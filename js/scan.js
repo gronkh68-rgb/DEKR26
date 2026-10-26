@@ -7,8 +7,8 @@
   var RECENT_KEY = 'dekr26_recent_' + (new URLSearchParams(location.search).get('q') || 'x');
   var recent = [];
   try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { recent = []; }
-  var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash', 'dk2'];
-  var VIEWS = ['beipack', 'podest', 'orders', 'problems', 'dash'];
+  var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash', 'ueber'];
+  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash'];
 
   // Name, Funktion und Rechte kommen vom QR-Code (?q=ID, im Dashboard gepflegt).
   // n/f/p im Link sind nur Rückfall, falls die Daten nicht aus der Datenbank kommen.
@@ -121,8 +121,10 @@
       if (o.qid !== qid || o.status === 'offen' || o.selfDone || seenO[key]) return;
       seenO[key] = 1; changed = true;
       if (Date.now() - (o.statusAt || 0) > 864e5) return;
-      var text = '✔ Podest-Bestellung (' + o.items.join(', ') + (o.where ? ' · ' + o.where : '') + ') ' + o.status + ' von ' + (o.statusBy || 'Deufol');
-      done(text); toast(text); notify('Podest ' + o.status, text, 'ord' + key);
+      var ue = o.kind === 'ueber';
+      var text = ue ? '✔ Anfrage Überspielen (' + o.where + ') ' + (o.status === 'erledigt' ? 'fertig' : o.status) + ' von ' + (o.statusBy || 'Deufol')
+        : '✔ Podest-Bestellung (' + o.items.join(', ') + (o.where ? ' · ' + o.where : '') + ') ' + o.status + ' von ' + (o.statusBy || 'Deufol');
+      done(text); toast(text); notify(ue ? 'Überspielen ' + o.status : 'Podest ' + o.status, text, 'ord' + key);
     });
     if (changed) { try { localStorage.setItem('dekr26_ordseen', JSON.stringify(seenO)); } catch (e) { /* ignorieren */ } }
   }
@@ -279,8 +281,9 @@
     if (html !== lastKrHtml) { lastKrHtml = html; $('krlist').innerHTML = html; }   // nur bei Änderung, sonst flackert die Auswahl
   }
   var lastKrHtml = '';
-  function krInfo() {
-    var kr = Util.normKr($('kr').value), box = $('krInfo');
+  function krInfo() { showKrInfo($('kr'), $('krInfo')); }
+  function showKrInfo(input, box) {
+    var kr = Util.normKr(input.value);
     if (!kr) { box.hidden = true; return; }
     var ts = tasksOf(kr);
     box.hidden = false;
@@ -313,6 +316,7 @@
     var p = perms(), v = [];
     if (p.report || p.status) v.push(['beipack', 'Beipack fertig melden']);
     if (p.order) v.push(['podest', 'Podest bestellen']);
+    if (p.ueber) v.push(['ueber', 'Anfrage Überspielen']);
     if (p.podest) v.push(['orders', 'Bestellungen']);
     if (p.solve) v.push(['problems', 'Probleme']);
     if (p.dash) v.push(['dash', 'Dashboard']);
@@ -453,10 +457,48 @@
   };
   var orderId = null;
 
+  // ---------- Anfrage Überspielen: KR wählen, Anfrage geht ans Dashboard (annehmen, fertig melden) ----------
+  var uId = null;
+  $('ukr').addEventListener('input', function () { showKrInfo($('ukr'), $('ukrInfo')); });
+  $('uGo').onclick = function () {
+    var kr = Util.normKr($('ukr').value), note = $('unote').value.trim();
+    if (!kr) { toast('Bitte eine KR-Nummer wählen', true); $('ukr').focus(); return; }
+    var t = tasksOf(kr)[0];
+    if (!t) { toast('Diese KR steht nicht in der Liste – bitte aus der Auswahl wählen', true); return; }
+    var where = 'KR ' + kr + (t.pos ? ' · ' + Halls.label(t.hall, t.pos) : '');
+    // Doppelte Anfrage verhindern (gleiche ID bei Wiederholung, gleiche KR in den letzten 2 Minuten)
+    var all = Store.get().orders;
+    if (!uId) uId = Util.uid();
+    var dup = Object.keys(all).some(function (id) {
+      var o = all[id];
+      return id !== uId && o.kind === 'ueber' && o.kr === kr && o.qid === (qid || '') && Date.now() - o.t < 12e4;
+    });
+    if (dup) { toast('Diese Anfrage wurde gerade schon gesendet', true); return; }
+    $('uGo').disabled = true;
+    Store.setOrder(uId, { kind: 'ueber', items: ['Anfrage Überspielen'], kr: kr, where: where, note: note, by: qr.name, func: qr.func || '', qid: qid || '', t: Date.now(), status: 'offen' })
+      .then(function () {
+        done('Anfrage Überspielen gesendet: ' + where + (note ? ' (' + note + ')' : '') + ' (' + who() + ')');
+        toast('Anfrage gesendet');
+        uId = null; $('ukr').value = ''; $('unote').value = ''; $('ukrInfo').hidden = true;
+      }).catch(fail).then(function () { $('uGo').disabled = false; });
+  };
+  function renderMyUeber(state) {
+    var ids = qid ? Object.keys(state.orders).filter(function (id) {
+      var o = state.orders[id];
+      return o.kind === 'ueber' && o.qid === qid && o.status !== 'erledigt';
+    }).sort(function (a, b) { return state.orders[b].t - state.orders[a].t; }) : [];
+    $('myUeber').innerHTML = ids.length
+      ? '<div class="col-title orb" style="margin-bottom:8px">Meine offenen Anfragen</div>' + ids.map(function (id) {
+        var o = state.orders[id];
+        return '<div class="item"><b>' + esc(o.where) + '</b>' + (o.note ? '<span>' + esc(o.note) + '</span>' : '') +
+          '<span class="meta">' + Util.time(o.t) + ' · <b>' + esc(o.status) + '</b>' + (o.statusBy ? ' von ' + esc(o.statusBy) : '') + '</span></div>';
+      }).join('') : '';
+  }
+
   // Eigene offene Bestellungen: der Besteller kann sie selbst als erledigt abhaken
   function renderMyOrders(state) {
     var ids = qid ? Object.keys(state.orders).filter(function (id) {
-      return state.orders[id].qid === qid && state.orders[id].status !== 'erledigt';
+      return state.orders[id].qid === qid && state.orders[id].status !== 'erledigt' && state.orders[id].kind !== 'ueber';
     }).sort(function (a, b) { return state.orders[b].t - state.orders[a].t; }) : [];
     $('myOrders').innerHTML = ids.length
       ? '<div class="col-title orb" style="margin-bottom:8px">Meine offenen Bestellungen</div>' + ids.map(function (id) {
@@ -480,7 +522,7 @@
   var ordSeen = null;
   function watchOrders(state) {
     if (!perms().podest) return;
-    var ids = Object.keys(state.orders).filter(function (id) { return state.orders[id].status === 'offen'; });
+    var ids = Object.keys(state.orders).filter(function (id) { return state.orders[id].status === 'offen' && state.orders[id].kind !== 'ueber'; });
     if (ordSeen) {
       ids.forEach(function (id) {
         var o = state.orders[id];
@@ -496,12 +538,12 @@
   // ---------- Bestellungen bearbeiten / Probleme lösen ----------
   function openOrders() {
     var o = Store.get().orders;
-    return Object.keys(o).filter(function (id) { return o[id].status !== 'erledigt'; });
+    return Object.keys(o).filter(function (id) { return o[id].status !== 'erledigt' && o[id].kind !== 'ueber'; });
   }
   function renderLists() {
     var s = Store.get();
     if (view === 'orders') {
-      var ids = Object.keys(s.orders).sort(function (a, b) { return s.orders[b].t - s.orders[a].t; }).slice(0, 40);
+      var ids = Object.keys(s.orders).filter(function (id) { return s.orders[id].kind !== 'ueber'; }).sort(function (a, b) { return s.orders[b].t - s.orders[a].t; }).slice(0, 40);
       ids.sort(function (a, b) { return (s.orders[a].status === 'erledigt') - (s.orders[b].status === 'erledigt'); });
       $('v-orders').innerHTML = ids.length ? ids.map(function (id) {
         var o = s.orders[id], fin = o.status === 'erledigt';
@@ -539,36 +581,6 @@
     }).catch(fail);
   };
 
-  // ---------- Klick-Bild (Option „DK2"): zeigt bei jedem Tippen kurz ein Bild ----------
-  // Bild: klick.png oder klick.jpg im Hauptordner des Repos (zum Ändern einfach neu hochladen).
-  // Zur Sicherheit höchstens ca. 3 Einblendungen pro Sekunde, und nicht bei reduzierter Bewegung.
-  var flashImg = null, flashLast = 0, flashOn = false;
-  function enableFlash() {
-    if (flashOn) return;
-    flashOn = true;
-    var stamp = Math.floor(Date.now() / 6e5);   // alle 10 Minuten neu laden, falls das Bild getauscht wurde
-    flashImg = document.createElement('img');
-    flashImg.alt = '';
-    flashImg.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:90;pointer-events:none;display:none';
-    var tryJpg = true;
-    flashImg.onerror = function () {
-      if (tryJpg) { tryJpg = false; flashImg.src = 'klick.jpg?v=' + stamp; }
-      else { flashImg = null; $('note').textContent += ' Bild fehlt: klick.png oder klick.jpg im Hauptordner hochladen.'; }
-    };
-    flashImg.src = 'klick.png?v=' + stamp;
-    document.body.appendChild(flashImg);
-    // pointerdown statt click: funktioniert auch beim Tippen auf leere Flächen (iPhone löst dort kein click aus)
-    document.addEventListener('pointerdown', function () {
-      if (!flashImg || !flashImg.complete || !flashImg.naturalWidth) return;
-      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      var now = Date.now();
-      if (now - flashLast < 350) return;
-      flashLast = now;
-      flashImg.style.display = 'block';
-      setTimeout(function () { flashImg.style.display = 'none'; }, 100);
-    }, true);
-  }
-
   // ---------- Start ----------
   function apply(state) {
     $('lockCover').hidden = !Store.isLocked();
@@ -598,16 +610,13 @@
       return;
     }
     $('note').textContent = Store.remote ? '' : 'Demo-Modus: Meldungen erreichen das Dashboard nicht.';
-    if (perms().dk2) {
-      enableFlash();
-      $('note').textContent += (Store.remote ? '' : ' ') + 'Klick-Bild aktiv.';
-    }
     fillKrList(state);
     renderMenu();
     renderPodestList(state);
     renderLists();
     krInfo();
     renderMyOrders(state);
+    renderMyUeber(state);
     watchOrders(state);
     renderInbox(state);
     renderDash(state);

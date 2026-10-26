@@ -369,12 +369,15 @@
 
   var tab = 'msgs';
   function openOrderIds(state) {
-    return Object.keys(state.orders).filter(function (id) { return state.orders[id].status !== 'erledigt'; });
+    return Object.keys(state.orders).filter(function (id) { return state.orders[id].status !== 'erledigt' && state.orders[id].kind !== 'ueber'; });
+  }
+  function openUeberIds(state) {
+    return Object.keys(state.orders).filter(function (id) { return state.orders[id].status !== 'erledigt' && state.orders[id].kind === 'ueber'; });
   }
   var ordSeen = null;
   function renderOrders(state) {
     if (Store.isLocked()) return;
-    var openIds = Object.keys(state.orders).filter(function (id) { return state.orders[id].status === 'offen'; });
+    var openIds = Object.keys(state.orders).filter(function (id) { return state.orders[id].status === 'offen' && state.orders[id].kind !== 'ueber'; });
     if (ordSeen) {
       openIds.forEach(function (id) {
         var o = state.orders[id];
@@ -383,7 +386,7 @@
     }
     ordSeen = ordSeen || {};
     openIds.forEach(function (id) { ordSeen[id] = 1; });
-    var ids = Object.keys(state.orders).sort(function (a, b) { return state.orders[b].t - state.orders[a].t; }).slice(0, 60);
+    var ids = Object.keys(state.orders).filter(function (id) { return state.orders[id].kind !== 'ueber'; }).sort(function (a, b) { return state.orders[b].t - state.orders[a].t; }).slice(0, 60);
     ids.sort(function (a, b) { return (state.orders[a].status === 'erledigt') - (state.orders[b].status === 'erledigt'); });
     $('orders').innerHTML = ids.length ? ids.map(function (id) {
       var o = state.orders[id], fin = o.status === 'erledigt';
@@ -393,6 +396,31 @@
           '<button class="btn-sm btn-ok" data-oid="' + id + '" data-st="erledigt">Erledigt</button>') +
         '<button class="btn-sm btn-warn" data-oid="' + id + '" data-st="del">Löschen</button></span></div>';
     }).join('') : '<div class="empty">Keine Podest-Bestellungen.</div>';
+  }
+  // Anfragen „Überspielen": annehmen, als fertig melden, löschen
+  var ueSeen = null;
+  function renderUeber(state) {
+    if (Store.isLocked()) return;
+    var ids = Object.keys(state.orders).filter(function (id) { return state.orders[id].kind === 'ueber'; });
+    var openIds = ids.filter(function (id) { return state.orders[id].status === 'offen'; });
+    if (ueSeen) {
+      openIds.forEach(function (id) {
+        if (!ueSeen[id]) { var o = state.orders[id]; toast('Neue Anfrage Überspielen: ' + o.where + ' (' + o.by + ')'); }
+      });
+    }
+    ueSeen = ueSeen || {};
+    openIds.forEach(function (id) { ueSeen[id] = 1; });
+    ids.sort(function (x, y) { return state.orders[y].t - state.orders[x].t; });
+    ids = ids.slice(0, 60);
+    ids.sort(function (x, y) { return (state.orders[x].status === 'erledigt') - (state.orders[y].status === 'erledigt'); });
+    $('uebs').innerHTML = ids.length ? ids.map(function (id) {
+      var o = state.orders[id], fin = o.status === 'erledigt';
+      return '<div class="item' + (fin ? ' ok' : '') + '"><b>Überspielen · ' + esc(o.where) + '</b>' + (o.note ? '<span>' + esc(o.note) + '</span>' : '') +
+        '<span class="meta">' + Util.time(o.t) + ' · ' + esc(o.by) + (o.func ? ' (' + esc(o.func) + ')' : '') + ' · <b>' + esc(fin ? 'fertig' : o.status) + '</b>' + (o.statusBy ? ' von ' + esc(o.statusBy) : '') + '</span>' +
+        '<span class="acts">' + (fin ? '' : (o.status === 'offen' ? '<button class="btn-sm" data-oid="' + id + '" data-st="angenommen">Annehmen</button>' : '') +
+          '<button class="btn-sm btn-ok" data-oid="' + id + '" data-st="erledigt">Fertig melden</button>') +
+        '<button class="btn-sm btn-warn" data-oid="' + id + '" data-st="del">Löschen</button></span></div>';
+    }).join('') : '<div class="empty">Keine Anfragen Überspielen.</div>';
   }
   function renderProbs(state) {
     var ids = Object.keys(state.problems).sort(function (a, b) { return state.problems[b].t - state.problems[a].t; }).slice(0, 60);
@@ -470,7 +498,8 @@
   var dOrderId = null;
 
   function renderTabs() {
-    ['msgs', 'orders', 'probs'].forEach(function (k) { $(k).hidden = k !== tab; });
+    var ids = { msgs: 'msgs', orders: 'orders', ueber: 'uebs', probs: 'probs' };
+    Object.keys(ids).forEach(function (k) { $(ids[k]).hidden = k !== tab; });
     $('send').hidden = tab !== 'msgs';
     $('dOrder').hidden = tab !== 'orders';
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) { b.classList.toggle('sel', b.dataset.tab === tab); });
@@ -479,6 +508,7 @@
     var b = e.target.closest('.tab');
     if (b) { tab = b.dataset.tab; renderTabs(); }
   };
+  $('uebs').onclick = function (e) { $('orders').onclick(e); };
   $('orders').onclick = function (e) {
     var b = e.target.closest('button[data-oid]');
     var o = b && Store.get().orders[b.dataset.oid];
@@ -500,6 +530,8 @@
     openProb = {};
     Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') openProb[state.problems[id].kr] = 1; });
     $('cOrd').textContent = openOrderIds(state).length || '';
+    $('cUeb').textContent = openUeberIds(state).length || '';
+    renderUeber(state);
     $('cProb').textContent = Object.keys(openProb).length ? Object.keys(state.problems).filter(function (id) { return state.problems[id].status === 'offen'; }).length : '';
     renderOrders(state);
     renderProbs(state);
@@ -933,13 +965,14 @@
   // ohne dass ausgedruckte Codes ungültig werden.
   var PERM_LABELS = [['report', 'Beipack melden (fertig/Problem)'], ['order', 'Podest bestellen'],
     ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Fertig/Nicht fertig setzen'],
-    ['dash', 'Mobiles Dashboard'], ['dk2', 'Klick-Bild (DK2)']];
+    ['dash', 'Mobiles Dashboard'], ['ueber', 'Anfrage Überspielen']];
   var PRESETS = [
     ['standard', 'Standard (melden + bestellen)', '', { report: 1, order: 1 }],
     ['podest', 'Podest-Empfänger', 'Podest-Empfänger', { podest: 1, order: 1 }],
     ['elektriker', 'Elektriker', 'Elektriker', { report: 1, status: 1 }],
+    ['ueber', 'Anfrage Überspielen', '', { report: 1, ueber: 1 }],
     ['mobil', 'Mobiles Dashboard (Push)', 'Dashboard mobil', { dash: 1 }],
-    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1 }]
+    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1 }]
   ];
   function permsOf(q) { return q.perms && Object.keys(q.perms).length ? q.perms : { report: 1, order: 1 }; }
   // n/f/p sind nur ein Rückfall, falls das Handy die QR-Daten nicht aus der Datenbank laden kann
