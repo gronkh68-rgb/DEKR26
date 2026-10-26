@@ -14,23 +14,22 @@ var AISLES_H7 = [
   [210, 948, 1420, 42], [1465, 480, 40, 510], [1535, 990, 95, 40], [1550, 365, 20, 95]
 ];
 
+// Arbeitsflächen [x, y, Breite, Höhe]: Positionen werden in diese Flächen gelegt und nie in die grünen Gänge
+var BLOCKS_H7 = [
+  [268, 308, 717, 172], [268, 520, 717, 213], [268, 775, 717, 173], [268, 990, 717, 113],
+  [1007, 308, 553, 172], [1007, 520, 458, 213], [1007, 775, 458, 173], [1007, 990, 373, 113]
+];
+
 var PLAN_H7 = [
   '<rect class="p-floor" x="210" y="308" width="1355" height="795"/>',
   // Fluchtwege / Gänge (bleiben frei, siehe AISLES_H7)
   '<g class="p-aisle">' + AISLES_H7.map(function (a) {
     return '<rect x="' + a[0] + '" y="' + a[1] + '" width="' + a[2] + '" height="' + a[3] + '"/>';
   }).join('') + '</g>',
-  // Arbeitsflächen
-  '<g class="p-block">',
-  '<rect x="268" y="308" width="717" height="172"/>',
-  '<rect x="268" y="520" width="717" height="213"/>',
-  '<rect x="268" y="775" width="717" height="173"/>',
-  '<rect x="268" y="990" width="717" height="113"/>',
-  '<rect x="1007" y="308" width="553" height="172"/>',
-  '<rect x="1007" y="520" width="458" height="213"/>',
-  '<rect x="1007" y="775" width="458" height="173"/>',
-  '<rect x="1007" y="990" width="373" height="113"/>',
-  '</g>',
+  // Arbeitsflächen (grau): nur dort liegen Positionen, siehe BLOCKS_H7
+  '<g class="p-block">' + BLOCKS_H7.map(function (a) {
+    return '<rect x="' + a[0] + '" y="' + a[1] + '" width="' + a[2] + '" height="' + a[3] + '"/>';
+  }).join('') + '</g>',
   // Büros, Sozialräume, Lager
   '<g class="p-office">',
   '<rect x="1565" y="308" width="195" height="312"/>',
@@ -68,6 +67,7 @@ window.DEKR_HALLS = [
     vb: '100 270 1820 860',
     plan: PLAN_H7,
     aisles: AISLES_H7,
+    blocks: BLOCKS_H7,
     // Aus den Spots der Arbeitsliste (9, 12, 21, 24, 30, 42): nur Vielfache von 3 werden genutzt
     layout: { off: everyNth(49, 3) },
     grid: { x: 215, y: 310, w: 1330, h: 790, rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 }
@@ -95,6 +95,20 @@ window.Halls = (function () {
   // verschiebt Spalten/Zeilen und blendet Spalten (cN) / Zeilen (rX) aus
   function inAisle(h, x, y) {
     return (h.aisles || []).some(function (a) { return x >= a[0] && x <= a[0] + a[2] && y >= a[1] && y <= a[1] + a[3]; });
+  }
+
+  // Legt eine Zelle vollständig in die nächstgelegene Arbeitsfläche (nie in Gänge)
+  function snap(h, p) {
+    if (!h.blocks) return p;
+    var cx = p.x + p.w / 2, cy = p.y + p.h / 2, best = null, bd = Infinity, pad = 3;
+    h.blocks.forEach(function (b) {
+      var dx = Math.max(b[0] - cx, 0, cx - (b[0] + b[2])), dy = Math.max(b[1] - cy, 0, cy - (b[1] + b[3])), d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = b; }
+    });
+    var w = Math.min(p.w, best[2] - 2 * pad), hh = Math.min(p.h, best[3] - 2 * pad);
+    return { id: p.id, w: w, h: hh, f: Math.min(w, hh) * 0.42,
+      x: Math.max(best[0] + pad, Math.min(cx - w / 2, best[0] + best[2] - pad - w)),
+      y: Math.max(best[1] + pad, Math.min(cy - hh / 2, best[1] + best[3] - pad - hh)) };
   }
 
   function build(h, ov) {
@@ -126,7 +140,7 @@ window.Halls = (function () {
         var id = s.rows[r] + (c + 1);
         if (off['c' + (c + 1)] || (valid && !valid[id])) continue;
         if (inAisle(h, xs[c] + s.pw / 2, y + s.ph / 2)) continue;
-        positions.push({ id: id, x: xs[c] - (wOf[c] - s.pw) / 2, y: y, w: wOf[c], h: s.ph, f: h.grid ? Math.min(wOf[c], s.ph) * 0.42 : s.font });
+        positions.push(snap(h, { id: id, x: xs[c] - (wOf[c] - s.pw) / 2, y: y, w: wOf[c], h: s.ph, f: h.grid ? Math.min(wOf[c], s.ph) * 0.42 : s.font }));
       }
     }
     return { vb: s.vb, plan: s.plan, font: s.font, pw: s.pw, ph: s.ph, positions: positions, labels: labels,
@@ -164,7 +178,7 @@ window.Halls = (function () {
       if (r < 0 || c < 0 || c >= s.cols) return null;
       var wide = ov.off && Object.keys(ov.off).length ? s.pw + 2 * s.cw : s.pw;
       var x = s.x + c * s.cw + ((ov.cols || {})['c' + (c + 1)] || 0), y = s.y + r * s.ch + ((ov.rows || {})['r' + m[1]] || 0);
-      return { id: pos, x: x - (wide - s.pw) / 2, y: y, w: wide, h: s.ph, f: h.grid ? Math.min(wide, s.ph) * 0.42 : s.font };
+      return snap(h, { id: pos, x: x - (wide - s.pw) / 2, y: y, w: wide, h: s.ph, f: h.grid ? Math.min(wide, s.ph) * 0.42 : s.font });
     },
     // Hallen, in denen die Position existiert
     find: function (pos) {
