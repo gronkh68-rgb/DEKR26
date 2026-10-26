@@ -1,4 +1,4 @@
-# DEKR26 – Beipack-Abholung
+# DEUKRO26 – Beipack-Abholung
 
 Statische Hilfswebsite (GitHub Pages). Mitarbeiter melden per Handy (QR-Code) „KR + Position fertig“, auf der Hauptseite wird die Position grün.
 
