@@ -142,6 +142,37 @@
     if (changed) { try { localStorage.setItem('dekr26_probseen', JSON.stringify(seenP)); } catch (e) { /* ignorieren */ } }
   }
 
+  // ---------- Nachrichten vom Dashboard (Posteingang) ----------
+  var inboxSeen = null;
+  function readSet() {
+    try { return JSON.parse(localStorage.getItem('dekr26_dmread')) || {}; } catch (e) { return {}; }
+  }
+  function renderInbox(state) {
+    var rd = readSet();
+    var ms = Object.keys(state.msgs).map(function (id) { return Object.assign({ id: id }, state.msgs[id]); })
+      .filter(function (m) { return m.type === 'dm' && (m.to === 'all' || (qid && m.to === qid)) && Date.now() - m.t < 1728e5 && !rd[m.id]; })
+      .sort(function (a, b) { return b.t - a.t; });
+    if (inboxSeen) {
+      ms.forEach(function (m) { if (!inboxSeen[m.id]) { toast('Nachricht von ' + m.by); notify('Nachricht von ' + m.by, m.text.replace(/^An [^:]*: /, ''), m.id); } });
+    }
+    inboxSeen = inboxSeen || {};
+    ms.forEach(function (m) { inboxSeen[m.id] = 1; });
+    $('inbox').innerHTML = ms.map(function (m) {
+      return '<div class="item dm"><b>Nachricht von ' + esc(m.by) + '</b><span>' + esc(m.text.replace(/^An [^:]*: /, '')) + '</span>' +
+        '<span class="meta">' + Util.time(m.t) + '</span><span class="acts"><button class="btn-ok" data-dm="' + m.id + '">Gelesen</button></span></div>';
+    }).join('');
+  }
+  $('inbox').onclick = function (e) {
+    var b = e.target.closest('button[data-dm]');
+    var m = b && Store.get().msgs[b.dataset.dm];
+    if (!m) return;
+    var rd = readSet(); rd[b.dataset.dm] = 1;
+    try { localStorage.setItem('dekr26_dmread', JSON.stringify(rd)); } catch (err) { /* ignorieren */ }
+    var reads = Object.assign({}, m.reads); reads[qid || 'x'] = { by: qr.name, t: Date.now() };
+    Store.setMsg(b.dataset.dm, Object.assign({}, m, { reads: reads })).catch(function () { /* Lesebestätigung ist optional */ });
+    renderInbox(Store.get());
+  };
+
   // ---------- Mobiles Dashboard ----------
   var notifSeen = null;   // bereits gesehene Fertig-Meldungen (für neue Benachrichtigungen)
   function doneMsgs(state) {
@@ -467,6 +498,7 @@
       $('note').textContent = qid ? 'QR-Code unbekannt oder gelöscht.' : 'Bitte über einen QR-Code öffnen.';
       $('menu').innerHTML = '';
       VIEWS.forEach(function (k) { $('v-' + k).hidden = true; });
+      $('inbox').innerHTML = '';
       return;
     }
     $('note').textContent = Store.remote ? '' : 'Demo-Modus: Meldungen erreichen das Dashboard nicht.';
@@ -476,6 +508,7 @@
     renderLists();
     krInfo();
     renderMyOrders(state);
+    renderInbox(state);
     renderDash(state);
     watchDone(state);
     checkAcks(state);

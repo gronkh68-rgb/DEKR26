@@ -86,6 +86,15 @@
     $('pKr').value = ''; $('pPos').value = '';
   };
 
+  // Empfänger: Dashboard (allgemein), alle QR-Besitzer oder ein bestimmter Code
+  function renderRecipients(state) {
+    var cur = $('mTo').value;
+    var qs = Object.keys(state.qrs).map(function (id) { return { id: id, name: state.qrs[id].name, t: state.qrs[id].t }; })
+      .sort(function (a, b) { return a.t - b.t; });
+    $('mTo').innerHTML = '<option value="">Allgemein (Dashboard)</option><option value="all">An alle QR-Besitzer</option>' +
+      qs.map(function (q) { return '<option value="' + esc(q.id) + '">An ' + esc(q.name) + '</option>'; }).join('');
+    if ([].some.call($('mTo').options, function (o) { return o.value === cur; })) $('mTo').value = cur;
+  }
   $('send').onsubmit = function (e) {
     e.preventDefault();
     var name = $('mName').value.trim() || 'Deufol';
@@ -93,7 +102,14 @@
     if (!text) return;
     Util.setName($('mName').value.trim());
     $('me').value = $('mName').value.trim();
-    Store.addMsg({ type: 'msg', by: name, text: text }).catch(function () { toast('Senden fehlgeschlagen'); });
+    var to = $('mTo').value, msg;
+    if (to) {
+      var who = to === 'all' ? 'alle QR-Besitzer' : $('mTo').options[$('mTo').selectedIndex].text.replace(/^An /, '');
+      msg = { type: 'dm', by: name, to: to, text: 'An ' + who + ': ' + text };
+    } else {
+      msg = { type: 'msg', by: name, text: text };
+    }
+    Store.addMsg(msg).catch(function () { toast('Senden fehlgeschlagen'); });
     $('mText').value = '';
   };
 
@@ -288,7 +304,7 @@
     $('msgs').innerHTML = list.length ? list.map(function (m) {
       var pulse = needsAck(m);
       return '<div class="msg ' + esc(m.type) + (pulse ? ' pulse' : '') + (fresh[m.id] ? ' fresh' : '') + '">' + esc(m.text) +
-        '<small>' + Util.time(m.t) + ' · ' + esc(m.by || '') + (m.ack ? ' · ✔ bestätigt von ' + esc(m.ack.by) : '') + '</small>' +
+        '<small>' + Util.time(m.t) + ' · ' + esc(m.by || '') + (m.ack ? ' · ✔ bestätigt von ' + esc(m.ack.by) : '') + (m.type === 'dm' && m.reads ? ' · ✔ gelesen von ' + Object.keys(m.reads).map(function (k) { return esc(m.reads[k].by); }).join(', ') : '') + '</small>' +
         '<span class="acts">' + (pulse ? '<button class="btn-sm btn-ok" data-ack="' + esc(m.id) + '">Bestätigen</button>' : '') +
         '<button class="btn-sm btn-warn" data-delmsg="' + esc(m.id) + '">Löschen</button></span></div>';
     }).join('') : '<div class="empty">Keine Nachrichten.</div>';
@@ -330,9 +346,63 @@
         '<button class="btn-sm btn-warn" data-pid="' + id + '" data-st="del">Löschen</button></span></div>';
     }).join('') : '<div class="empty">Keine Probleme.</div>';
   }
+  // ---- Podest vom Dashboard bestellen ----
+  var dSel = {}, dAuto = '';
+  function renderDOrder(state) {
+    var names = podestList(state).map(function (p) { return p.name; });
+    if (!names.length) names = (window.DEKR_CONFIG || {}).podests || [];
+    $('dPdList').innerHTML = names.map(function (n) {
+      return '<button type="button" class="chip pick' + (dSel[n] ? ' on' : '') + '" data-n="' + esc(n) + '">' + esc(n) + '</button>';
+    }).join('') || '<span class="empty">Keine Auswahl hinterlegt – bitte Text eintragen.</span>';
+    var cur = $('dKrList').childElementCount;
+    var list = Object.keys(state.tasks).map(function (id) { return state.tasks[id]; });
+    if (cur !== list.length) {
+      $('dKrList').innerHTML = list.slice(0, 500).map(function (t) {
+        return '<option value="' + esc(t.kr) + '">KR ' + esc(t.kr) + (t.pos ? ' · ' + esc(Halls.label(t.hall, t.pos)) : '') + '</option>';
+      }).join('');
+    }
+  }
+  $('dPdList').onclick = function (e) {
+    var b = e.target.closest('.pick');
+    if (!b) return;
+    dSel[b.dataset.n] = !dSel[b.dataset.n];
+    renderDOrder(Store.get());
+  };
+  function fillDPos() {
+    var kr = Util.normKr($('dPdKr').value), ts = Object.keys(Store.get().tasks).map(function (id) { return Store.get().tasks[id]; })
+      .filter(function (t) { return t.kr === kr; });
+    var cur = $('dPdPos').value.trim(), auto = ts[0] && ts[0].pos ? Halls.label(ts[0].hall, ts[0].pos) : '';
+    if (!cur || cur === dAuto) { $('dPdPos').value = auto; dAuto = auto; }
+  }
+  $('dPdKr').addEventListener('input', fillDPos);
+  $('dPdPos').addEventListener('input', function () { if ($('dPdPos').value.trim() !== dAuto) dAuto = ''; });
+  $('dOrder').onsubmit = function (e) {
+    e.preventDefault();
+    var items = Object.keys(dSel).filter(function (n) { return dSel[n]; });
+    var free = $('dPdText').value.trim();
+    if (free) items.push(free);
+    var kr = Util.normKr($('dPdKr').value), raw = $('dPdPos').value.trim();
+    if (!items.length) { toast('Bitte Podest auswählen oder Text eintragen'); return; }
+    if (!kr && !raw) { toast('Bitte KR oder Position angeben'); return; }
+    var pp = raw ? Util.parsePos(raw) : null;
+    if (raw && !pp) { toast('Position nicht erkannt, z.B. 7 42 Z'); return; }
+    var t = kr ? Object.keys(Store.get().tasks).map(function (id) { return Store.get().tasks[id]; }).filter(function (x) { return x.kr === kr; })[0] : null;
+    var hallId = (pp && pp.hall && Halls.byShort(pp.hall)) || (t && t.hall) || Halls.all[0].id;
+    var posL = pp ? Halls.label(hallId, pp.pos) : t && t.pos ? Halls.label(t.hall, t.pos) : '';
+    var where = [kr ? 'KR ' + kr : '', posL].filter(Boolean).join(' · ');
+    var name = Util.getName();
+    Store.setOrder(Util.uid(), { items: items, kr: kr, where: where, by: name, func: 'Dashboard', qid: '', t: Date.now(), status: 'offen' })
+      .then(function () { return Store.addMsg({ type: 'order', by: name, text: 'Podest bestellt: ' + items.join(', ') + ' für ' + where + ' (' + name + ')' }); })
+      .then(function () {
+        dSel = {}; dAuto = ''; $('dPdText').value = ''; $('dPdKr').value = ''; $('dPdPos').value = '';
+        renderDOrder(Store.get()); toast('Bestellt');
+      }).catch(function () { toast('Bestellen fehlgeschlagen'); });
+  };
+
   function renderTabs() {
     ['msgs', 'orders', 'probs'].forEach(function (k) { $(k).hidden = k !== tab; });
     $('send').hidden = tab !== 'msgs';
+    $('dOrder').hidden = tab !== 'orders';
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) { b.classList.toggle('sel', b.dataset.tab === tab); });
   }
   document.querySelector('.tabs').onclick = function (e) {
@@ -363,6 +433,8 @@
     $('cProb').textContent = Object.keys(openProb).length ? Object.keys(state.problems).filter(function (id) { return state.problems[id].status === 'offen'; }).length : '';
     renderOrders(state);
     renderProbs(state);
+    renderRecipients(state);
+    renderDOrder(state);
     renderTabs();
     var tasks = weekTasks(state);
     renderWeek(tasks);

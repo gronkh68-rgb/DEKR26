@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=07786cf">
+<link rel="stylesheet" href="css/style.css?v=41e4226">
 </head>
 <body>
 <div class="app">
@@ -69,7 +69,19 @@
       <div class="scroll" id="msgs"></div>
       <div class="scroll" id="orders" hidden></div>
       <div class="scroll" id="probs" hidden></div>
+      <form class="card dorder" id="dOrder" hidden>
+        <div class="empty">Podest bestellen</div>
+        <div class="chips" id="dPdList"></div>
+        <input id="dPdText" maxlength="100" placeholder="Oder eigener Text">
+        <div class="row2">
+          <div class="kr-in"><span>KR</span><input id="dPdKr" list="dKrList" autocapitalize="characters" autocomplete="off" placeholder="Nummer"></div>
+          <input id="dPdPos" maxlength="12" placeholder="Position, z.B. 7 42 Z">
+        </div>
+        <datalist id="dKrList"></datalist>
+        <button class="btn-main">Bestellen</button>
+      </form>
       <form class="card send" id="send">
+        <select id="mTo" title="Empfänger"></select>
         <input id="mName" placeholder="Name" maxlength="30">
         <textarea id="mText" placeholder="Nachricht..." maxlength="300" required></textarea>
         <button class="btn-main">Senden</button>
@@ -113,10 +125,10 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=07786cf"></script>
-<script src="js/halls.js?v=07786cf"></script>
-<script src="js/core.js?v=07786cf"></script>
-<script src="js/qrcode.js?v=07786cf"></script>
-<script src="js/app.js?v=07786cf"></script>
+<script src="js/config.js?v=41e4226"></script>
+<script src="js/halls.js?v=41e4226"></script>
+<script src="js/core.js?v=41e4226"></script>
+<script src="js/qrcode.js?v=41e4226"></script>
+<script src="js/app.js?v=41e4226"></script>
 </body>
 </html>
