@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DEKR26 // Beipack-Abholung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>DEKR26 // BEIPACK-ABHOLUNG</h1>
+    <span class="tag" id="week"></span>
+    <span class="sp"></span>
+    <span class="tag" id="mode"></span>
+    <a class="tag" href="qr.html" style="text-decoration:none">QR-CODES</a>
+    <span class="orb" id="clock" style="color:var(--cyan)"></span>
+  </header>
+  <main class="cols">
+    <section class="col">
+      <div class="col-title orb"><span>KR / WOCHE</span><button class="btn-sm" id="planToggle">+ KR</button></div>
+      <form class="card plan" id="plan" hidden>
+        <input id="pKr" placeholder="KR-Nummer" required>
+        <div class="row">
+          <select id="pDay"></select>
+          <select id="pHall"></select>
+        </div>
+        <input id="pPos" placeholder="Positionen: A14 X36 ..." required>
+        <button class="btn-main">Planen</button>
+      </form>
+      <div class="scroll" id="week-list"></div>
+    </section>
+
+    <section class="col map-wrap">
+      <div class="map-head">
+        <div><h2 id="hallName" style="display:inline"></h2><span class="stat" id="hallStat"></span></div>
+        <button class="btn-main" id="hallSwitch"></button>
+      </div>
+      <div class="map-box" id="map"></div>
+      <div class="card detail" id="detail"></div>
+      <div class="legend">
+        <span><i style="border-color:var(--orange);background:rgba(255,154,31,.3)"></i>offen</span>
+        <span><i style="border-color:var(--green);background:rgba(57,255,20,.3)"></i>bereit / abholbar</span>
+        <span><i style="border-color:#16273a;background:#0c1520"></i>kein Beipack</span>
+      </div>
+    </section>
+
+    <section class="col">
+      <div class="col-title orb"><span>NACHRICHTEN</span></div>
+      <div class="scroll" id="msgs"></div>
+      <form class="card send" id="send">
+        <input id="mName" placeholder="Name" maxlength="30">
+        <textarea id="mText" placeholder="Nachricht..." maxlength="300" required></textarea>
+        <button class="btn-main">Senden</button>
+      </form>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="js/config.js"></script>
+<script src="js/halls.js"></script>
+<script src="js/core.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

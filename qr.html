@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DEKR26 // QR-Codes</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="qr-ctl no-print">
+  <label>Basis-URL (scan.html)<input id="url" size="48"></label>
+  <label>Anzahl<input id="n" type="number" min="1" max="40" value="6" style="width:80px"></label>
+  <label>Bezeichnung<input id="prefix" value="Team" style="width:120px"></label>
+  <button class="btn-main" id="gen">Erzeugen</button>
+  <button id="print">Drucken</button>
+  <a class="tag" href="index.html" style="text-decoration:none">ZURÜCK</a>
+</div>
+<div class="qr-grid" id="grid"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="js/core.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('url').value = new URL('scan.html', location.href).href;
+
+  function gen() {
+    var n = Math.max(1, Math.min(40, +$('n').value || 1));
+    var html = '';
+    for (var i = 1; i <= n; i++) {
+      var label = $('prefix').value.trim() + ' ' + i;
+      var u = new URL($('url').value);
+      u.searchParams.set('n', label);
+      var qr = qrcode(0, 'M');
+      qr.addData(u.href);
+      qr.make();
+      html += '<div class="card qr-card"><h3 class="orb">' + Util.esc(label) + '</h3>' +
+        qr.createSvgTag(4, 2) + '<div class="empty">Fertigmeldung Beipack</div></div>';
+    }
+    $('grid').innerHTML = html;
+  }
+  $('gen').onclick = gen;
+  $('print').onclick = function () { window.print(); };
+  gen();
+})();
+</script>
+</body>
+</html>
