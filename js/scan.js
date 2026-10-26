@@ -67,6 +67,12 @@
       ? 'Benachrichtigungen sind aktiv, solange diese Seite geöffnet ist.' + ((window.DEKR_CONFIG || {}).ntfyTopic ? '' : ' Für Push bei geschlossener Seite: ntfy einrichten (README).')
       : Notification.permission === 'denied' ? 'Benachrichtigungen sind im Browser blockiert.' : '';
   }
+  // Push-Abo (ntfy): Thema und Link werden nur im mobilen Dashboard angezeigt
+  function pushState() {
+    var t = (window.DEKR_CONFIG || {}).ntfyTopic, el = $('pushInfo');
+    el.innerHTML = t ? 'Push bei geschlossener Seite: <a href="https://ntfy.sh/' + encodeURIComponent(t) +
+      '" target="_blank" rel="noopener" style="color:var(--accent)">Thema in ntfy öffnen</a> (App „ntfy", Thema: <b>' + esc(t) + '</b>)' : '';
+  }
   $('notifBtn').onclick = function () {
     if (navigator.serviceWorker) navigator.serviceWorker.register('sw.js').catch(function () { /* ignorieren */ });
     Notification.requestPermission().then(notifState);
@@ -125,6 +131,7 @@
       }).join('') + '</div>' : '') +
       (ac.length ? '<div class="col-title orb" style="margin:12px 0 8px">Zuletzt bestätigt</div>' + ac.map(function (m) { return item(m, false); }).join('') : '');
     notifState();
+    pushState();
   }
   $('v-dash').onclick = function (e) {
     var b = e.target.closest('button[data-ackm]');
