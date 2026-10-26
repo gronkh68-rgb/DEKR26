@@ -52,15 +52,6 @@
   renderRecent();
 
   // ---------- Benachrichtigungen ----------
-  // Push aufs Handy über ntfy.sh (nur wenn in js/config.js ein Thema eingetragen ist)
-  function push(title, text) {
-    var topic = (window.DEKR_CONFIG || {}).ntfyTopic;
-    if (!topic) return;
-    try {
-      fetch('https://ntfy.sh/' + encodeURIComponent(topic), { method: 'POST', body: text, headers: { Title: title, Tags: 'white_check_mark' } })
-        .catch(function () { /* Push ist optional */ });
-    } catch (e) { /* ignorieren */ }
-  }
   function canNotify() { return 'Notification' in window && Notification.permission === 'granted'; }
   function notify(title, body, tag) {
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
@@ -79,11 +70,19 @@
       ? 'Benachrichtigungen sind aktiv, solange diese Seite geöffnet ist.' + ((window.DEKR_CONFIG || {}).ntfyTopic ? '' : ' Für Push bei geschlossener Seite: ntfy einrichten (README).')
       : Notification.permission === 'denied' ? 'Benachrichtigungen sind im Browser blockiert.' : '';
   }
-  // Push-Abo (ntfy): Thema und Link werden nur im mobilen Dashboard angezeigt
-  function pushState() {
-    var t = (window.DEKR_CONFIG || {}).ntfyTopic, el = $('pushInfo');
-    el.innerHTML = t ? 'Push bei geschlossener Seite: <a href="https://ntfy.sh/' + encodeURIComponent(t) +
-      '" target="_blank" rel="noopener" style="color:var(--accent)">Thema in ntfy öffnen</a> (App „ntfy", Thema: <b>' + esc(t) + '</b>)' : '';
+  // Push-Abos (ntfy): je nach Rolle die passenden Themen mit Link zum Abonnieren
+  function pushFoot() {
+    var el = $('pushFoot');
+    if (!Push.enabled || !qr) { el.innerHTML = ''; return; }
+    var p = perms(), rows = [];
+    var row = function (sub, text) {
+      return '<div><a href="' + esc(Push.url(sub)) + '" target="_blank" rel="noopener">' + esc(text) + '</a> <span class="meta">Thema: ' + esc(Push.topic(sub)) + '</span></div>';
+    };
+    if (qid) rows.push(row('q' + qid, 'Rückmeldungen für dieses Handy (angenommen, bestätigt, gelöst)'));
+    if (p.dash) rows.push(row('', 'Alle Meldungen (fertig, Probleme, Anfragen)'));
+    if (p.podest) rows.push(row('podest', 'Neue Podest-Bestellungen'));
+    el.innerHTML = rows.length ? '<div class="col-title orb" style="margin-bottom:6px">Push aufs Handy (optional)</div>' +
+      '<div class="empty">App „ntfy" installieren und das Thema abonnieren. Der Link öffnet es direkt.</div>' + rows.join('') : '';
   }
   $('notifBtn').onclick = function () {
     if (navigator.serviceWorker) navigator.serviceWorker.register('sw.js').catch(function () { /* ignorieren */ });
@@ -211,7 +210,6 @@
       }).join('') + '</div>' : '') +
       (ac.length ? '<div class="col-title orb" style="margin:12px 0 8px">Zuletzt bestätigt</div>' + ac.map(function (m) { return item(m, false); }).join('') : '');
     notifState();
-    pushState();
     renderAllList(state);
   }
   // Alle KR aller Wochen mit Suche
@@ -250,7 +248,7 @@
     var b = e.target.closest('button[data-ackm]');
     var m = b && Store.get().msgs[b.dataset.ackm];
     if (!m) return;
-    Store.updateMsg(b.dataset.ackm, { ack: { by: qr.name, t: Date.now() } }).catch(fail);
+    Store.updateMsg(b.dataset.ackm, { ack: { by: qr.name, t: Date.now() } }).then(function () { Push.ack(m, qr.name); }).catch(fail);
   };
 
   // ---------- KR-Daten ----------
@@ -366,7 +364,7 @@
       return Store.addMsg({ type: isDone ? 'done' : 'info', by: qr.name, text: text, kr: kr, qid: qid || '' });
     }).then(function () {
       done(text); toast((isDone ? 'Gemeldet: KR ' : 'Zurückgenommen: KR ') + kr);
-      if (isDone) push('Beipack fertig', text);
+      if (isDone) Push.send('', 'Beipack fertig', text, 3, ['white_check_mark']);
       $('kr').value = ''; $('probBox').hidden = true; krInfo(); $('kr').focus();
     }).catch(fail).then(function () { busy(false); });
   }
@@ -389,6 +387,7 @@
       .then(function () { return Store.addMsg({ type: 'problem', by: qr.name, text: msg, kr: kr, qid: qid || '' }); })
       .then(function () {
         done(msg); toast('Problem gemeldet');
+        Push.send('', 'Problem', msg, 4, ['warning']);
         $('kr').value = ''; $('probText').value = ''; $('probBox').hidden = true; krInfo();
       }).catch(fail).then(function () { busy(false); });
   };
@@ -450,6 +449,7 @@
     Store.setOrder(orderId, { items: items, kr: kr, where: where, by: qr.name, func: qr.func || '', qid: qid || '', t: Date.now(), status: 'offen' })
       .then(function () {
         done(msg); toast('Bestellt');
+        Push.send('podest', 'Podest-Bestellung', msg, 3, ['package']);
         orderId = null;
         pdSel = {}; $('pdText').value = ''; $('pdKr').value = ''; $('pdPos').value = ''; pdAuto = '';
         renderPodestList(Store.get());
@@ -479,6 +479,7 @@
       .then(function () {
         done('Anfrage Überspielen gesendet: ' + where + (note ? ' (' + note + ')' : '') + ' (' + who() + ')');
         toast('Anfrage gesendet');
+        Push.send('', 'Anfrage Überspielen', where + (note ? ' (' + note + ')' : '') + ' (' + who() + ')', 3, ['floppy_disk']);
         uId = null; $('ukr').value = ''; $('unote').value = ''; $('ukrInfo').hidden = true;
       }).catch(fail).then(function () { $('uGo').disabled = false; });
   };
@@ -570,13 +571,15 @@
     var o = b && Store.get().orders[b.dataset.oid];
     if (!o) return;
     b.disabled = true;
-    Store.updateOrder(b.dataset.oid, { status: b.dataset.st, statusBy: qr.name, statusAt: Date.now() }).catch(fail);
+    Store.updateOrder(b.dataset.oid, { status: b.dataset.st, statusBy: qr.name, statusAt: Date.now() })
+      .then(function () { if (!o.selfDone) Push.orderStatus(o, b.dataset.st, qr.name); }).catch(fail);
   };
   $('v-problems').onclick = function (e) {
     var b = e.target.closest('button[data-pid]');
     var p = b && Store.get().problems[b.dataset.pid];
     if (!p) return;
     Store.updateProblem(b.dataset.pid, { status: 'gelöst', solvedBy: qr.name, solvedAt: Date.now() }).then(function () {
+      Push.toQr(p.qid, 'Problem gelöst', '✔ Problem KR ' + p.kr + ' gelöst von ' + qr.name);
       return Store.addMsg({ type: 'info', by: qr.name, text: 'Problem KR ' + p.kr + ' gelöst (' + who() + ')' });
     }).catch(fail);
   };
@@ -617,6 +620,7 @@
     krInfo();
     renderMyOrders(state);
     renderMyUeber(state);
+    pushFoot();
     watchOrders(state);
     renderInbox(state);
     renderDash(state);

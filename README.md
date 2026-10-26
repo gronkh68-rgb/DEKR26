@@ -24,13 +24,15 @@ Achtung: Mit offenen Regeln kann jeder mit der URL schreiben. Keine sensiblen Da
 ## Lokal testen
 `python3 -m http.server` im Repo-Ordner, dann `http://localhost:8000`.
 
-## Push-Nachricht bei „Beipack fertig" (optional)
-Eine statische Seite kann nicht selbst Push senden. Kostenlos geht es über **ntfy.sh**:
-1. In `js/config.js` bei `ntfyTopic` ein langes, zufälliges Thema eintragen (wie ein Passwort), z. B. `dekr26-k8f3x9q2m7`.
-2. Auf dem Handy die App **ntfy** installieren und dieses Thema abonnieren (oder `https://ntfy.sh/<Thema>` im Browser öffnen).
-3. Ab dann kommt bei jeder „Fertig"-Meldung eine Push-Nachricht.
+## Push-Nachrichten aufs Handy (ntfy)
+Eine statische Seite kann nicht selbst Push senden. Kostenlos geht es über **ntfy.sh**. In `js/config.js` steht bei `ntfyTopic` die Basis des Themas (lang und zufällig wählen, wie ein Passwort).
 
-Achtung: Der Text der Meldung (KR, Position, Name) läuft dabei über ntfy.sh, und jeder, der das Thema kennt, kann mitlesen. Ohne Eintrag ist die Funktion aus.
+Es gibt drei Arten von Themen, alle werden in der App **ntfy** (Android/iPhone) abonniert; die Seiten zeigen die passenden Links:
+- `<Basis>`: Beipack fertig, Probleme, Anfragen Überspielen (für Dashboard-Leute; Link im Admin-Fenster und im mobilen Dashboard)
+- `<Basis>-podest`: neue Podest-Bestellungen (für Podest-Empfänger)
+- `<Basis>-q<QR-ID>`: Rückmeldungen an ein Handy (angenommen, bestätigt, gelöst, Nachricht vom Dashboard)
+
+Achtung: Der Text der Meldung (KR, Position, Name) läuft über ntfy.sh, und jeder, der ein Thema kennt, kann mitlesen. Ohne Eintrag bei `ntfyTopic` ist Push aus. Das kostenlose ntfy.sh begrenzt die Zahl der Nachrichten pro Tag und Gerät.
 
 Ohne ntfy gibt es im QR-Typ „Mobiles Dashboard" Benachrichtigungen, solange die Seite auf dem Handy geöffnet ist (Knopf „Benachrichtigungen aktivieren").
 

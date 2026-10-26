@@ -113,7 +113,12 @@
     } else {
       msg = { type: 'msg', by: name, text: text };
     }
-    Store.addMsg(msg).catch(function () { toast('Senden fehlgeschlagen'); });
+    Store.addMsg(msg).then(function () {
+      if (!to) return;
+      // Push an die Handys der Empfänger
+      var qrs = Store.get().qrs, targets = to === 'all' ? Object.keys(qrs) : [to];
+      targets.forEach(function (qid) { Push.toQr(qid, 'Nachricht von ' + name, text); });
+    }).catch(function () { toast('Senden fehlgeschlagen'); });
     $('mText').value = '';
   };
 
@@ -364,6 +369,7 @@
     var m = b && Store.get().msgs[b.dataset.ack];
     if (!m) return;
     Store.updateMsg(b.dataset.ack, { ack: { by: Util.getName() || 'Deufol', t: Date.now() } })
+      .then(function () { Push.ack(m, Util.getName()); })
       .catch(function () { toast('Bestätigen fehlgeschlagen'); });
   };
 
@@ -491,6 +497,7 @@
     Store.setOrder(dOrderId, { items: items, kr: kr, where: where, by: name, func: 'Dashboard', qid: '', t: Date.now(), status: 'offen' })
       .then(function () {
         dOrderId = null;
+        Push.send('podest', 'Podest-Bestellung', 'Podest bestellt: ' + items.join(', ') + ' für ' + where + ' (' + name + ')', 3, ['package']);
         dSel = {}; dAuto = ''; $('dPdText').value = ''; $('dPdKr').value = ''; $('dPdPos').value = '';
         renderDOrder(Store.get()); toast('Bestellt');
       }).catch(function () { toast('Bestellen fehlgeschlagen'); }).then(function () { btn.disabled = false; });
@@ -514,7 +521,8 @@
     var o = b && Store.get().orders[b.dataset.oid];
     if (!o) return;
     var p = b.dataset.st === 'del' ? Store.setOrder(b.dataset.oid, null)
-      : Store.updateOrder(b.dataset.oid, { status: b.dataset.st, statusBy: Util.getName() || 'Deufol', statusAt: Date.now() });
+      : Store.updateOrder(b.dataset.oid, { status: b.dataset.st, statusBy: Util.getName() || 'Deufol', statusAt: Date.now() })
+        .then(function () { if (!o.selfDone) Push.orderStatus(o, b.dataset.st, Util.getName()); });
     p.catch(function () { toast('Speichern fehlgeschlagen'); });
   };
   $('probs').onclick = function (e) {
@@ -522,7 +530,8 @@
     var pr = b && Store.get().problems[b.dataset.pid];
     if (!pr) return;
     var p = b.dataset.st === 'del' ? Store.setProblem(b.dataset.pid, null)
-      : Store.updateProblem(b.dataset.pid, { status: 'gelöst', solvedBy: Util.getName() || 'Deufol', solvedAt: Date.now() });
+      : Store.updateProblem(b.dataset.pid, { status: 'gelöst', solvedBy: Util.getName() || 'Deufol', solvedAt: Date.now() })
+        .then(function () { Push.toQr(pr.qid, 'Problem gelöst', '✔ Problem KR ' + pr.kr + ' gelöst von ' + Util.getName()); });
     p.catch(function () { toast('Speichern fehlgeschlagen'); });
   };
 
@@ -1168,6 +1177,10 @@
     $('admLogin').hidden = adm;
     $('admBody').hidden = !adm;
     $('admWho').textContent = adm ? 'Angemeldet als ' + Auth.email() : '';
+    $('admPush').innerHTML = adm && Push.enabled
+      ? '<div class="col-title orb" style="margin:10px 0 6px">Push-Themen (ntfy)</div><div class="empty">In der App „ntfy" abonnieren:</div>' +
+        '<div><a href="' + esc(Push.url('')) + '" target="_blank" rel="noopener">Alle Meldungen</a> <span class="meta">' + esc(Push.topic('')) + '</span></div>' +
+        '<div><a href="' + esc(Push.url('podest')) + '" target="_blank" rel="noopener">Podest-Bestellungen</a> <span class="meta">' + esc(Push.topic('podest')) + '</span></div>' : '';
     if (adm) loadDevices();
   }
   $('admOpen').onclick = function () { $('admModal').hidden = false; renderAdmin(); };

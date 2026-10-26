@@ -135,6 +135,41 @@ window.Auth = (function () {
   };
 })();
 
+// Push aufs Handy über ntfy.sh (nur wenn in js/config.js ein Thema eingetragen ist).
+// Themen: <Basis> = Dashboard-Meldungen, <Basis>-podest = Podest-Bestellungen, <Basis>-q<QR-ID> = Rückmeldungen an ein Handy.
+window.Push = (function () {
+  var base = String((window.DEKR_CONFIG || {}).ntfyTopic || '');
+  function topic(sub) { return sub ? base + '-' + sub : base; }
+  function send(sub, title, text, prio, tags) {
+    if (!base) return;
+    try {
+      // JSON im Text-Format: einfache Anfrage ohne Vorabprüfung, Umlaute bleiben erhalten
+      fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: topic(sub), title: title, message: text, priority: prio || 3, tags: tags || [] }) })
+        .catch(function () { /* Push ist optional */ });
+    } catch (e) { /* ignorieren */ }
+  }
+  return {
+    enabled: !!base,
+    topic: topic,
+    url: function (sub) { return 'https://ntfy.sh/' + encodeURIComponent(topic(sub)); },
+    send: send,
+    // Rückmeldung an das Handy mit dem QR-Code qid
+    toQr: function (qid, title, text) { if (qid) send('q' + qid, title, text, 3, ['white_check_mark']); },
+    // Status einer Bestellung/Anfrage geändert (angenommen, erledigt)
+    orderStatus: function (o, status, by) {
+      var ue = o.kind === 'ueber';
+      this.toQr(o.qid, ue ? 'Überspielen ' + (status === 'erledigt' ? 'fertig' : status) : 'Podest ' + status,
+        ue ? '✔ Anfrage Überspielen (' + o.where + ') ' + (status === 'erledigt' ? 'fertig' : status) + ' von ' + by
+          : '✔ Podest-Bestellung (' + o.items.join(', ') + (o.where ? ' · ' + o.where : '') + ') ' + status + ' von ' + by);
+    },
+    // Empfang einer Meldung bestätigt
+    ack: function (m, by) {
+      this.toQr(m.qid, 'Bestätigt', m.type === 'problem' ? '✔ Problem KR ' + m.kr + ': Empfang bestätigt von ' + by
+        : '✔ ' + (m.kr ? 'KR ' + m.kr + ' ' : '') + 'bestätigt von ' + by);
+    }
+  };
+})();
+
 window.Store = (function () {
   var cfg = window.DEKR_CONFIG || {};
   var base = (cfg.firebaseUrl || '').replace(/\/$/, '');

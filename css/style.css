@@ -306,3 +306,7 @@ textarea.full { width: 100%; font-size: 16px; padding: 10px; min-height: 90px; }
 
 .qr-links { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; }
 .qr-links a { color: var(--accent); }
+
+.push-foot { margin-top: 24px; font-size: 13px; display: grid; gap: 4px; }
+.push-foot a, #admPush a { color: var(--accent); }
+.meta { color: var(--dim); font-size: 12px; }
