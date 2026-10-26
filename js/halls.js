@@ -40,18 +40,7 @@ var PLAN_H7 = [
   '</g>',
   '<g class="p-rack"><rect x="1432" y="778" width="28" height="165"/><rect x="1510" y="785" width="45" height="160"/></g>',
   '<text class="p-t" x="1662" y="470" text-anchor="middle">Büro / Sozial</text>',
-  '<text class="p-t" x="1634" y="820" text-anchor="middle">Lager</text>',
-  // Ausgänge links, Eingänge rechts
-  '<g class="p-exit">',
-  '<rect x="126" y="545" width="64" height="34" rx="3"/>',
-  '<rect x="126" y="778" width="64" height="34" rx="3"/>',
-  '<rect x="120" y="990" width="64" height="34" rx="3"/>',
-  '<rect x="126" y="385" width="64" height="34" rx="3"/>',
-  '<polygon points="1895,607 1895,652 1850,629"/>',
-  '<polygon points="1895,1010 1895,1055 1850,1032"/>',
-  '</g>',
-  '<text class="p-t" x="1822" y="595" text-anchor="end">Eingang</text>',
-  '<text class="p-t" x="1822" y="1000" text-anchor="end">Eingang</text>'
+  '<text class="p-t" x="1634" y="820" text-anchor="middle">Lager</text>'
 ].join('');
 
 // Jede n-te Spalte behalten (z.B. 3, 6, 9, ...), alle anderen ausblenden
@@ -64,7 +53,7 @@ function everyNth(cols, n) {
 window.DEKR_HALLS = [
   {
     id: 'H1', name: 'Halle 7.1', short: '7',
-    vb: '100 270 1820 860',
+    vb: '190 286 1590 840',
     plan: PLAN_H7,
     aisles: AISLES_H7,
     blocks: BLOCKS_H7,
