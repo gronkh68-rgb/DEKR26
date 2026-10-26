@@ -34,9 +34,9 @@
 
   // Plant eine KR (genau eine Position). Ein früherer Eintrag derselben KR wird ersetzt, der Status bleibt.
   // Gibt die Schreib-Promises zurück.
-  function planOne(kr, pos, day, hall0) {
-    var found = pos ? Halls.find(pos) : [];
-    var hall = !pos ? '' : found.length && found.every(function (h) { return h.id !== hall0; }) ? found[0].id : hall0;
+  function planOne(kr, pos, day, hall0, extra, forceHall) {
+    var found = pos && !forceHall ? Halls.find(pos) : [];
+    var hall = !pos ? '' : forceHall ? forceHall : found.length && found.every(function (h) { return h.id !== hall0; }) ? found[0].id : hall0;
     var id = Util.taskId(WEEK, kr, hall || '0', pos || '0');
     var tasks = Store.get().tasks, wasDone = false, jobs = [];
     Object.keys(tasks).forEach(function (tid) {
@@ -46,7 +46,10 @@
       }
     });
     var cur = tasks[id];
-    jobs.push(Store.setTask(id, { week: WEEK, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : wasDone }));
+    var t = { week: WEEK, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : wasDone };
+    if (extra && extra.scope) t.scope = extra.scope;
+    if (extra && extra.usa) t.usa = true;
+    jobs.push(Store.setTask(id, t));
     return jobs;
   }
 
@@ -92,6 +95,10 @@
   }
   function hallOf(id) { return Halls.get(id); }
 
+  function badges(t) {
+    return (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '');
+  }
+
   // ---------- Linke Spalte ----------
   function renderWeek(tasks) {
     var html = '';
@@ -110,7 +117,7 @@
       order.forEach(function (kr) {
         var ts = groups[kr];
         var all = ts.every(function (t) { return t.done; });
-        html += '<div class="card kr ' + (all ? 'ok' : 'open') + '"><div class="kr-n"><span>KR ' + esc(kr) + '</span>' +
+        html += '<div class="card kr ' + (all ? 'ok' : 'open') + '"><div class="kr-n"><span>KR ' + esc(kr) + badges(ts[0]) + '</span>' +
           '<span style="color:' + (all ? 'var(--green)' : 'var(--orange)') + '">' +
           ts.filter(function (t) { return t.done; }).length + '/' + ts.length + '</span></div><div class="chips">';
         ts.sort(function (a, b) { return a.pos < b.pos ? -1 : 1; }).forEach(function (t) {
@@ -183,7 +190,7 @@
         (sel.id ? 'Eintrag ohne Position' : 'Position ' + esc(sel.pos)) + '</div>';
       if (!ts.length) html += '<div class="empty">Kein Beipack geplant.</div>';
       ts.forEach(function (t) {
-        html += '<div class="line"><span>KR ' + esc(t.kr) + ' · ' + Util.DAYS[t.day].slice(0, 2) + ' · <b style="color:' +
+        html += '<div class="line"><span>KR ' + esc(t.kr) + badges(t) + ' · ' + Util.DAYS[t.day].slice(0, 2) + ' · <b style="color:' +
           (t.done ? 'var(--green)' : 'var(--orange)') + '">' + (t.done ? 'Bereit' : 'Offen') + '</b></span><span>' +
           '<button class="btn-sm" data-act="toggle" data-id="' + esc(t.id) + '">' + (t.done ? 'Wieder offen' : 'Bereit') + '</button> ' +
           '<button class="btn-sm btn-warn" data-act="del" data-id="' + esc(t.id) + '">Löschen</button></span></div>';
@@ -371,8 +378,13 @@
   };
 
   // ---------- Import (Kopieren und Einfügen) ----------
-  // Nur die gewählten Spalten (KR, Position, Tag) werden übernommen; alle anderen werden verworfen.
+  // Nur die gewählten Spalten werden verarbeitet; alles andere wird verworfen und nie gespeichert.
+  // Gespeichert werden: KR, Tag, Halle, Position, Lieferumfang (Maschine/komplett) und ein USA-Hinweis.
+  var ROLES = [['', 'ignorieren'], ['kr', 'KR'], ['day', 'Tag'], ['hall', 'Halle'], ['num', 'Nummer'],
+    ['letter', 'Buchstabe'], ['pos', 'Position (A14)'], ['scope', 'Lieferumfang'], ['cust', 'Kunde (nur USA-Prüfung)'],
+    ['country', 'Land']];
   var imp = { rows: [], cols: [] };
+  var MAP_KEY = 'dekr26_impmap';
   var DAY_KEYS = { mo: 1, di: 2, mi: 3, do: 4, fr: 5 };
   function parseDay(s) {
     s = String(s || '').trim().toLowerCase();
@@ -391,26 +403,78 @@
     return lines.map(function (l) { return l.split(sep).map(function (c) { return c.trim(); }); });
   }
   function guess(h) {
-    h = String(h || '').toLowerCase();
-    if (/(^|\W)kr(\W|$)/.test(h)) return 'kr';
-    if (/pos|platz/.test(h)) return 'pos';
-    if (/tag|datum|liefer/.test(h)) return 'day';
+    h = String(h || '').toLowerCase().trim();
+    if (/^kr(\W|$)|kr-?nr/.test(h)) return 'kr';
+    if (h === 'tag') return 'day';
+    if (/^spot/.test(h)) return 'hall';
+    if (/lieferumfang/.test(h)) return 'scope';
+    if (/^kunde/.test(h)) return 'cust';
+    if (/^land/.test(h)) return 'country';
+    if (/^pos|^platz/.test(h)) return 'pos';
     return '';
+  }
+  function sigOf(row) { return (row || []).join('|'); }
+  function autoCols(rows, n, head) {
+    var cols = [], c;
+    for (c = 0; c < n; c++) cols.push(head ? guess(rows[0][c]) : '');
+    if (head) {
+      try {
+        var saved = JSON.parse(localStorage.getItem(MAP_KEY));
+        if (saved && saved.sig === sigOf(rows[0])) return saved.cols;
+      } catch (e) { /* ignorieren */ }
+      // "Spot" überspannt drei Spalten: Halle | Nummer | Buchstabe
+      cols.forEach(function (v, i) {
+        if (v === 'hall') {
+          if (!cols[i + 1] && !rows[0][i + 1]) cols[i + 1] = 'num';
+          if (!cols[i + 2] && !rows[0][i + 2]) cols[i + 2] = 'letter';
+        }
+      });
+    }
+    return cols;
+  }
+  // Ergebnis je Zeile: { skip: Grund } oder { kr, day, hall, pos, scope, usa }
+  function readRow(r, ci, dayDef) {
+    var g = function (role) { return ci[role] >= 0 ? (r[ci[role]] || '') : ''; };
+    var kr = Util.normKr(g('kr'));
+    if (!kr) return { skip: 'leer' };
+    var hall = '';
+    if (ci.hall >= 0) {
+      var major = g('hall').trim().split('.')[0];
+      hall = major === '7' ? 'H1' : major === '6' ? 'H2' : '';
+      if (!hall) return { skip: 'andere Halle' };
+    }
+    var scope = '';
+    if (ci.scope >= 0) {
+      var sc = g('scope').toLowerCase();
+      scope = /schrumpf/.test(sc) ? '' : /komplett/.test(sc) ? 'komplett' : /maschine/.test(sc) ? 'Maschine' : '';
+      if (!scope) return { skip: 'Lieferumfang' };
+    }
+    var pos = '';
+    if (ci.pos >= 0) pos = Util.normPos(g('pos'));
+    else if (ci.num >= 0 && ci.letter >= 0) {
+      var letter = (g('letter').toUpperCase().match(/[A-Z]/) || [''])[0];
+      var num = (g('num').match(/\d+/) || [''])[0];
+      if (letter && num) pos = letter + num;
+    }
+    var usa = /(^|\W)(usa|us|u\.s\.a?\.?|vereinigte staaten|united states)(\W|$)/i.test(g('country') + ' ' + g('cust'));
+    return { kr: kr, day: ci.day >= 0 ? parseDay(g('day')) || dayDef : dayDef, hall: hall, pos: pos, scope: scope, usa: usa };
+  }
+  function roleIdx() {
+    var ci = {};
+    ROLES.forEach(function (r) { if (r[0]) ci[r[0]] = imp.cols.indexOf(r[0]); });
+    return ci;
   }
   function renderImp() {
     var rows = parseTable($('impText').value);
     imp.rows = rows;
     var n = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
     var head = $('impHead').checked;
-    var prev = imp.cols.slice();
-    imp.cols = [];
-    for (var c = 0; c < n; c++) imp.cols.push(prev[c] !== undefined ? prev[c] : (head ? guess(rows[0][c]) : ''));
-    if (!n) { $('impPreview').innerHTML = ''; $('impGo').disabled = true; $('impInfo').textContent = ''; return; }
+    if (!n) { imp.cols = []; $('impPreview').innerHTML = ''; $('impGo').disabled = true; $('impInfo').textContent = ''; return; }
+    if (imp.cols.length !== n) imp.cols = autoCols(rows, n, head);
     var html = '<table class="imp"><tr>' + imp.cols.map(function (v, c) {
-      return '<th><select data-c="' + c + '">' +
-        [['', 'ignorieren'], ['kr', 'KR'], ['pos', 'Position'], ['day', 'Tag']].map(function (o) {
-          return '<option value="' + o[0] + '"' + (o[0] === v ? ' selected' : '') + '>' + o[1] + '</option>';
-        }).join('') + '</select></th>';
+      return '<th><select data-c="' + c + '">' + ROLES.map(function (o) {
+        return '<option value="' + o[0] + '"' + (o[0] === v ? ' selected' : '') + '>' + o[1] + '</option>';
+      }).join('') + '</select></th>';
     }).join('') + '</tr>';
     rows.slice(0, 8).forEach(function (r, i) {
       html += '<tr class="' + (i === 0 && head ? 'dim' : '') + '">' + imp.cols.map(function (v, c) {
@@ -418,45 +482,57 @@
       }).join('') + '</tr>';
     });
     $('impPreview').innerHTML = html + '</table>';
-    var ok = imp.cols.indexOf('kr') >= 0;
+    var ci = roleIdx();
+    var ok = ci.kr >= 0;
     $('impGo').disabled = !ok;
-    var cnt = rows.length - (head ? 1 : 0);
-    $('impInfo').textContent = ok ? cnt + ' Zeilen · nur die markierten Spalten werden übernommen, der Rest wird verworfen.'
+    // Vorschau der Auswertung (ohne zu speichern)
+    var data = rows.slice(head ? 1 : 0), cnt = { ok: 0, hall: 0, scope: 0, usa: 0 }, seen = {};
+    if (ok) data.forEach(function (r) {
+      var x = readRow(r, ci, 1);
+      if (x.skip === 'andere Halle') cnt.hall++;
+      else if (x.skip === 'Lieferumfang') cnt.scope++;
+      else if (!x.skip && !seen[x.kr]) { seen[x.kr] = 1; cnt.ok++; if (x.usa) cnt.usa++; }
+    });
+    $('impInfo').textContent = ok
+      ? cnt.ok + ' KR werden importiert · ' + cnt.hall + ' andere Halle · ' + cnt.scope + ' ohne Maschine/komplett (übersprungen)' +
+        (cnt.usa ? ' · ' + cnt.usa + ' USA' : '') + ' · nicht gewählte Spalten werden verworfen.'
       : 'Bitte über der KR-Spalte „KR" wählen.';
   }
   $('impOpen').onclick = function () { $('impModal').hidden = false; };
   $('impClose').onclick = function () { $('impModal').hidden = true; };
   $('impText').oninput = function () { imp.cols = []; renderImp(); };
   $('impHead').onchange = function () { imp.cols = []; renderImp(); };
+  $('impDay').onchange = renderImp;
   $('impPreview').onchange = function (e) {
     var sel = e.target.closest('select[data-c]');
     if (!sel) return;
     imp.cols[+sel.dataset.c] = sel.value;
-    // jede Rolle nur einmal
     if (sel.value) imp.cols = imp.cols.map(function (v, c) { return c !== +sel.dataset.c && v === sel.value ? '' : v; });
     renderImp();
   };
   $('impGo').onclick = function () {
-    var ci = { kr: imp.cols.indexOf('kr'), pos: imp.cols.indexOf('pos'), day: imp.cols.indexOf('day') };
-    var rows = imp.rows.slice($('impHead').checked ? 1 : 0);
-    var dayDef = +$('impDay').value, jobs = [], seen = {}, n = 0, noPos = 0;
-    rows.forEach(function (r) {
-      var kr = Util.normKr(r[ci.kr] || '');
-      if (!kr || seen[kr]) return;
-      seen[kr] = 1;
-      var pos = ci.pos >= 0 ? Util.normPos(r[ci.pos] || '') : '';
-      var day = ci.day >= 0 ? parseDay(r[ci.day]) || dayDef : dayDef;
-      if (!pos) noPos++;
+    var ci = roleIdx(), head = $('impHead').checked;
+    var dayDef = +$('impDay').value, jobs = [], seen = {}, n = 0, noPos = 0, usa = 0, skipped = 0;
+    imp.rows.slice(head ? 1 : 0).forEach(function (r) {
+      var x = readRow(r, ci, dayDef);
+      if (x.skip) { skipped++; return; }
+      if (seen[x.kr]) return;
+      seen[x.kr] = 1;
       n++;
-      jobs = jobs.concat(planOne(kr, pos, day, Halls.all[0].id));
+      if (!x.pos) noPos++;
+      if (x.usa) usa++;
+      jobs = jobs.concat(planOne(x.kr, x.pos, x.day, x.hall || Halls.all[0].id, { scope: x.scope, usa: x.usa }, x.hall));
     });
     if (!n) { toast('Keine KR gefunden'); return; }
+    if (head) {
+      try { localStorage.setItem(MAP_KEY, JSON.stringify({ sig: sigOf(imp.rows[0]), cols: imp.cols })); } catch (e) { /* ignorieren */ }
+    }
     $('impGo').disabled = true;
+    var msg = n + ' KR importiert' + (noPos ? ', ' + noPos + ' ohne Position' : '') + (usa ? ', ' + usa + ' USA' : '');
     Promise.all(jobs).then(function () {
-      return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition',
-        text: n + ' KR importiert' + (noPos ? ' (' + noPos + ' ohne Position)' : '') });
+      return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition', text: msg });
     }).then(function () {
-      toast(n + ' KR importiert');
+      toast(msg);
       $('impText').value = ''; imp.cols = []; renderImp();
       $('impModal').hidden = true;
     }).catch(function () { toast('Import fehlgeschlagen'); renderImp(); });
