@@ -549,7 +549,8 @@
     renderTabs();
     var tasks = weekTasks(state);
     renderWeek(tasks);
-    renderMap(tasks);
+    // Ausgeblendete Tage verschwinden auch von der Karte (in der Ansicht „Alle KR" gilt das nicht)
+    renderMap(allMode ? tasks : tasks.filter(function (t) { return !dayPrefs.hidden[t.day]; }));
     renderMsgs(state);
   }
 
