@@ -347,7 +347,7 @@
       list.forEach(function (m) {
         if (!seen[m.id]) {
           fresh[m.id] = 1;
-          if (m.type === 'done' || m.type === 'problem') toast(m.text);
+          if (m.type === 'done' || m.type === 'problem') { toast(m.text); Sound.play(m.type); }
         }
       });
     }
@@ -387,7 +387,7 @@
     if (ordSeen) {
       openIds.forEach(function (id) {
         var o = state.orders[id];
-        if (!ordSeen[id] && !(o.func === 'Dashboard' && o.by === Util.getName())) toast('Neue Podest-Bestellung: ' + o.items.join(', ') + (o.where ? ' · ' + o.where : ''));
+        if (!ordSeen[id] && !(o.func === 'Dashboard' && o.by === Util.getName())) { toast('Neue Podest-Bestellung: ' + o.items.join(', ') + (o.where ? ' · ' + o.where : '')); Sound.play('order'); }
       });
     }
     ordSeen = ordSeen || {};
@@ -411,7 +411,7 @@
     var openIds = ids.filter(function (id) { return state.orders[id].status === 'offen'; });
     if (ueSeen) {
       openIds.forEach(function (id) {
-        if (!ueSeen[id]) { var o = state.orders[id]; toast('Neue Anfrage Überspielen: ' + o.where + ' (' + o.by + ')'); }
+        if (!ueSeen[id]) { var o = state.orders[id]; toast('Neue Anfrage Überspielen: ' + o.where + ' (' + o.by + ')'); Sound.play('order'); }
       });
     }
     ueSeen = ueSeen || {};
@@ -1206,6 +1206,11 @@
     // Das Gerät trägt sich mit dem gemerkten Namen zur Freigabe ein
     Store.setDeviceLabel('Dashboard ' + Util.getName());
   }
+
+  // Ton an/aus (im Browser gemerkt)
+  function soundLabel() { $('soundBtn').textContent = Sound.enabled() ? '🔔 Ton an' : '🔕 Ton aus'; }
+  $('soundBtn').onclick = function () { Sound.set(!Sound.enabled()); soundLabel(); };
+  soundLabel();
 
   // Nur der Admin ändert Layout und QR-Codes (die Datenbank-Regeln erzwingen es; hier werden die Knöpfe ausgeblendet)
   function applyRoleUi() {

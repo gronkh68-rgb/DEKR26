@@ -135,6 +135,50 @@ window.Auth = (function () {
   };
 })();
 
+// Töne bei neuen Meldungen (mit dem Browser erzeugt, keine Dateien). Der Browser erlaubt Ton erst nach dem ersten Tippen/Klicken.
+window.Sound = (function () {
+  var ctx = null, KEY = 'dekr26_sound';
+  var on = true;
+  try { on = localStorage.getItem(KEY) !== '0'; } catch (e) { /* ignorieren */ }
+  function ac() {
+    if (!ctx) { var C = window.AudioContext || window.webkitAudioContext; if (C) ctx = new C(); }
+    return ctx;
+  }
+  function unlock() { var c = ac(); if (c && c.state === 'suspended') c.resume().catch(function () { /* ignorieren */ }); }
+  ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlock, { passive: true }); });
+  function beep(f, t0, dur, type, vol) {
+    var c = ac(); if (!c) return;
+    var o = c.createOscillator(), g = c.createGain(), t = c.currentTime + t0;
+    o.type = type || 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.25, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  // Frequenz, Start, Dauer, Wellenform, Lautstärke
+  var tunes = {
+    done: [[523, 0, 0.14], [659, 0.16, 0.14], [784, 0.32, 0.26]],            // fertig: aufsteigend, freundlich
+    problem: [[440, 0, 0.2, 'triangle', 0.32], [311, 0.24, 0.2, 'triangle', 0.32], [440, 0.48, 0.3, 'triangle', 0.32]], // Problem: tiefer Wechselton
+    order: [[880, 0, 0.12], [880, 0.2, 0.2]],                                // Bestellung/Anfrage: Doppel-Ping
+    ding: [[659, 0, 0.3]]                                                    // Rückmeldung: sanfter Ton
+  };
+  return {
+    enabled: function () { return on; },
+    set: function (v) {
+      on = !!v;
+      try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) { /* ignorieren */ }
+      if (on) { unlock(); this.play('ding'); }
+    },
+    play: function (kind) {
+      if (!on) return;
+      var t = tunes[kind] || tunes.ding;
+      unlock();
+      t.forEach(function (n) { beep(n[0], n[1], n[2], n[3], n[4]); });
+    }
+  };
+})();
+
 // Push aufs Handy über ntfy.sh (nur wenn in js/config.js ein Thema eingetragen ist).
 // Themen: <Basis> = Dashboard-Meldungen, <Basis>-podest = Podest-Bestellungen, <Basis>-q<QR-ID> = Rückmeldungen an ein Handy.
 window.Push = (function () {

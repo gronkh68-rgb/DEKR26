@@ -53,7 +53,8 @@
 
   // ---------- Benachrichtigungen ----------
   function canNotify() { return 'Notification' in window && Notification.permission === 'granted'; }
-  function notify(title, body, tag) {
+  function notify(title, body, tag, kind) {
+    Sound.play(kind || 'ding');
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     if (!canNotify()) return;
     var plain = function () { try { new Notification(title, { body: body, tag: tag }); } catch (e) { /* ignorieren */ } };
@@ -186,7 +187,7 @@
     if (!perms().dash) return;
     var ms = doneMsgs(state);
     if (notifSeen) {
-      ms.forEach(function (m) { if (!notifSeen[m.id] && !m.ack) notify(m.type === 'problem' ? 'Beipack: Problem' : 'Beipack fertig', m.text, m.id); });
+      ms.forEach(function (m) { if (!notifSeen[m.id] && !m.ack) notify(m.type === 'problem' ? 'Beipack: Problem' : 'Beipack fertig', m.text, m.id, m.type === 'problem' ? 'problem' : 'done'); });
     }
     notifSeen = notifSeen || {};
     ms.forEach(function (m) { notifSeen[m.id] = 1; });
@@ -212,6 +213,31 @@
     notifState();
     renderAllList(state);
   }
+  // Ton an/aus und Bildschirm anlassen (Wake Lock)
+  function soundLabel() { $('soundBtn').textContent = Sound.enabled() ? '🔔 Ton an' : '🔕 Ton aus'; }
+  $('soundBtn').onclick = function () { Sound.set(!Sound.enabled()); soundLabel(); };
+  soundLabel();
+  var wakeLock = null, wantWake = false;
+  try { wantWake = localStorage.getItem('dekr26_wake') === '1'; } catch (e) { /* ignorieren */ }
+  function wakeOn() {
+    if (!navigator.wakeLock || wakeLock) return;
+    navigator.wakeLock.request('screen').then(function (l) {
+      wakeLock = l;
+      l.addEventListener('release', function () { wakeLock = null; });
+    }).catch(function () { /* nicht erlaubt */ });
+  }
+  if (navigator.wakeLock) {
+    $('wakeRow').hidden = false;
+    $('wakeChk').checked = wantWake;
+    $('wakeChk').onchange = function () {
+      wantWake = $('wakeChk').checked;
+      try { localStorage.setItem('dekr26_wake', wantWake ? '1' : '0'); } catch (e) { /* ignorieren */ }
+      if (wantWake) wakeOn(); else if (wakeLock) wakeLock.release();
+    };
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && wantWake) wakeOn(); });
+    if (wantWake) wakeOn();
+  }
+
   // Alle KR aller Wochen mit Suche
   var dashTab = 'new';
   function renderAllList(state) {
@@ -529,7 +555,7 @@
         var o = state.orders[id];
         if (ordSeen[id] || (qid && o.qid === qid)) return;
         var text = 'Neue Podest-Bestellung: ' + o.items.join(', ') + (o.where ? ' · ' + o.where : '');
-        toast(text); notify('Podest-Bestellung', text, 'ord-' + id);
+        toast(text); notify('Podest-Bestellung', text, 'ord-' + id, 'order');
       });
     }
     ordSeen = ordSeen || {};
