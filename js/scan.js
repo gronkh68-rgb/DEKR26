@@ -97,6 +97,23 @@
     if (changed) { try { localStorage.setItem('dekr26_ackseen', JSON.stringify(seenA)); } catch (e) { /* ignorieren */ } }
   }
 
+  // Rückmeldung zur eigenen Podest-Bestellung (angenommen / erledigt)
+  function checkOrders(state) {
+    if (!qid) return;
+    var seenO;
+    try { seenO = JSON.parse(localStorage.getItem('dekr26_ordseen')) || {}; } catch (e) { seenO = {}; }
+    var changed = false;
+    Object.keys(state.orders).forEach(function (id) {
+      var o = state.orders[id], key = id + ':' + o.status;
+      if (o.qid !== qid || o.status === 'offen' || seenO[key]) return;
+      seenO[key] = 1; changed = true;
+      if (Date.now() - (o.statusAt || 0) > 864e5) return;
+      var text = '✔ Podest-Bestellung (' + o.items.join(', ') + (o.where ? ' · ' + o.where : '') + ') ' + o.status + ' von ' + (o.statusBy || 'Dashboard');
+      done(text); toast(text); notify('Podest ' + o.status, text, 'ord' + key);
+    });
+    if (changed) { try { localStorage.setItem('dekr26_ordseen', JSON.stringify(seenO)); } catch (e) { /* ignorieren */ } }
+  }
+
   // ---------- Mobiles Dashboard ----------
   var notifSeen = null;   // bereits gesehene Fertig-Meldungen (für neue Benachrichtigungen)
   function doneMsgs(state) {
@@ -316,7 +333,7 @@
     var where = [kr ? 'KR ' + kr : '', posL].filter(Boolean).join(' · ');
     var msg = 'Podest bestellt: ' + items.join(', ') + ' für ' + where + ' (' + who() + ')';
     $('pdGo').disabled = true;
-    Store.setOrder(Util.uid(), { items: items, kr: kr, where: where, by: qr.name, func: qr.func || '', t: Date.now(), status: 'offen' })
+    Store.setOrder(Util.uid(), { items: items, kr: kr, where: where, by: qr.name, func: qr.func || '', qid: qid || '', t: Date.now(), status: 'offen' })
       .then(function () { return Store.addMsg({ type: 'order', by: qr.name, text: msg }); })
       .then(function () {
         done(msg); toast('Bestellt');
@@ -396,6 +413,7 @@
     renderDash(state);
     watchDone(state);
     checkAcks(state);
+    checkOrders(state);
   }
   if (qid && !urlQr) $('note').textContent = 'Lädt …';
   Store.subscribe(apply);

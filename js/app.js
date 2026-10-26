@@ -36,7 +36,13 @@
   $('pHall').innerHTML = Halls.all.map(function (h) {
     return '<option value="' + h.id + '">' + esc(h.name) + '</option>';
   }).join('');
+  // Dein Name: wird bei Bestätigungen, Bestellungen und Änderungen im Dashboard verwendet
+  $('me').value = Util.getName();
   $('mName').value = Util.getName();
+  $('me').onchange = function () {
+    Util.setName($('me').value.trim());
+    $('mName').value = $('me').value.trim();
+  };
 
   $('planToggle').onclick = function () { $('plan').hidden = !$('plan').hidden; };
 
@@ -86,6 +92,7 @@
     var text = $('mText').value.trim();
     if (!text) return;
     Util.setName($('mName').value.trim());
+    $('me').value = $('mName').value.trim();
     Store.addMsg({ type: 'msg', by: name, text: text }).catch(function () { toast('Senden fehlgeschlagen'); });
     $('mText').value = '';
   };
