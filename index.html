@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=3a25f1c">
+<link rel="stylesheet" href="css/style.css?v=fa1ab28">
 </head>
 <body>
 <div class="app">
@@ -21,7 +21,7 @@
   </header>
   <main class="cols">
     <section class="col">
-      <div class="col-title orb"><span>KR / Woche</span><button class="btn-sm" id="planToggle">+ KR</button></div>
+      <div class="col-title orb"><span>KR / Woche</span><span><button class="btn-sm" id="impOpen">Import</button> <button class="btn-sm" id="planToggle">+ KR</button></span></div>
       <form class="card plan" id="plan" hidden>
         <div class="kr-in"><span>KR</span><input id="pKr" autocapitalize="characters" placeholder="Nummer" required></div>
         <div class="row">
@@ -68,6 +68,20 @@
     </section>
   </main>
 </div>
+<div class="modal" id="impModal" hidden>
+  <div class="modal-box">
+    <div class="col-title orb"><span>KR importieren</span><button class="btn-sm" id="impClose">Schließen</button></div>
+    <div class="empty">Tabelle auf der Arbeitsseite kopieren und hier einfügen. Danach über jeder Spalte wählen, was sie ist. Nicht gewählte Spalten werden nicht übernommen.</div>
+    <textarea id="impText" rows="6" placeholder="Hier einfügen (Strg+V)"></textarea>
+    <div class="qr-add">
+      <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="impHead" checked> Erste Zeile ist Überschrift</label>
+      <label style="display:flex;align-items:center;gap:6px">Standard-Tag <select id="impDay"></select></label>
+    </div>
+    <div class="imp-wrap" id="impPreview"></div>
+    <div class="empty" id="impInfo"></div>
+    <button class="btn-main" id="impGo" disabled>Importieren</button>
+  </div>
+</div>
 <div class="modal" id="qrModal" hidden>
   <div class="modal-box">
     <div class="col-title orb"><span>QR-Codes für die Meldeseite</span><button class="btn-sm no-print" id="qrClose">Schließen</button></div>
@@ -83,10 +97,10 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=3a25f1c"></script>
-<script src="js/halls.js?v=3a25f1c"></script>
-<script src="js/core.js?v=3a25f1c"></script>
-<script src="js/qrcode.js?v=3a25f1c"></script>
-<script src="js/app.js?v=3a25f1c"></script>
+<script src="js/config.js?v=fa1ab28"></script>
+<script src="js/halls.js?v=fa1ab28"></script>
+<script src="js/core.js?v=fa1ab28"></script>
+<script src="js/qrcode.js?v=fa1ab28"></script>
+<script src="js/app.js?v=fa1ab28"></script>
 </body>
 </html>

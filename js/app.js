@@ -32,20 +32,12 @@
 
   $('planToggle').onclick = function () { $('plan').hidden = !$('plan').hidden; };
 
-  $('plan').onsubmit = function (e) {
-    e.preventDefault();
-    var kr = Util.normKr($('pKr').value);
-    var hall0 = $('pHall').value;
-    var day = +$('pDay').value;
-    var list = $('pPos').value.split(/[\s,;]+/).map(Util.normPos).filter(Boolean);
-    if (!kr) return;
-    if (list.length > 1) { toast('Pro KR nur eine Position'); return; }
-    var pos = list[0] || '';
+  // Plant eine KR (genau eine Position). Ein früherer Eintrag derselben KR wird ersetzt, der Status bleibt.
+  // Gibt die Schreib-Promises zurück.
+  function planOne(kr, pos, day, hall0) {
     var found = pos ? Halls.find(pos) : [];
     var hall = !pos ? '' : found.length && found.every(function (h) { return h.id !== hall0; }) ? found[0].id : hall0;
     var id = Util.taskId(WEEK, kr, hall || '0', pos || '0');
-
-    // Jede KR hat genau eine Position: ein früherer Eintrag dieser KR wird ersetzt (Status bleibt erhalten)
     var tasks = Store.get().tasks, wasDone = false, jobs = [];
     Object.keys(tasks).forEach(function (tid) {
       if (tasks[tid].week === WEEK && tasks[tid].kr === kr) {
@@ -55,7 +47,19 @@
     });
     var cur = tasks[id];
     jobs.push(Store.setTask(id, { week: WEEK, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : wasDone }));
-    Promise.all(jobs).then(function () {
+    return jobs;
+  }
+
+  $('plan').onsubmit = function (e) {
+    e.preventDefault();
+    var kr = Util.normKr($('pKr').value);
+    var hall0 = $('pHall').value;
+    var day = +$('pDay').value;
+    var list = $('pPos').value.split(/[\s,;]+/).map(Util.normPos).filter(Boolean);
+    if (!kr) return;
+    if (list.length > 1) { toast('Pro KR nur eine Position'); return; }
+    var pos = list[0] || '';
+    Promise.all(planOne(kr, pos, day, hall0)).then(function () {
       return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition',
         text: 'KR ' + kr + ' geplant (' + Util.DAYS[day].slice(0, 2) + ')' + (pos ? ': ' + pos : '') });
     }).catch(function () { toast('Speichern fehlgeschlagen'); });
@@ -339,6 +343,99 @@
     }
     p.catch(function () { toast('Speichern fehlgeschlagen'); });
   };
+
+  // ---------- Import (Kopieren und Einfügen) ----------
+  // Nur die gewählten Spalten (KR, Position, Tag) werden übernommen; alle anderen werden verworfen.
+  var imp = { rows: [], cols: [] };
+  var DAY_KEYS = { mo: 1, di: 2, mi: 3, do: 4, fr: 5 };
+  function parseDay(s) {
+    s = String(s || '').trim().toLowerCase();
+    var m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})?/);
+    if (m) {
+      var y = m[3] ? +m[3] : new Date().getFullYear();
+      if (y < 100) y += 2000;
+      var d = new Date(y, +m[2] - 1, +m[1]).getDay();
+      return d >= 1 && d <= 5 ? d : 0;
+    }
+    return DAY_KEYS[s.slice(0, 2)] || 0;
+  }
+  function parseTable(text) {
+    var lines = text.split(/\r?\n/).filter(function (l) { return l.trim(); });
+    var sep = /\t/.test(text) ? /\t/ : /;/.test(text) ? /;/ : /\s{2,}/;
+    return lines.map(function (l) { return l.split(sep).map(function (c) { return c.trim(); }); });
+  }
+  function guess(h) {
+    h = String(h || '').toLowerCase();
+    if (/(^|\W)kr(\W|$)/.test(h)) return 'kr';
+    if (/pos|platz/.test(h)) return 'pos';
+    if (/tag|datum|liefer/.test(h)) return 'day';
+    return '';
+  }
+  function renderImp() {
+    var rows = parseTable($('impText').value);
+    imp.rows = rows;
+    var n = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+    var head = $('impHead').checked;
+    var prev = imp.cols.slice();
+    imp.cols = [];
+    for (var c = 0; c < n; c++) imp.cols.push(prev[c] !== undefined ? prev[c] : (head ? guess(rows[0][c]) : ''));
+    if (!n) { $('impPreview').innerHTML = ''; $('impGo').disabled = true; $('impInfo').textContent = ''; return; }
+    var html = '<table class="imp"><tr>' + imp.cols.map(function (v, c) {
+      return '<th><select data-c="' + c + '">' +
+        [['', 'ignorieren'], ['kr', 'KR'], ['pos', 'Position'], ['day', 'Tag']].map(function (o) {
+          return '<option value="' + o[0] + '"' + (o[0] === v ? ' selected' : '') + '>' + o[1] + '</option>';
+        }).join('') + '</select></th>';
+    }).join('') + '</tr>';
+    rows.slice(0, 8).forEach(function (r, i) {
+      html += '<tr class="' + (i === 0 && head ? 'dim' : '') + '">' + imp.cols.map(function (v, c) {
+        return '<td class="' + (v ? '' : 'dim') + '">' + esc(r[c] || '') + '</td>';
+      }).join('') + '</tr>';
+    });
+    $('impPreview').innerHTML = html + '</table>';
+    var ok = imp.cols.indexOf('kr') >= 0;
+    $('impGo').disabled = !ok;
+    var cnt = rows.length - (head ? 1 : 0);
+    $('impInfo').textContent = ok ? cnt + ' Zeilen · nur die markierten Spalten werden übernommen, der Rest wird verworfen.'
+      : 'Bitte über der KR-Spalte „KR" wählen.';
+  }
+  $('impOpen').onclick = function () { $('impModal').hidden = false; };
+  $('impClose').onclick = function () { $('impModal').hidden = true; };
+  $('impText').oninput = function () { imp.cols = []; renderImp(); };
+  $('impHead').onchange = function () { imp.cols = []; renderImp(); };
+  $('impPreview').onchange = function (e) {
+    var sel = e.target.closest('select[data-c]');
+    if (!sel) return;
+    imp.cols[+sel.dataset.c] = sel.value;
+    // jede Rolle nur einmal
+    if (sel.value) imp.cols = imp.cols.map(function (v, c) { return c !== +sel.dataset.c && v === sel.value ? '' : v; });
+    renderImp();
+  };
+  $('impGo').onclick = function () {
+    var ci = { kr: imp.cols.indexOf('kr'), pos: imp.cols.indexOf('pos'), day: imp.cols.indexOf('day') };
+    var rows = imp.rows.slice($('impHead').checked ? 1 : 0);
+    var dayDef = +$('impDay').value, jobs = [], seen = {}, n = 0, noPos = 0;
+    rows.forEach(function (r) {
+      var kr = Util.normKr(r[ci.kr] || '');
+      if (!kr || seen[kr]) return;
+      seen[kr] = 1;
+      var pos = ci.pos >= 0 ? Util.normPos(r[ci.pos] || '') : '';
+      var day = ci.day >= 0 ? parseDay(r[ci.day]) || dayDef : dayDef;
+      if (!pos) noPos++;
+      n++;
+      jobs = jobs.concat(planOne(kr, pos, day, Halls.all[0].id));
+    });
+    if (!n) { toast('Keine KR gefunden'); return; }
+    $('impGo').disabled = true;
+    Promise.all(jobs).then(function () {
+      return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition',
+        text: n + ' KR importiert' + (noPos ? ' (' + noPos + ' ohne Position)' : '') });
+    }).then(function () {
+      toast(n + ' KR importiert');
+      $('impText').value = ''; imp.cols = []; renderImp();
+      $('impModal').hidden = true;
+    }).catch(function () { toast('Import fehlgeschlagen'); renderImp(); });
+  };
+  $('impDay').innerHTML = $('pDay').innerHTML;
 
   // ---------- QR-Codes ----------
   // Der Code enthält nur die ID (?q=...). Name und Funktion lassen sich daher jederzeit ändern,

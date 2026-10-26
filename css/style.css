@@ -188,3 +188,10 @@ svg.map.zoom { min-width: 2300px; }
 .qr-card input { width: 100%; margin-top: 6px; text-align: center; }
 .print-only { display: none; }
 @media print { body.print-qr .print-only { display: block; color: #000; } }
+
+/* Import */
+#impText { width: 100%; font-size: 13px; }
+.imp-wrap { overflow-x: auto; }
+table.imp { border-collapse: collapse; font-size: 13px; width: 100%; }
+table.imp th, table.imp td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; white-space: nowrap; }
+table.imp td.dim, table.imp tr.dim td { color: var(--dim); opacity: .6; }
