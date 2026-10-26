@@ -1177,10 +1177,6 @@
     $('admLogin').hidden = adm;
     $('admBody').hidden = !adm;
     $('admWho').textContent = adm ? 'Angemeldet als ' + Auth.email() : '';
-    $('admPush').innerHTML = adm && Push.enabled
-      ? '<div class="col-title orb" style="margin:10px 0 6px">Push-Themen (ntfy)</div><div class="empty">In der App „ntfy" abonnieren:</div>' +
-        '<div><a href="' + esc(Push.url('')) + '" target="_blank" rel="noopener">Alle Meldungen</a> <span class="meta">' + esc(Push.topic('')) + '</span></div>' +
-        '<div><a href="' + esc(Push.url('podest')) + '" target="_blank" rel="noopener">Podest-Bestellungen</a> <span class="meta">' + esc(Push.topic('podest')) + '</span></div>' : '';
     if (adm) loadDevices();
   }
   $('admOpen').onclick = function () { $('admModal').hidden = false; renderAdmin(); };
@@ -1208,8 +1204,9 @@
   }
 
   // Ton an/aus (im Browser gemerkt)
-  function soundLabel() { $('soundBtn').textContent = Sound.enabled() ? '🔔 Ton an' : '🔕 Ton aus'; }
-  $('soundBtn').onclick = function () { Sound.set(!Sound.enabled()); soundLabel(); };
+  function soundLabel() { $('soundBtn').textContent = Sound.label(); }
+  $('soundBtn').onclick = function () { Sound.panel(); };
+  document.addEventListener('dekr-sound', soundLabel);
   soundLabel();
 
   // Nur der Admin ändert Layout und QR-Codes (die Datenbank-Regeln erzwingen es; hier werden die Knöpfe ausgeblendet)

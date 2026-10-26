@@ -137,24 +137,40 @@ window.Auth = (function () {
 
 // Töne bei neuen Meldungen (mit dem Browser erzeugt, keine Dateien). Der Browser erlaubt Ton erst nach dem ersten Tippen/Klicken.
 window.Sound = (function () {
-  var ctx = null, KEY = 'dekr26_sound';
-  var on = true;
-  try { on = localStorage.getItem(KEY) !== '0'; } catch (e) { /* ignorieren */ }
+  var ctx = null, KEY = 'dekr26_soundcfg';
+  var cfg = { on: true, vol: 0.7, style: 'standard', kinds: { done: 1, problem: 1, order: 1, ding: 1 } };
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY));
+    if (saved) cfg = Object.assign(cfg, saved, { kinds: Object.assign(cfg.kinds, saved.kinds || {}) });
+  } catch (e) { /* ignorieren */ }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) { /* ignorieren */ } document.dispatchEvent(new Event('dekr-sound')); }
   function ac() {
     if (!ctx) { var C = window.AudioContext || window.webkitAudioContext; if (C) ctx = new C(); }
     return ctx;
   }
   function unlock() { var c = ac(); if (c && c.state === 'suspended') c.resume().catch(function () { /* ignorieren */ }); }
   ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlock, { passive: true }); });
-  function beep(f, t0, dur, type, vol) {
+  var STYLES = {
+    standard: { name: 'Standard', mult: 1, type: 'sine', bell: false },
+    hell: { name: 'Hell', mult: 1.5, type: 'sine', bell: false },
+    tief: { name: 'Tief', mult: 0.6, type: 'triangle', bell: false },
+    glocke: { name: 'Glocke', mult: 1, type: 'sine', bell: true }
+  };
+  function beep(f, t0, dur, type, vol, st) {
     var c = ac(); if (!c) return;
-    var o = c.createOscillator(), g = c.createGain(), t = c.currentTime + t0;
-    o.type = type || 'sine'; o.frequency.value = f;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol || 0.25, t + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(c.destination);
-    o.start(t); o.stop(t + dur + 0.05);
+    var peak = Math.min(0.9, (vol || 0.25) * cfg.vol * 1.6);
+    var tone = function (freq, level, d, wave) {
+      var o = c.createOscillator(), g = c.createGain(), t = c.currentTime + t0;
+      o.type = wave; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(c.destination);
+      o.start(t); o.stop(t + d + 0.05);
+    };
+    var wave = st.type === 'sine' && type ? type : st.type;
+    tone(f * st.mult, peak, st.bell ? dur * 2.2 : dur, wave);
+    if (st.bell) tone(f * st.mult * 2.76, peak * 0.35, dur * 1.4, 'sine');   // Oberton für Glockenklang
   }
   // Frequenz, Start, Dauer, Wellenform, Lautstärke
   var tunes = {
@@ -163,19 +179,57 @@ window.Sound = (function () {
     order: [[880, 0, 0.12], [880, 0.2, 0.2]],                                // Bestellung/Anfrage: Doppel-Ping
     ding: [[659, 0, 0.3]]                                                    // Rückmeldung: sanfter Ton
   };
-  return {
-    enabled: function () { return on; },
-    set: function (v) {
-      on = !!v;
-      try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) { /* ignorieren */ }
-      if (on) { unlock(); this.play('ding'); }
-    },
-    play: function (kind) {
-      if (!on) return;
-      var t = tunes[kind] || tunes.ding;
-      unlock();
-      t.forEach(function (n) { beep(n[0], n[1], n[2], n[3], n[4]); });
+  var KIND_NAMES = { done: 'Beipack fertig', problem: 'Probleme', order: 'Bestellungen und Anfragen', ding: 'Rückmeldungen und Nachrichten' };
+  function play(kind, force) {
+    if (!cfg.on && !force) return;
+    if (!force && cfg.kinds[kind] === 0) return;
+    var t = tunes[kind] || tunes.ding, st = STYLES[cfg.style] || STYLES.standard;
+    unlock();
+    t.forEach(function (n) { beep(n[0], n[1], n[2], n[3], n[4], st); });
+  }
+
+  // Einstellungsfenster (wird bei Bedarf erzeugt)
+  function panel() {
+    var box = document.getElementById('soundPanel');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'soundPanel'; box.className = 'modal';
+      document.body.appendChild(box);
+      box.addEventListener('click', function (e) { if (e.target === box) box.hidden = true; });
     }
+    var h = '<div class="modal-box" style="max-width:420px"><div class="col-title orb"><span>Töne</span><button type="button" class="btn-sm" id="spClose">Schließen</button></div>' +
+      '<label class="chk"><input type="checkbox" id="spOn"' + (cfg.on ? ' checked' : '') + '> Ton bei neuen Meldungen</label>' +
+      '<label class="chk" style="display:grid;gap:4px">Lautstärke <input type="range" id="spVol" min="0.1" max="1" step="0.05" value="' + cfg.vol + '"></label>' +
+      '<label class="chk" style="display:grid;gap:4px">Klang <select id="spStyle">' + Object.keys(STYLES).map(function (k) {
+        return '<option value="' + k + '"' + (cfg.style === k ? ' selected' : '') + '>' + STYLES[k].name + '</option>';
+      }).join('') + '</select></label>' +
+      '<div class="empty">Welche Meldungen einen Ton machen (Knopf „Test" spielt ihn ab):</div>' +
+      Object.keys(KIND_NAMES).map(function (k) {
+        return '<div class="chk"><label style="display:flex;gap:8px;align-items:center;flex:1"><input type="checkbox" data-k="' + k + '"' + (cfg.kinds[k] === 0 ? '' : ' checked') + '> ' + KIND_NAMES[k] +
+          '</label><button type="button" class="btn-sm" data-test="' + k + '">Test</button></div>';
+      }).join('') + '</div>';
+    box.innerHTML = h;
+    box.hidden = false;
+    box.querySelector('#spClose').onclick = function () { box.hidden = true; };
+    box.querySelector('#spOn').onchange = function (e) { cfg.on = e.target.checked; save(); if (cfg.on) play('ding'); };
+    box.querySelector('#spVol').onchange = function (e) { cfg.vol = +e.target.value; save(); play('ding', true); };
+    box.querySelector('#spStyle').onchange = function (e) { cfg.style = e.target.value; save(); play('ding', true); };
+    box.onchange = function (e) {
+      if (e.target.dataset && e.target.dataset.k) { cfg.kinds[e.target.dataset.k] = e.target.checked ? 1 : 0; save(); }
+    };
+    box.onclick = function (e) {
+      if (e.target === box) { box.hidden = true; return; }
+      var t = e.target.closest('button[data-test]');
+      if (t) play(t.dataset.test, true);
+    };
+  }
+
+  return {
+    enabled: function () { return cfg.on; },
+    label: function () { return cfg.on ? '🔔 Ton' : '🔕 Ton aus'; },
+    set: function (v) { cfg.on = !!v; save(); if (cfg.on) play('ding'); },
+    panel: panel,
+    play: function (kind) { play(kind, false); }
   };
 })();
 

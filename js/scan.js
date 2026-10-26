@@ -68,22 +68,8 @@
     if (!('Notification' in window)) { el.textContent = 'Dieser Browser unterstützt keine Benachrichtigungen.'; b.hidden = true; return; }
     b.hidden = Notification.permission === 'granted';
     el.textContent = Notification.permission === 'granted'
-      ? 'Benachrichtigungen sind aktiv, solange diese Seite geöffnet ist.' + ((window.DEKR_CONFIG || {}).ntfyTopic ? '' : ' Für Push bei geschlossener Seite: ntfy einrichten (README).')
+      ? 'Benachrichtigungen sind aktiv, solange diese Seite geöffnet ist.'
       : Notification.permission === 'denied' ? 'Benachrichtigungen sind im Browser blockiert.' : '';
-  }
-  // Push-Abos (ntfy): je nach Rolle die passenden Themen mit Link zum Abonnieren
-  function pushFoot() {
-    var el = $('pushFoot');
-    if (!Push.enabled || !qr) { el.innerHTML = ''; return; }
-    var p = perms(), rows = [];
-    var row = function (sub, text) {
-      return '<div><a href="' + esc(Push.url(sub)) + '" target="_blank" rel="noopener">' + esc(text) + '</a> <span class="meta">Thema: ' + esc(Push.topic(sub)) + '</span></div>';
-    };
-    if (qid) rows.push(row('q' + qid, 'Rückmeldungen für dieses Handy (angenommen, bestätigt, gelöst)'));
-    if (p.dash) rows.push(row('', 'Alle Meldungen (fertig, Probleme, Anfragen)'));
-    if (p.podest) rows.push(row('podest', 'Neue Podest-Bestellungen'));
-    el.innerHTML = rows.length ? '<div class="col-title orb" style="margin-bottom:6px">Push aufs Handy (optional)</div>' +
-      '<div class="empty">App „ntfy" installieren und das Thema abonnieren. Der Link öffnet es direkt.</div>' + rows.join('') : '';
   }
   $('notifBtn').onclick = function () {
     if (navigator.serviceWorker) navigator.serviceWorker.register('sw.js').catch(function () { /* ignorieren */ });
@@ -214,8 +200,9 @@
     renderAllList(state);
   }
   // Ton an/aus und Bildschirm anlassen (Wake Lock)
-  function soundLabel() { $('soundBtn').textContent = Sound.enabled() ? '🔔 Ton an' : '🔕 Ton aus'; }
-  $('soundBtn').onclick = function () { Sound.set(!Sound.enabled()); soundLabel(); };
+  function soundLabel() { $('soundBtn').textContent = Sound.label(); }
+  $('soundBtn').onclick = function () { Sound.panel(); };
+  document.addEventListener('dekr-sound', soundLabel);
   soundLabel();
   var wakeLock = null, wantWake = false;
   try { wantWake = localStorage.getItem('dekr26_wake') === '1'; } catch (e) { /* ignorieren */ }
@@ -646,7 +633,6 @@
     krInfo();
     renderMyOrders(state);
     renderMyUeber(state);
-    pushFoot();
     watchOrders(state);
     renderInbox(state);
     renderDash(state);
