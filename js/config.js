@@ -6,6 +6,6 @@ window.DEKR_CONFIG = {
   podests: ['Podest klein', 'Podest mittel', 'Podest groß'],
   // Push-Nachricht aufs Handy bei „Beipack fertig" über den kostenlosen Dienst ntfy.sh (siehe README).
   // Leer lassen = aus. Das Thema wie ein Passwort wählen (lang, zufällig); jeder, der es kennt, sieht die Meldungen.
-  ntfyTopic: '',
+  ntfyTopic: 'dekr26-o2ry1ls8he5sph',
   firebaseUrl: 'https://dekr26-34b05-default-rtdb.europe-west1.firebasedatabase.app'
 };
