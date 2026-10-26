@@ -329,7 +329,7 @@
     if (Store.isLocked()) return;   // noch keine Daten: nichts vormerken, sonst gelten später alle als neu
     var all = Object.keys(state.msgs).map(function (id) {
       var m = state.msgs[id]; m.id = id; return m;
-    }).filter(function (m) { return m.type !== 'plan'; })   // Planung/Import wird nicht gemeldet
+    }).filter(function (m) { return m.type !== 'plan' && m.type !== 'order'; })   // Planung/Import und Bestellungen stehen nicht im Nachrichtenstrom
       .sort(function (a, b) { return b.t - a.t; });
     // Unbestätigte „fertig"-Meldungen stehen immer oben und pulsieren grün
     var needsAck = function (m) { return (m.type === 'done' || m.type === 'problem') && !m.ack; };
@@ -342,7 +342,7 @@
       list.forEach(function (m) {
         if (!seen[m.id]) {
           fresh[m.id] = 1;
-          if (m.type === 'done' || m.type === 'problem' || m.type === 'order') toast(m.text);
+          if (m.type === 'done' || m.type === 'problem') toast(m.text);
         }
       });
     }
@@ -371,7 +371,18 @@
   function openOrderIds(state) {
     return Object.keys(state.orders).filter(function (id) { return state.orders[id].status !== 'erledigt'; });
   }
+  var ordSeen = null;
   function renderOrders(state) {
+    if (Store.isLocked()) return;
+    var openIds = Object.keys(state.orders).filter(function (id) { return state.orders[id].status === 'offen'; });
+    if (ordSeen) {
+      openIds.forEach(function (id) {
+        var o = state.orders[id];
+        if (!ordSeen[id] && !(o.func === 'Dashboard' && o.by === Util.getName())) toast('Neue Podest-Bestellung: ' + o.items.join(', ') + (o.where ? ' · ' + o.where : ''));
+      });
+    }
+    ordSeen = ordSeen || {};
+    openIds.forEach(function (id) { ordSeen[id] = 1; });
     var ids = Object.keys(state.orders).sort(function (a, b) { return state.orders[b].t - state.orders[a].t; }).slice(0, 60);
     ids.sort(function (a, b) { return (state.orders[a].status === 'erledigt') - (state.orders[b].status === 'erledigt'); });
     $('orders').innerHTML = ids.length ? ids.map(function (id) {
@@ -439,13 +450,24 @@
     var posL = pp ? Halls.label(hallId, pp.pos) : t && t.pos ? Halls.label(t.hall, t.pos) : '';
     var where = [kr ? 'KR ' + kr : '', posL].filter(Boolean).join(' · ');
     var name = Util.getName();
-    Store.setOrder(Util.uid(), { items: items, kr: kr, where: where, by: name, func: 'Dashboard', qid: '', t: Date.now(), status: 'offen' })
-      .then(function () { return Store.addMsg({ type: 'order', by: name, text: 'Podest bestellt: ' + items.join(', ') + ' für ' + where + ' (' + name + ')' }); })
+    // Doppelte Bestellung verhindern (gleiche ID bei Wiederholung, gleiche Bestellung in den letzten 2 Minuten)
+    var all = Store.get().orders, key = items.join('|');
+    if (!dOrderId) dOrderId = Util.uid();
+    var dup = Object.keys(all).some(function (id) {
+      var o = all[id];
+      return id !== dOrderId && o.func === 'Dashboard' && o.by === name && o.where === where && o.items.join('|') === key && Date.now() - o.t < 12e4;
+    });
+    if (dup) { toast('Diese Bestellung wurde gerade schon aufgegeben'); return; }
+    var btn = $('dOrder').querySelector('.btn-main');
+    btn.disabled = true;
+    Store.setOrder(dOrderId, { items: items, kr: kr, where: where, by: name, func: 'Dashboard', qid: '', t: Date.now(), status: 'offen' })
       .then(function () {
+        dOrderId = null;
         dSel = {}; dAuto = ''; $('dPdText').value = ''; $('dPdKr').value = ''; $('dPdPos').value = '';
         renderDOrder(Store.get()); toast('Bestellt');
-      }).catch(function () { toast('Bestellen fehlgeschlagen'); });
+      }).catch(function () { toast('Bestellen fehlgeschlagen'); }).then(function () { btn.disabled = false; });
   };
+  var dOrderId = null;
 
   function renderTabs() {
     ['msgs', 'orders', 'probs'].forEach(function (k) { $(k).hidden = k !== tab; });

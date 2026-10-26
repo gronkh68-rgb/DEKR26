@@ -434,15 +434,24 @@
     var posL = pp ? Halls.label(hallId, pp.pos) : t && t.pos ? Halls.label(t.hall, t.pos) : '';
     var where = [kr ? 'KR ' + kr : '', posL].filter(Boolean).join(' · ');
     var msg = 'Podest bestellt: ' + items.join(', ') + ' für ' + where + ' (' + who() + ')';
+    // Doppelte Bestellung verhindern: gleiche Bestellung dieses Geräts in den letzten 2 Minuten
+    var all = Store.get().orders, key = items.join('|');
+    if (!orderId) orderId = Util.uid();   // bei erneutem Tippen/Wiederholung dieselbe ID: es entsteht nur ein Eintrag
+    var dup = Object.keys(all).some(function (id) {
+      var o = all[id];
+      return id !== orderId && o.qid === (qid || '') && o.where === where && o.items.join('|') === key && Date.now() - o.t < 12e4;
+    });
+    if (dup) { toast('Diese Bestellung wurde gerade schon aufgegeben', true); return; }
     $('pdGo').disabled = true;
-    Store.setOrder(Util.uid(), { items: items, kr: kr, where: where, by: qr.name, func: qr.func || '', qid: qid || '', t: Date.now(), status: 'offen' })
-      .then(function () { return Store.addMsg({ type: 'order', by: qr.name, text: msg }); })
+    Store.setOrder(orderId, { items: items, kr: kr, where: where, by: qr.name, func: qr.func || '', qid: qid || '', t: Date.now(), status: 'offen' })
       .then(function () {
         done(msg); toast('Bestellt');
+        orderId = null;
         pdSel = {}; $('pdText').value = ''; $('pdKr').value = ''; $('pdPos').value = ''; pdAuto = '';
         renderPodestList(Store.get());
       }).catch(fail).then(function () { $('pdGo').disabled = false; });
   };
+  var orderId = null;
 
   // Eigene offene Bestellungen: der Besteller kann sie selbst als erledigt abhaken
   function renderMyOrders(state) {
@@ -466,6 +475,23 @@
       .then(function () { done('Podest-Bestellung (' + o.items.join(', ') + (o.where ? ' · ' + o.where : '') + ') erledigt'); toast('Als erledigt markiert'); })
       .catch(fail);
   };
+
+  // Empfänger werden über neue offene Bestellungen anderer benachrichtigt (einmal pro Bestellung)
+  var ordSeen = null;
+  function watchOrders(state) {
+    if (!perms().podest) return;
+    var ids = Object.keys(state.orders).filter(function (id) { return state.orders[id].status === 'offen'; });
+    if (ordSeen) {
+      ids.forEach(function (id) {
+        var o = state.orders[id];
+        if (ordSeen[id] || (qid && o.qid === qid)) return;
+        var text = 'Neue Podest-Bestellung: ' + o.items.join(', ') + (o.where ? ' · ' + o.where : '');
+        toast(text); notify('Podest-Bestellung', text, 'ord-' + id);
+      });
+    }
+    ordSeen = ordSeen || {};
+    ids.forEach(function (id) { ordSeen[id] = 1; });
+  }
 
   // ---------- Bestellungen bearbeiten / Probleme lösen ----------
   function openOrders() {
@@ -501,9 +527,8 @@
     var b = e.target.closest('button[data-oid]');
     var o = b && Store.get().orders[b.dataset.oid];
     if (!o) return;
-    Store.updateOrder(b.dataset.oid, { status: b.dataset.st, statusBy: qr.name, statusAt: Date.now() }).then(function () {
-      return Store.addMsg({ type: 'order', by: qr.name, text: 'Podest-Bestellung (' + o.items.join(', ') + ' · ' + o.where + ') ' + b.dataset.st + ' (' + who() + ')' });
-    }).catch(fail);
+    b.disabled = true;
+    Store.updateOrder(b.dataset.oid, { status: b.dataset.st, statusBy: qr.name, statusAt: Date.now() }).catch(fail);
   };
   $('v-problems').onclick = function (e) {
     var b = e.target.closest('button[data-pid]');
@@ -549,6 +574,7 @@
     renderLists();
     krInfo();
     renderMyOrders(state);
+    watchOrders(state);
     renderInbox(state);
     renderDash(state);
     watchDone(state);
