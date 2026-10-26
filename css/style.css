@@ -203,3 +203,14 @@ table.imp td.dim, table.imp tr.dim td { color: var(--dim); opacity: .6; }
 .badge.usa { border-color: var(--orange); color: var(--orange); font-weight: 700; }
 
 .weeknav { display: flex; align-items: center; gap: 4px; }
+
+.badge.chg { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+#impDropRow[hidden] { display: none; }
+.diff-sum { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--dim); }
+.diff-sum span { padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; }
+.b-new { color: var(--green); border-color: var(--green) !important; }
+.b-mov { color: var(--accent); border-color: var(--accent) !important; }
+.b-chg { color: var(--orange); border-color: var(--orange) !important; }
+.b-gone { color: var(--red); border-color: var(--red) !important; }
+.diff-list { list-style: none; max-height: 180px; overflow-y: auto; font-size: 13px; display: grid; gap: 3px; margin-top: 6px; }
+.diff-list li { padding: 3px 8px; border-left: 3px solid; background: var(--panel); }

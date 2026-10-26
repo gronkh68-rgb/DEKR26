@@ -46,9 +46,11 @@
     week = week || viewWeek;
     var hall = !pos ? '' : forceHall || hall0;
     var id = Util.taskId(week, kr, hall || '0', pos || '0');
-    var tasks = Store.get().tasks, wasDone = false, jobs = [];
+    var tasks = Store.get().tasks, wasDone = false, jobs = [], prev = null;
+    // Jede KR gibt es nur einmal (auch wochenübergreifend): frühere Einträge werden ersetzt
     Object.keys(tasks).forEach(function (tid) {
-      if (tasks[tid].week === week && tasks[tid].kr === kr) {
+      if (tasks[tid].kr === kr) {
+        prev = prev || tasks[tid];
         wasDone = wasDone || !!tasks[tid].done;
         if (tid !== id) jobs.push(Store.removeTask(tid));
       }
@@ -57,6 +59,8 @@
     var t = { week: week, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : wasDone };
     if (extra && extra.scope) t.scope = extra.scope;
     if (extra && extra.usa) t.usa = true;
+    if (extra && extra.chg) { t.chg = extra.chg; t.chgK = extra.chgK; t.chgAt = Date.now(); }
+    else if (prev && prev.chg) { t.chg = prev.chg; t.chgK = prev.chgK; t.chgAt = prev.chgAt; }
     jobs.push(Store.setTask(id, t));
     return jobs;
   }
@@ -104,7 +108,9 @@
   function hallOf(id) { return Halls.get(id); }
 
   function badges(t) {
-    return (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '');
+    var fresh = t.chg && Date.now() - t.chgAt < 864e5;   // Vermerk 24 Stunden lang
+    return (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '') +
+      (fresh ? ' <span class="badge chg" title="' + esc(t.chg) + '">' + esc(t.chgK || 'geändert') + '</span>' : '');
   }
 
   // ---------- Linke Spalte ----------
@@ -203,7 +209,9 @@
       var ts = sel.id ? (Store.get().tasks[sel.id] ? [Object.assign({ id: sel.id }, Store.get().tasks[sel.id])] : []) : byPos[sel.pos] || [];
       html += '<div class="orb" style="font-size:12px;color:var(--accent);margin-bottom:4px">' +
         (sel.id ? 'Eintrag ohne Position' : 'Position ' + esc(sel.pos)) + '</div>';
+      var notes = ts.filter(function (t) { return t.chg && Date.now() - t.chgAt < 864e5; });
       if (!ts.length) html += '<div class="empty">Kein Beipack geplant.</div>';
+      notes.forEach(function (t) { html += '<div class="note">KR ' + esc(t.kr) + ': ' + esc(t.chg) + '</div>'; });
       ts.forEach(function (t) {
         html += '<div class="line"><span>KR ' + esc(t.kr) + badges(t) + ' · ' + Util.DAYS[t.day].slice(0, 2) + ' · <b style="color:' +
           (t.done ? 'var(--green)' : 'var(--orange)') + '">' + (t.done ? 'Bereit' : 'Offen') + '</b></span><span>' +
@@ -522,12 +530,86 @@
     ROLES.forEach(function (r) { if (r[0]) ci[r[0]] = imp.cols.indexOf(r[0]); });
     return ci;
   }
+  // Liest die eingefügte Liste aus: gültige Einträge (je KR der erste) und Zähler der übersprungenen
+  function collect() {
+    var ci = roleIdx(), head = $('impHead').checked, dayDef = +$('impDay').value;
+    var out = { items: [], hall: 0, scope: 0 }, seen = {};
+    if (ci.kr < 0) return out;
+    imp.rows.slice(head ? 1 : 0).forEach(function (r) {
+      var x = readRow(r, ci, dayDef);
+      if (x.skip === 'andere Halle') out.hall++;
+      else if (x.skip === 'Lieferumfang') out.scope++;
+      else if (!x.skip && !seen[x.kr]) {
+        seen[x.kr] = 1;
+        x.hallEff = x.pos ? (x.hall || Halls.all[0].id) : '';
+        out.items.push(x);
+      }
+    });
+    return out;
+  }
+  function posText(hall, pos) {
+    return pos ? (Halls.get(hall) ? Halls.get(hall).name : hall) + ' ' + pos : '–';
+  }
+  function kwText(w) { return 'KW ' + w.split('-W')[1]; }
+  // Vergleicht die Liste mit dem gespeicherten Stand: neu, verschoben, geändert, entfallen
+  function diffItems(items) {
+    var tasks = Store.get().tasks, byKr = {}, weeks = {}, inList = {};
+    var res = { neu: [], moved: [], chg: [], gone: [], same: 0 };
+    Object.keys(tasks).forEach(function (id) {
+      var t = Object.assign({ id: id }, tasks[id]);
+      (byKr[t.kr] = byKr[t.kr] || []).push(t);
+    });
+    items.forEach(function (x) {
+      inList[x.kr] = 1; weeks[x.week] = 1;
+      var ex = byKr[x.kr];
+      if (!ex) { x.how = 'neu'; res.neu.push(x); return; }
+      var e = ex[0], moved = [], ch = [];
+      if (e.week !== x.week) moved.push(kwText(e.week) + ' → ' + kwText(x.week));
+      if (e.day !== x.day) moved.push(Util.DAYS[e.day].slice(0, 2) + ' → ' + Util.DAYS[x.day].slice(0, 2));
+      if ((e.pos || '') !== (x.pos || '') || (e.pos && (e.hall || '') !== x.hallEff)) {
+        ch.push('Position ' + posText(e.hall, e.pos) + ' → ' + posText(x.hallEff, x.pos));
+      }
+      if ((e.scope || '') !== (x.scope || '')) ch.push('Lieferumfang ' + (e.scope || '–') + ' → ' + (x.scope || '–'));
+      if (!!e.usa !== !!x.usa) ch.push(x.usa ? 'jetzt USA' : 'nicht mehr USA');
+      x.chg = moved.concat(ch).join('; ');
+      x.how = moved.length ? 'verschoben' : ch.length ? 'geändert' : 'gleich';
+      x.chgK = x.how;
+      if (x.how === 'verschoben') res.moved.push(x);
+      else if (x.how === 'geändert') res.chg.push(x);
+      else res.same++;
+    });
+    Object.keys(byKr).forEach(function (kr) {
+      byKr[kr].forEach(function (t) {
+        if (!inList[kr] && weeks[t.week] && !t.done) res.gone.push(t);
+      });
+    });
+    return res;
+  }
+  function renderDiff(d) {
+    var any = d.moved.length || d.chg.length || d.gone.length;
+    var li = function (cls, kr, txt) { return '<li class="' + cls + '"><b>KR ' + esc(kr) + '</b> ' + esc(txt) + '</li>'; };
+    var html = '<div class="diff-sum"><span class="b-new">Neu ' + d.neu.length + '</span> <span class="b-mov">Verschoben ' +
+      d.moved.length + '</span> <span class="b-chg">Geändert ' + d.chg.length + '</span> <span class="b-gone">Entfallen ' +
+      d.gone.length + '</span> <span>Unverändert ' + d.same + '</span></div>';
+    if (any) {
+      html += '<ul class="diff-list">' +
+        d.moved.map(function (x) { return li('b-mov', x.kr, 'verschoben: ' + x.chg); }).join('') +
+        d.chg.map(function (x) { return li('b-chg', x.kr, 'geändert: ' + x.chg); }).join('') +
+        d.gone.map(function (t) { return li('b-gone', t.kr, 'steht nicht mehr in der Liste (' + kwText(t.week) + ', ' + Util.DAYS[t.day].slice(0, 2) + ')'); }).join('') +
+        '</ul>';
+    }
+    $('impDiff').innerHTML = html;
+    $('impDropRow').hidden = !d.gone.length;
+  }
   function renderImp() {
     var rows = parseTable($('impText').value);
     imp.rows = rows;
     var n = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
     var head = $('impHead').checked;
-    if (!n) { imp.cols = []; $('impPreview').innerHTML = ''; $('impGo').disabled = true; $('impInfo').textContent = ''; return; }
+    if (!n) {
+      imp.cols = []; $('impPreview').innerHTML = ''; $('impGo').disabled = true; $('impInfo').textContent = '';
+      $('impDiff').innerHTML = ''; $('impDropRow').hidden = true; return;
+    }
     if (imp.cols.length !== n) imp.cols = autoCols(rows, n, head);
     var html = '<table class="imp"><tr>' + imp.cols.map(function (v, c) {
       return '<th><select data-c="' + c + '">' + ROLES.map(function (o) {
@@ -540,22 +622,17 @@
       }).join('') + '</tr>';
     });
     $('impPreview').innerHTML = html + '</table>';
-    var ci = roleIdx();
-    var ok = ci.kr >= 0;
+    var ok = imp.cols.indexOf('kr') >= 0;
     $('impGo').disabled = !ok;
-    // Vorschau der Auswertung (ohne zu speichern)
-    var data = rows.slice(head ? 1 : 0), cnt = { ok: 0, hall: 0, scope: 0, usa: 0 }, seen = {}, weeks = {};
-    if (ok) data.forEach(function (r) {
-      var x = readRow(r, ci, 1);
-      if (x.skip === 'andere Halle') cnt.hall++;
-      else if (x.skip === 'Lieferumfang') cnt.scope++;
-      else if (!x.skip && !seen[x.week + x.kr]) { seen[x.week + x.kr] = 1; cnt.ok++; weeks[x.week] = 1; if (x.usa) cnt.usa++; }
-    });
-    $('impInfo').textContent = ok
-      ? cnt.ok + ' KR werden importiert (' + Object.keys(weeks).sort().map(function (w) { return 'KW ' + w.split('-W')[1]; }).join(', ') + ') · ' + cnt.hall + ' andere Halle · ' + cnt.scope + ' ohne Maschine/komplett (übersprungen)' +
-        (cnt.usa ? ' · ' + cnt.usa + ' USA' : '') + (rows.multi ? ' · ' + rows.multi + ' mit mehreren Spots (erster wird genommen)' : '') +
-        ' · nicht gewählte Spalten werden verworfen.'
-      : 'Bitte über der KR-Spalte „KR" wählen.';
+    if (!ok) { $('impInfo').textContent = 'Bitte über der KR-Spalte „KR" wählen.'; $('impDiff').innerHTML = ''; return; }
+    var c = collect(), weeks = {};
+    c.items.forEach(function (x) { weeks[x.week] = 1; });
+    $('impInfo').textContent = c.items.length + ' KR (' + Object.keys(weeks).sort().map(kwText).join(', ') + ') · ' +
+      c.hall + ' andere Halle · ' + c.scope + ' ohne Maschine/komplett (übersprungen) · ' +
+      c.items.filter(function (x) { return x.usa; }).length + ' USA' +
+      (rows.multi ? ' · ' + rows.multi + ' mit mehreren Spots (erster wird genommen)' : '') +
+      ' · nicht gewählte Spalten werden verworfen.';
+    renderDiff(diffItems(c.items));
   }
   $('impOpen').onclick = function () { $('impModal').hidden = false; };
   $('impClose').onclick = function () { $('impModal').hidden = true; };
@@ -570,29 +647,31 @@
     renderImp();
   };
   $('impGo').onclick = function () {
-    var ci = roleIdx(), head = $('impHead').checked;
-    var dayDef = +$('impDay').value, jobs = [], seen = {}, n = 0, noPos = 0, usa = 0, skipped = 0, firstWeek = '';
-    imp.rows.slice(head ? 1 : 0).forEach(function (r) {
-      var x = readRow(r, ci, dayDef);
-      if (x.skip) { skipped++; return; }
-      if (seen[x.week + x.kr]) return;
-      seen[x.week + x.kr] = 1;
+    var c = collect(), head = $('impHead').checked;
+    if (!c.items.length) { toast('Keine KR gefunden'); return; }
+    var d = diffItems(c.items), jobs = [], firstWeek = '';
+    c.items.forEach(function (x) {
       if (!firstWeek || x.week < firstWeek) firstWeek = x.week;
-      n++;
-      if (!x.pos) noPos++;
-      if (x.usa) usa++;
-      jobs = jobs.concat(planOne(x.kr, x.pos, x.day, x.hall || Halls.all[0].id, { scope: x.scope, usa: x.usa }, x.hall, x.week));
+      var extra = { scope: x.scope, usa: x.usa };
+      if (x.how === 'verschoben' || x.how === 'geändert') { extra.chg = x.chg; extra.chgK = x.how; }
+      jobs = jobs.concat(planOne(x.kr, x.pos, x.day, x.hallEff || Halls.all[0].id, extra, x.hallEff, x.week));
     });
-    if (!n) { toast('Keine KR gefunden'); return; }
+    var dropped = 0;
+    if ($('impDrop').checked) d.gone.forEach(function (t) { jobs.push(Store.removeTask(t.id)); dropped++; });
     if (head) {
       try { localStorage.setItem(MAP_KEY, JSON.stringify({ sig: sigOf(imp.rows[0]), cols: imp.cols })); } catch (e) { /* ignorieren */ }
     }
     $('impGo').disabled = true;
-    var msg = n + ' KR importiert' + (noPos ? ', ' + noPos + ' ohne Position' : '') + (usa ? ', ' + usa + ' USA' : '');
+    var short = function (arr, f) { return arr.slice(0, 6).map(f).join(', ') + (arr.length > 6 ? ' (+' + (arr.length - 6) + ')' : ''); };
+    var msg = 'Import: ' + d.neu.length + ' neu, ' + d.moved.length + ' verschoben, ' + d.chg.length + ' geändert, ' +
+      d.gone.length + ' entfallen' + (dropped ? ' (entfernt)' : '') +
+      (d.moved.length ? ' · Verschoben: ' + short(d.moved, function (x) { return 'KR ' + x.kr + ' ' + x.chg; }) : '') +
+      (d.chg.length ? ' · Geändert: ' + short(d.chg, function (x) { return 'KR ' + x.kr + ' ' + x.chg; }) : '') +
+      (d.gone.length && !dropped ? ' · Entfallen: ' + short(d.gone, function (t) { return 'KR ' + t.kr; }) : '');
     Promise.all(jobs).then(function () {
       return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition', text: msg });
     }).then(function () {
-      toast(msg);
+      toast('Import: ' + d.neu.length + ' neu, ' + d.moved.length + ' verschoben, ' + d.chg.length + ' geändert');
       viewWeek = firstWeek; weekLabel(); render(Store.get());
       $('impText').value = ''; imp.cols = []; renderImp();
       $('impModal').hidden = true;
