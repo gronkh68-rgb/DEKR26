@@ -5,7 +5,8 @@
   var WEEK = Util.isoWeek();
   var params = new URLSearchParams(location.search);
   var recent = [];
-  var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status'];
+  var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash'];
+  var VIEWS = ['beipack', 'podest', 'orders', 'problems', 'dash'];
 
   // Name, Funktion und Rechte kommen vom QR-Code (?q=ID, im Dashboard gepflegt).
   // n/f/p im Link sind nur Rückfall, falls die Daten nicht aus der Datenbank kommen.
@@ -38,6 +39,99 @@
       return '<div class="msg done">' + esc(m.text) + '<small>' + Util.time(m.t) + '</small></div>';
     }).join('');
   }
+
+  // ---------- Benachrichtigungen ----------
+  // Push aufs Handy über ntfy.sh (nur wenn in js/config.js ein Thema eingetragen ist)
+  function push(title, text) {
+    var topic = (window.DEKR_CONFIG || {}).ntfyTopic;
+    if (!topic) return;
+    try {
+      fetch('https://ntfy.sh/' + encodeURIComponent(topic), { method: 'POST', body: text, headers: { Title: title, Tags: 'white_check_mark' } })
+        .catch(function () { /* Push ist optional */ });
+    } catch (e) { /* ignorieren */ }
+  }
+  function canNotify() { return 'Notification' in window && Notification.permission === 'granted'; }
+  function notify(title, body, tag) {
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    if (!canNotify()) return;
+    var plain = function () { try { new Notification(title, { body: body, tag: tag }); } catch (e) { /* ignorieren */ } };
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then(function (reg) { reg.showNotification(title, { body: body, tag: tag }); }).catch(plain);
+    } else plain();
+  }
+  function notifState() {
+    var el = $('notifInfo'), b = $('notifBtn');
+    if (!('Notification' in window)) { el.textContent = 'Dieser Browser unterstützt keine Benachrichtigungen.'; b.hidden = true; return; }
+    b.hidden = Notification.permission === 'granted';
+    el.textContent = Notification.permission === 'granted'
+      ? 'Benachrichtigungen sind aktiv, solange diese Seite geöffnet ist.' + ((window.DEKR_CONFIG || {}).ntfyTopic ? '' : ' Für Push bei geschlossener Seite: ntfy einrichten (README).')
+      : Notification.permission === 'denied' ? 'Benachrichtigungen sind im Browser blockiert.' : '';
+  }
+  $('notifBtn').onclick = function () {
+    if (navigator.serviceWorker) navigator.serviceWorker.register('sw.js').catch(function () { /* ignorieren */ });
+    Notification.requestPermission().then(notifState);
+  };
+  if (canNotify() && navigator.serviceWorker) navigator.serviceWorker.register('sw.js').catch(function () { /* ignorieren */ });
+
+  // Bestätigungen für den Melder: ✔ „KR … bestätigt von …"
+  function ackSeen() {
+    try { return JSON.parse(localStorage.getItem('dekr26_ackseen')) || {}; } catch (e) { return {}; }
+  }
+  function checkAcks(state) {
+    if (!qid) return;
+    var seenA = ackSeen(), changed = false;
+    Object.keys(state.msgs).forEach(function (id) {
+      var m = state.msgs[id];
+      if (m.qid !== qid || !m.ack || seenA[id]) return;
+      seenA[id] = 1; changed = true;
+      if (Date.now() - m.ack.t > 864e5) return;
+      var text = '✔ ' + (m.kr ? 'KR ' + m.kr + ' ' : '') + 'bestätigt von ' + m.ack.by;
+      done(text); toast(text); notify('Bestätigt', text, 'ack' + id);
+    });
+    if (changed) { try { localStorage.setItem('dekr26_ackseen', JSON.stringify(seenA)); } catch (e) { /* ignorieren */ } }
+  }
+
+  // ---------- Mobiles Dashboard ----------
+  var notifSeen = null;   // bereits gesehene Fertig-Meldungen (für neue Benachrichtigungen)
+  function doneMsgs(state) {
+    return Object.keys(state.msgs).map(function (id) { return Object.assign({ id: id }, state.msgs[id]); })
+      .filter(function (m) { return m.type === 'done'; }).sort(function (a, b) { return b.t - a.t; });
+  }
+  function watchDone(state) {
+    if (!perms().dash) return;
+    var ms = doneMsgs(state);
+    if (notifSeen) {
+      ms.forEach(function (m) { if (!notifSeen[m.id] && !m.ack) notify('Beipack fertig', m.text, m.id); });
+    }
+    notifSeen = notifSeen || {};
+    ms.forEach(function (m) { notifSeen[m.id] = 1; });
+  }
+  function renderDash(state) {
+    var ms = doneMsgs(state), un = ms.filter(function (m) { return !m.ack; }), ac = ms.filter(function (m) { return m.ack; }).slice(0, 5);
+    var today = Object.keys(state.tasks).map(function (id) { return state.tasks[id]; })
+      .filter(function (t) { return t.week === WEEK && t.day === Util.todayIdx(); });
+    var open = today.filter(function (t) { return !t.done; });
+    var item = function (m, pulse) {
+      return '<div class="item ' + (pulse ? 'pulse' : 'ok') + '"><b>' + esc(m.text) + '</b><span class="meta">' + Util.time(m.t) + ' · ' + esc(m.by || '') +
+        (m.ack ? ' · ✔ bestätigt von ' + esc(m.ack.by) : '') + '</span>' +
+        (pulse ? '<span class="acts"><button class="btn-ok" data-ackm="' + m.id + '">Bestätigen</button></span>' : '') + '</div>';
+    };
+    $('dashList').innerHTML =
+      '<div class="col-title orb" style="margin:8px 0">Neu gemeldet (' + un.length + ')</div>' +
+      (un.length ? un.map(function (m) { return item(m, true); }).join('') : '<div class="empty">Nichts Neues.</div>') +
+      '<div class="col-title orb" style="margin:12px 0 8px">Heute: ' + (today.length - open.length) + '/' + today.length + ' fertig</div>' +
+      (open.length ? '<div class="chips">' + open.slice(0, 40).map(function (t) {
+        return '<span class="chip">KR ' + esc(t.kr) + (t.pos ? ' · ' + esc(Halls.label(t.hall, t.pos)) : '') + '</span>';
+      }).join('') + '</div>' : '') +
+      (ac.length ? '<div class="col-title orb" style="margin:12px 0 8px">Zuletzt bestätigt</div>' + ac.map(function (m) { return item(m, false); }).join('') : '');
+    notifState();
+  }
+  $('v-dash').onclick = function (e) {
+    var b = e.target.closest('button[data-ackm]');
+    var m = b && Store.get().msgs[b.dataset.ackm];
+    if (!m) return;
+    Store.setMsg(b.dataset.ackm, Object.assign({}, m, { ack: { by: qr.name, t: Date.now() } })).catch(fail);
+  };
 
   // ---------- KR-Daten ----------
   function tasksOf(kr) {
@@ -109,13 +203,14 @@
     if (p.order) v.push(['podest', 'Podest bestellen']);
     if (p.podest) v.push(['orders', 'Bestellungen']);
     if (p.solve) v.push(['problems', 'Probleme']);
+    if (p.dash) v.push(['dash', 'Dashboard']);
     return v;
   }
   function renderMenu() {
     var v = allowed(), ord = openOrders().length, pr = openProblems().length;
     if (!v.some(function (x) { return x[0] === view; })) {
       // Empfänger starten bei den Bestellungen, Problemlöser bei den Problemen
-      var p0 = perms(), pref = p0.podest ? 'orders' : p0.solve && !p0.report ? 'problems' : '';
+      var p0 = perms(), pref = p0.dash && !p0.report ? 'dash' : p0.podest ? 'orders' : p0.solve && !p0.report ? 'problems' : '';
       view = v.some(function (x) { return x[0] === pref; }) ? pref : v.length ? v[0][0] : '';
     }
     $('menu').innerHTML = v.map(function (x) {
@@ -123,7 +218,7 @@
       return '<button type="button" class="menu-btn' + (x[0] === view ? ' sel' : '') + '" data-view="' + x[0] + '">' +
         esc(x[1]) + (cnt ? '<span class="cnt">' + cnt + '</span>' : '') + '</button>';
     }).join('');
-    ['beipack', 'podest', 'orders', 'problems'].forEach(function (k) { $('v-' + k).hidden = k !== view; });
+    VIEWS.forEach(function (k) { $('v-' + k).hidden = k !== view; });
     var p = perms();
     $('bOk').hidden = !(p.report || p.status);
     $('bProb').hidden = !p.report;
@@ -152,9 +247,10 @@
     var m = markKr(kr, isDone);
     var text = 'KR ' + kr + m.where + (isDone ? ' bereit' : ' nicht fertig') + ' (' + who() + ')';
     Promise.all(m.jobs).then(function () {
-      return Store.addMsg({ type: isDone ? 'done' : 'plan', by: qr.name, text: text });
+      return Store.addMsg({ type: isDone ? 'done' : 'info', by: qr.name, text: text, kr: kr, qid: qid || '' });
     }).then(function () {
       done(text); toast((isDone ? 'Gemeldet: KR ' : 'Zurückgenommen: KR ') + kr);
+      if (isDone) push('Beipack fertig', text);
       $('kr').value = ''; $('probBox').hidden = true; krInfo(); $('kr').focus();
     }).catch(fail).then(function () { busy(false); });
   }
@@ -267,7 +363,7 @@
     if (!p) return;
     var upd = Object.assign({}, p, { status: 'gelöst', solvedBy: qr.name, solvedAt: Date.now() });
     Store.setProblem(b.dataset.pid, upd).then(function () {
-      return Store.addMsg({ type: 'plan', by: qr.name, text: 'Problem KR ' + p.kr + ' gelöst (' + who() + ')' });
+      return Store.addMsg({ type: 'info', by: qr.name, text: 'Problem KR ' + p.kr + ' gelöst (' + who() + ')' });
     }).catch(fail);
   };
 
@@ -281,7 +377,7 @@
     if (!ok) {
       $('note').textContent = qid ? 'QR-Code unbekannt oder gelöscht.' : 'Bitte über einen QR-Code öffnen.';
       $('menu').innerHTML = '';
-      ['beipack', 'podest', 'orders', 'problems'].forEach(function (k) { $('v-' + k).hidden = true; });
+      VIEWS.forEach(function (k) { $('v-' + k).hidden = true; });
       return;
     }
     $('note').textContent = Store.remote ? '' : 'Demo-Modus: Meldungen erreichen das Dashboard nicht.';
@@ -290,6 +386,9 @@
     renderPodestList(state);
     renderLists();
     krInfo();
+    renderDash(state);
+    watchDone(state);
+    checkAcks(state);
   }
   if (qid && !urlQr) $('note').textContent = 'Lädt …';
   Store.subscribe(apply);

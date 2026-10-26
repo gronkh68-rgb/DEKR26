@@ -76,10 +76,7 @@
     if (raw && !pp) { toast('Position nicht erkannt, z.B. 7 42 Z'); return; }
     var pos = pp ? pp.pos : '';
     var hallId = (pp && pp.hall && Halls.byShort(pp.hall)) || hall0;
-    Promise.all(planOne(kr, pos, day, hallId, null, hallId)).then(function () {
-      return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition',
-        text: 'KR ' + kr + ' geplant (' + Util.DAYS[day].slice(0, 2) + ')' + (pos ? ': ' + Halls.label(hallId, pos) : '') });
-    }).catch(function () { toast('Speichern fehlgeschlagen'); });
+    Promise.all(planOne(kr, pos, day, hallId, null, hallId)).catch(function () { toast('Speichern fehlgeschlagen'); });
     $('pKr').value = ''; $('pPos').value = '';
   };
 
@@ -233,9 +230,14 @@
 
   // ---------- Nachrichten ----------
   function renderMsgs(state) {
-    var list = Object.keys(state.msgs).map(function (id) {
+    var all = Object.keys(state.msgs).map(function (id) {
       var m = state.msgs[id]; m.id = id; return m;
-    }).sort(function (a, b) { return b.t - a.t; }).slice(0, 80);
+    }).filter(function (m) { return m.type !== 'plan'; })   // Planung/Import wird nicht gemeldet
+      .sort(function (a, b) { return b.t - a.t; });
+    // Unbestätigte „fertig"-Meldungen stehen immer oben und pulsieren grün
+    var unack = all.filter(function (m) { return m.type === 'done' && !m.ack; });
+    var list = unack.concat(all.filter(function (m) { return !(m.type === 'done' && !m.ack); }).slice(0, 70));
+    $('cMsg').textContent = unack.length || '';
 
     var fresh = {};
     if (seen) {
@@ -250,10 +252,19 @@
     list.forEach(function (m) { seen[m.id] = 1; });
 
     $('msgs').innerHTML = list.length ? list.map(function (m) {
-      return '<div class="msg ' + esc(m.type) + (fresh[m.id] ? ' fresh' : '') + '">' + esc(m.text) +
-        '<small>' + Util.time(m.t) + ' · ' + esc(m.by || '') + '</small></div>';
+      var pulse = m.type === 'done' && !m.ack;
+      return '<div class="msg ' + esc(m.type) + (pulse ? ' pulse' : '') + (fresh[m.id] ? ' fresh' : '') + '">' + esc(m.text) +
+        '<small>' + Util.time(m.t) + ' · ' + esc(m.by || '') + (m.type === 'done' && m.ack ? ' · ✔ bestätigt von ' + esc(m.ack.by) : '') + '</small>' +
+        (pulse ? '<button class="btn-sm btn-ok" data-ack="' + esc(m.id) + '">Bestätigen</button>' : '') + '</div>';
     }).join('') : '<div class="empty">Keine Nachrichten.</div>';
   }
+  $('msgs').onclick = function (e) {
+    var b = e.target.closest('button[data-ack]');
+    var m = b && Store.get().msgs[b.dataset.ack];
+    if (!m) return;
+    Store.setMsg(b.dataset.ack, Object.assign({}, m, { ack: { by: Util.getName() || 'Dashboard', t: Date.now() } }))
+      .catch(function () { toast('Bestätigen fehlgeschlagen'); });
+  };
 
   var tab = 'msgs';
   function openOrderIds(state) {
@@ -726,15 +737,7 @@
       try { localStorage.setItem(MAP_KEY, JSON.stringify({ sig: sigOf(imp.rows[0]), cols: imp.cols })); } catch (e) { /* ignorieren */ }
     }
     $('impGo').disabled = true;
-    var short = function (arr, f) { return arr.slice(0, 6).map(f).join(', ') + (arr.length > 6 ? ' (+' + (arr.length - 6) + ')' : ''); };
-    var msg = 'Import: ' + d.neu.length + ' neu, ' + d.moved.length + ' verschoben, ' + d.chg.length + ' geändert, ' +
-      d.gone.length + ' entfallen' + (dropped ? ' (entfernt)' : '') +
-      (d.moved.length ? ' · Verschoben: ' + short(d.moved, function (x) { return 'KR ' + x.kr + ' ' + x.chg; }) : '') +
-      (d.chg.length ? ' · Geändert: ' + short(d.chg, function (x) { return 'KR ' + x.kr + ' ' + x.chg; }) : '') +
-      (d.gone.length && !dropped ? ' · Entfallen: ' + short(d.gone, function (t) { return 'KR ' + t.kr; }) : '');
     Promise.all(jobs).then(function () {
-      return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition', text: msg });
-    }).then(function () {
       toast('Import: ' + d.neu.length + ' neu, ' + d.moved.length + ' verschoben, ' + d.chg.length + ' geändert');
       viewWeek = firstWeek; weekLabel(); render(Store.get());
       $('impText').value = ''; imp.cols = []; renderImp();
@@ -747,12 +750,14 @@
   // Der Code enthält nur die ID (?q=...). Name, Funktion und Rechte lassen sich daher jederzeit ändern,
   // ohne dass ausgedruckte Codes ungültig werden.
   var PERM_LABELS = [['report', 'Beipack melden (fertig/Problem)'], ['order', 'Podest bestellen'],
-    ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Fertig/Nicht fertig setzen']];
+    ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Fertig/Nicht fertig setzen'],
+    ['dash', 'Mobiles Dashboard']];
   var PRESETS = [
     ['standard', 'Standard (melden + bestellen)', '', { report: 1, order: 1 }],
     ['podest', 'Podest-Empfänger', 'Podest-Empfänger', { podest: 1, order: 1 }],
     ['elektriker', 'Elektriker', 'Elektriker', { report: 1, status: 1 }],
-    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1 }]
+    ['mobil', 'Mobiles Dashboard (Push)', 'Dashboard mobil', { dash: 1 }],
+    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1 }]
   ];
   function permsOf(q) { return q.perms && Object.keys(q.perms).length ? q.perms : { report: 1, order: 1 }; }
   // n/f/p sind nur ein Rückfall, falls das Handy die QR-Daten nicht aus der Datenbank laden kann

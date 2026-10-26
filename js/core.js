@@ -138,10 +138,13 @@ window.Store = (function () {
     setProblem: function (id, p) { return write('problems', id, p); },
     setPodest: function (id, p) { return write('podests', id, p); },
     setQr: function (id, q) { return write('qrs', id, q); },
+    // Gibt die ID der Nachricht zurück
     addMsg: function (m) {
       m.t = Date.now();
-      return write('msgs', Util.uid(), m);
+      var id = Util.uid();
+      return write('msgs', id, m).then(function () { return id; });
     },
+    setMsg: function (id, m) { return write('msgs', id, m); },
     get: function () { return state; }
   };
 })();

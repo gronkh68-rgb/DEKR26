@@ -23,3 +23,13 @@ Achtung: Mit offenen Regeln kann jeder mit der URL schreiben. Keine sensiblen Da
 
 ## Lokal testen
 `python3 -m http.server` im Repo-Ordner, dann `http://localhost:8000`.
+
+## Push-Nachricht bei „Beipack fertig" (optional)
+Eine statische Seite kann nicht selbst Push senden. Kostenlos geht es über **ntfy.sh**:
+1. In `js/config.js` bei `ntfyTopic` ein langes, zufälliges Thema eintragen (wie ein Passwort), z. B. `dekr26-k8f3x9q2m7`.
+2. Auf dem Handy die App **ntfy** installieren und dieses Thema abonnieren (oder `https://ntfy.sh/<Thema>` im Browser öffnen).
+3. Ab dann kommt bei jeder „Fertig"-Meldung eine Push-Nachricht.
+
+Achtung: Der Text der Meldung (KR, Position, Name) läuft dabei über ntfy.sh, und jeder, der das Thema kennt, kann mitlesen. Ohne Eintrag ist die Funktion aus.
+
+Ohne ntfy gibt es im QR-Typ „Mobiles Dashboard" Benachrichtigungen, solange die Seite auf dem Handy geöffnet ist (Knopf „Benachrichtigungen aktivieren").
