@@ -326,21 +326,28 @@
   };
 
   // ---------- QR-Codes ----------
-  function scanUrl(name) {
+  // Der Code enthält nur die ID (?q=...). Name und Funktion lassen sich daher jederzeit ändern,
+  // ohne dass ausgedruckte Codes ungültig werden.
+  function scanUrl(id) {
     var u = new URL('scan.html', location.href);
-    if (name) u.searchParams.set('n', name);
+    u.searchParams.set('q', id);
     return u.href;
   }
   function renderQr(state) {
     var list = Object.keys(state.qrs).map(function (id) {
       var q = state.qrs[id]; q.id = id; return q;
     }).sort(function (a, b) { return a.t - b.t; });
-    $('qrHint').textContent = list.length ? '' : 'Noch keine QR-Codes. Namen eintragen und „Hinzufügen" klicken.';
+    $('qrHint').textContent = list.length ? '' : 'Noch keine QR-Codes. Name (und Funktion) eintragen und „Hinzufügen" klicken.';
     $('qrGrid').innerHTML = list.map(function (q) {
       var qr = qrcode(0, 'M');
-      qr.addData(scanUrl(q.name));
+      qr.addData(scanUrl(q.id));
       qr.make();
-      return '<div class="card qr-card"><h3>' + esc(q.name) + '</h3>' + qr.createSvgTag(4, 2) +
+      return '<div class="card qr-card" data-id="' + esc(q.id) + '">' +
+        '<h3 class="print-only">' + esc(q.name) + '</h3>' +
+        (q.func ? '<div class="print-only">' + esc(q.func) + '</div>' : '') +
+        '<input class="no-print" data-f="name" value="' + esc(q.name) + '" maxlength="40" placeholder="Name">' +
+        '<input class="no-print" data-f="func" value="' + esc(q.func || '') + '" maxlength="40" placeholder="Funktion">' +
+        qr.createSvgTag(4, 2) +
         '<button class="btn-sm btn-warn no-print" data-del="' + esc(q.id) + '">Löschen</button></div>';
     }).join('');
   }
@@ -353,17 +360,30 @@
   };
   $('qrForm').onsubmit = function (e) {
     e.preventDefault();
-    var names = $('qrName').value.split(',').map(function (n) { return n.trim(); }).filter(Boolean);
-    Promise.all(names.map(function (n, i) {
-      return Store.setQr(Util.uid() + i, { name: n, t: Date.now() + i });
-    })).catch(function () { toast('Speichern fehlgeschlagen'); });
-    $('qrName').value = '';
+    var name = $('qrName').value.trim();
+    if (!name) return;
+    Store.setQr(Util.uid(), { name: name, func: $('qrFunc').value.trim(), t: Date.now() })
+      .catch(function () { toast('Speichern fehlgeschlagen'); });
+    $('qrName').value = ''; $('qrFunc').value = '';
   };
   $('qrGrid').onclick = function (e) {
     var b = e.target.closest('button[data-del]');
     if (b && confirm('QR-Code löschen?')) Store.setQr(b.dataset.del, null).catch(function () { toast('Löschen fehlgeschlagen'); });
   };
-  Store.subscribe(function (state) { if (!$('qrModal').hidden) renderQr(state); });
+  $('qrGrid').onchange = function (e) {
+    var inp = e.target.closest('input[data-f]');
+    var card = e.target.closest('.qr-card');
+    var q = card && Store.get().qrs[card.dataset.id];
+    if (!inp || !q) return;
+    var upd = { name: q.name, func: q.func || '', t: q.t };
+    upd[inp.dataset.f] = inp.value.trim();
+    if (!upd.name) { toast('Name darf nicht leer sein'); renderQr(Store.get()); return; }
+    Store.setQr(card.dataset.id, upd).catch(function () { toast('Speichern fehlgeschlagen'); });
+  };
+  Store.subscribe(function (state) {
+    var typing = document.activeElement && $('qrGrid').contains(document.activeElement);
+    if (!$('qrModal').hidden && !typing) renderQr(state);
+  });
 
   Store.subscribe(render);
   Store.start();

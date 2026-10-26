@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=99cc718">
+<link rel="stylesheet" href="css/style.css?v=5d9a336">
 </head>
 <body>
 <div class="app">
@@ -72,7 +72,8 @@
   <div class="modal-box">
     <div class="col-title orb"><span>QR-Codes für die Meldeseite</span><button class="btn-sm no-print" id="qrClose">Schließen</button></div>
     <form class="qr-add no-print" id="qrForm">
-      <input id="qrName" placeholder="Name, z.B. Platz 3 (mehrere mit Komma trennen)" maxlength="120">
+      <input id="qrName" placeholder="Name, z.B. Platz 3" maxlength="40" required>
+      <input id="qrFunc" placeholder="Funktion (optional)" maxlength="40">
       <button class="btn-main">Hinzufügen</button>
       <button type="button" id="qrPrint">Drucken</button>
     </form>
@@ -81,10 +82,10 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=99cc718"></script>
-<script src="js/halls.js?v=99cc718"></script>
-<script src="js/core.js?v=99cc718"></script>
-<script src="js/qrcode.js?v=99cc718"></script>
-<script src="js/app.js?v=99cc718"></script>
+<script src="js/config.js?v=5d9a336"></script>
+<script src="js/halls.js?v=5d9a336"></script>
+<script src="js/core.js?v=5d9a336"></script>
+<script src="js/qrcode.js?v=5d9a336"></script>
+<script src="js/app.js?v=5d9a336"></script>
 </body>
 </html>

@@ -183,3 +183,8 @@ svg.map.zoom { min-width: 2300px; }
   body.print-qr .col-title { display: none; }
   .no-print { display: none !important; }
 }
+
+.qr-add input#qrFunc { max-width: 220px; }
+.qr-card input { width: 100%; margin-top: 6px; text-align: center; }
+.print-only { display: none; }
+@media print { body.print-qr .print-only { display: block; color: #000; } }

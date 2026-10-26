@@ -6,10 +6,34 @@
   var params = new URLSearchParams(location.search);
   var mine = [];
 
-  // Name per QR-Code festgelegt (?n=...), sonst frei eintragbar und gemerkt
+  // QR-Code (?q=ID) legt Name und Funktion fest; sie werden im Dashboard gepflegt.
+  // Ohne QR-Daten ist der Name frei eintragbar und wird gemerkt (?n=Name setzt ihn fest).
+  var qid = params.get('q');
+  var qr = null;
   var fixedName = (params.get('n') || '').trim();
   $('name').value = fixedName || Util.getName();
   if (fixedName) $('name').readOnly = true;
+  if (qid) $('go').disabled = true;
+
+  function applyQr(state) {
+    if (!qid) return;
+    qr = state.qrs[qid] || null;
+    if (qr) {
+      $('name').value = qr.name;
+      $('name').readOnly = true;
+      $('who').textContent = qr.func || '';
+      $('who').hidden = !qr.func;
+      $('note').textContent = '';
+    } else {
+      $('name').readOnly = false;
+      $('who').hidden = true;
+      $('name').value = Util.getName();
+      $('note').textContent = 'QR-Code nicht gefunden (evtl. gelöscht) – Name bitte selbst eintragen.';
+    }
+    $('go').disabled = false;
+  }
+  Store.subscribe(applyQr);
+  setTimeout(function () { $('go').disabled = false; }, 5000);
   // Halle ergibt sich aus der Position; nur wenn sie in mehreren Hallen existiert, wird gefragt
   function checkPos() {
     var pos = Util.normPos($('pos').value);
@@ -55,14 +79,15 @@
     var pos = Util.normPos($('pos').value);
     var hall = $('hall').value;
     if (!name || !kr || !pos) return;
-    Util.setName(name);
+    if (!qr) Util.setName(name);
+    var who = qr && qr.func ? name + ' · ' + qr.func : name;
     $('go').disabled = true;
 
     var id = Util.taskId(WEEK, kr, hall, pos);
     var old = Store.get().tasks[id];
     var task = old ? Object.assign({}, old) : { week: WEEK, kr: kr, day: Util.todayIdx(), hall: hall, pos: pos };
     task.done = true; task.doneAt = Date.now(); task.doneBy = name;
-    var text = 'KR ' + kr + ' · ' + Halls.get(hall).name + ' · ' + pos + ' bereit (' + name + ')';
+    var text = 'KR ' + kr + ' · ' + Halls.get(hall).name + ' · ' + pos + ' bereit (' + who + ')';
 
     Store.setTask(id, task).then(function () {
       return Store.addMsg({ type: 'done', by: name, text: text });
