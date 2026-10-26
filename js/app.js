@@ -109,10 +109,12 @@
   }
   function hallOf(id) { return Halls.get(id); }
 
+  var openProb = {};   // KR -> offenes Problem vorhanden
   function badges(t) {
     var fresh = t.chg && Date.now() - t.chgAt < 864e5;   // Vermerk 24 Stunden lang
     return (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '') +
-      (fresh ? ' <span class="badge chg" title="' + esc(t.chg) + '">' + esc(t.chgK || 'geändert') + '</span>' : '');
+      (fresh ? ' <span class="badge chg" title="' + esc(t.chg) + '">' + esc(t.chgK || 'geändert') + '</span>' : '') +
+      (openProb[t.kr] ? ' <span class="badge prob">Problem</span>' : '');
   }
 
   // ---------- Linke Spalte ----------
@@ -240,7 +242,7 @@
       list.forEach(function (m) {
         if (!seen[m.id]) {
           fresh[m.id] = 1;
-          if (m.type === 'done') toast(m.text);
+          if (m.type === 'done' || m.type === 'problem' || m.type === 'order') toast(m.text);
         }
       });
     }
@@ -253,7 +255,67 @@
     }).join('') : '<div class="empty">Keine Nachrichten.</div>';
   }
 
+  var tab = 'msgs';
+  function openOrderIds(state) {
+    return Object.keys(state.orders).filter(function (id) { return state.orders[id].status !== 'erledigt'; });
+  }
+  function renderOrders(state) {
+    var ids = Object.keys(state.orders).sort(function (a, b) { return state.orders[b].t - state.orders[a].t; }).slice(0, 60);
+    ids.sort(function (a, b) { return (state.orders[a].status === 'erledigt') - (state.orders[b].status === 'erledigt'); });
+    $('orders').innerHTML = ids.length ? ids.map(function (id) {
+      var o = state.orders[id], fin = o.status === 'erledigt';
+      return '<div class="item' + (fin ? ' ok' : '') + '"><b>' + esc(o.items.join(', ')) + '</b><span>' + esc(o.where) + '</span>' +
+        '<span class="meta">' + Util.time(o.t) + ' · ' + esc(o.by) + ' · <b>' + esc(o.status) + '</b>' + (o.statusBy ? ' von ' + esc(o.statusBy) : '') + '</span>' +
+        '<span class="acts">' + (fin ? '' : (o.status === 'offen' ? '<button class="btn-sm" data-oid="' + id + '" data-st="angenommen">Annehmen</button>' : '') +
+          '<button class="btn-sm btn-ok" data-oid="' + id + '" data-st="erledigt">Erledigt</button>') +
+        '<button class="btn-sm btn-warn" data-oid="' + id + '" data-st="del">Löschen</button></span></div>';
+    }).join('') : '<div class="empty">Keine Podest-Bestellungen.</div>';
+  }
+  function renderProbs(state) {
+    var ids = Object.keys(state.problems).sort(function (a, b) { return state.problems[b].t - state.problems[a].t; }).slice(0, 60);
+    ids.sort(function (a, b) { return (state.problems[a].status !== 'offen') - (state.problems[b].status !== 'offen'); });
+    $('probs').innerHTML = ids.length ? ids.map(function (id) {
+      var p = state.problems[id], open = p.status === 'offen';
+      return '<div class="item ' + (open ? 'prob' : 'ok') + '"><b>KR ' + esc(p.kr) + (p.where ? ' · ' + esc(p.where) : '') + '</b><span>' + esc(p.text) + '</span>' +
+        '<span class="meta">' + Util.time(p.t) + ' · ' + esc(p.by) + (p.func ? ' (' + esc(p.func) + ')' : '') + ' · <b>' + esc(p.status) + '</b>' + (p.solvedBy ? ' von ' + esc(p.solvedBy) : '') + '</span>' +
+        '<span class="acts">' + (open ? '<button class="btn-sm btn-ok" data-pid="' + id + '" data-st="solve">Gelöst</button>' : '') +
+        '<button class="btn-sm btn-warn" data-pid="' + id + '" data-st="del">Löschen</button></span></div>';
+    }).join('') : '<div class="empty">Keine Probleme.</div>';
+  }
+  function renderTabs() {
+    ['msgs', 'orders', 'probs'].forEach(function (k) { $(k).hidden = k !== tab; });
+    $('send').hidden = tab !== 'msgs';
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) { b.classList.toggle('sel', b.dataset.tab === tab); });
+  }
+  document.querySelector('.tabs').onclick = function (e) {
+    var b = e.target.closest('.tab');
+    if (b) { tab = b.dataset.tab; renderTabs(); }
+  };
+  $('orders').onclick = function (e) {
+    var b = e.target.closest('button[data-oid]');
+    var o = b && Store.get().orders[b.dataset.oid];
+    if (!o) return;
+    var p = b.dataset.st === 'del' ? Store.setOrder(b.dataset.oid, null)
+      : Store.setOrder(b.dataset.oid, Object.assign({}, o, { status: b.dataset.st, statusBy: Util.getName() || 'Dashboard', statusAt: Date.now() }));
+    p.catch(function () { toast('Speichern fehlgeschlagen'); });
+  };
+  $('probs').onclick = function (e) {
+    var b = e.target.closest('button[data-pid]');
+    var pr = b && Store.get().problems[b.dataset.pid];
+    if (!pr) return;
+    var p = b.dataset.st === 'del' ? Store.setProblem(b.dataset.pid, null)
+      : Store.setProblem(b.dataset.pid, Object.assign({}, pr, { status: 'gelöst', solvedBy: Util.getName() || 'Dashboard', solvedAt: Date.now() }));
+    p.catch(function () { toast('Speichern fehlgeschlagen'); });
+  };
+
   function render(state) {
+    openProb = {};
+    Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') openProb[state.problems[id].kr] = 1; });
+    $('cOrd').textContent = openOrderIds(state).length || '';
+    $('cProb').textContent = Object.keys(openProb).length ? Object.keys(state.problems).filter(function (id) { return state.problems[id].status === 'offen'; }).length : '';
+    renderOrders(state);
+    renderProbs(state);
+    renderTabs();
     var tasks = weekTasks(state);
     renderWeek(tasks);
     renderMap(tasks);
@@ -682,24 +744,37 @@
   $('impDay').innerHTML = $('pDay').innerHTML;
 
   // ---------- QR-Codes ----------
-  // Der Code enthält nur die ID (?q=...). Name und Funktion lassen sich daher jederzeit ändern,
+  // Der Code enthält nur die ID (?q=...). Name, Funktion und Rechte lassen sich daher jederzeit ändern,
   // ohne dass ausgedruckte Codes ungültig werden.
-  // n/f sind nur ein Rückfall, falls das Handy die QR-Daten nicht aus der Datenbank laden kann
+  var PERM_LABELS = [['report', 'Beipack melden (fertig/Problem)'], ['order', 'Podest bestellen'],
+    ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Fertig/Nicht fertig setzen']];
+  var PRESETS = [
+    ['standard', 'Standard (melden + bestellen)', '', { report: 1, order: 1 }],
+    ['podest', 'Podest-Empfänger', 'Podest-Empfänger', { podest: 1, order: 1 }],
+    ['elektriker', 'Elektriker', 'Elektriker', { report: 1, status: 1 }],
+    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1 }]
+  ];
+  function permsOf(q) { return q.perms && Object.keys(q.perms).length ? q.perms : { report: 1, order: 1 }; }
+  // n/f/p sind nur ein Rückfall, falls das Handy die QR-Daten nicht aus der Datenbank laden kann
   function scanUrl(q) {
     var u = new URL('scan.html', location.href);
     u.searchParams.set('q', q.id);
     u.searchParams.set('n', q.name);
     if (q.func) u.searchParams.set('f', q.func);
+    u.searchParams.set('p', Object.keys(permsOf(q)).join(','));
     return u.href;
+  }
+  function presetOptions(sel) {
+    return PRESETS.map(function (p) { return '<option value="' + p[0] + '"' + (p[0] === sel ? ' selected' : '') + '>' + esc(p[1]) + '</option>'; }).join('');
   }
   function renderQr(state) {
     var list = Object.keys(state.qrs).map(function (id) {
       var q = state.qrs[id]; q.id = id; return q;
     }).sort(function (a, b) { return a.t - b.t; });
     $('qrWarn').hidden = Store.remote;
-    $('qrHint').textContent = list.length ? '' : 'Noch keine QR-Codes. Name (und Funktion) eintragen und „Hinzufügen" klicken.';
+    $('qrHint').textContent = list.length ? '' : 'Noch keine QR-Codes. Name eintragen, Vorlage wählen und „Hinzufügen" klicken.';
     $('qrGrid').innerHTML = list.map(function (q) {
-      var qr = qrcode(0, 'M');
+      var qr = qrcode(0, 'M'), pm = permsOf(q);
       qr.addData(scanUrl(q));
       qr.make();
       return '<div class="card qr-card" data-id="' + esc(q.id) + '">' +
@@ -707,9 +782,14 @@
         (q.func ? '<div class="print-only">' + esc(q.func) + '</div>' : '') +
         '<input class="no-print" data-f="name" value="' + esc(q.name) + '" maxlength="40" placeholder="Name">' +
         '<input class="no-print" data-f="func" value="' + esc(q.func || '') + '" maxlength="40" placeholder="Funktion">' +
+        '<select class="no-print" data-preset><option value="">Vorlage anwenden …</option>' + presetOptions('') + '</select>' +
+        '<div class="perms no-print">' + PERM_LABELS.map(function (p) {
+          return '<label><input type="checkbox" data-perm="' + p[0] + '"' + (pm[p[0]] ? ' checked' : '') + '>' + esc(p[1]) + '</label>';
+        }).join('') + '</div>' +
         qr.createSvgTag(4, 2) +
         '<button class="btn-sm btn-warn no-print" data-del="' + esc(q.id) + '">Löschen</button></div>';
     }).join('');
+    renderPodestEdit(state);
   }
   $('qrOpen').onclick = function () { $('qrModal').hidden = false; renderQr(Store.get()); };
   $('qrClose').onclick = function () { $('qrModal').hidden = true; };
@@ -718,11 +798,14 @@
     window.print();
     document.body.classList.remove('print-qr');
   };
+  $('qrPreset').innerHTML = presetOptions('standard');
   $('qrForm').onsubmit = function (e) {
     e.preventDefault();
     var name = $('qrName').value.trim();
     if (!name) return;
-    Store.setQr(Util.uid(), { name: name, func: $('qrFunc').value.trim(), t: Date.now() })
+    var pre = PRESETS.filter(function (p) { return p[0] === $('qrPreset').value; })[0];
+    var func = $('qrFunc').value.trim() || pre[2];
+    Store.setQr(Util.uid(), { name: name, func: func, t: Date.now(), perms: Object.assign({}, pre[3]) })
       .catch(function () { toast('Speichern fehlgeschlagen'); });
     $('qrName').value = ''; $('qrFunc').value = '';
   };
@@ -731,14 +814,64 @@
     if (b && confirm('QR-Code löschen?')) Store.setQr(b.dataset.del, null).catch(function () { toast('Löschen fehlgeschlagen'); });
   };
   $('qrGrid').onchange = function (e) {
-    var inp = e.target.closest('input[data-f]');
     var card = e.target.closest('.qr-card');
     var q = card && Store.get().qrs[card.dataset.id];
-    if (!inp || !q) return;
-    var upd = { name: q.name, func: q.func || '', t: q.t };
-    upd[inp.dataset.f] = inp.value.trim();
+    if (!q) return;
+    var upd = { name: q.name, func: q.func || '', t: q.t, perms: permsOf(q) };
+    var t = e.target;
+    if (t.matches('input[data-f]')) {
+      upd[t.dataset.f] = t.value.trim();
+    } else if (t.matches('input[data-perm]')) {
+      upd.perms = {};
+      Array.prototype.forEach.call(card.querySelectorAll('input[data-perm]'), function (c) { if (c.checked) upd.perms[c.dataset.perm] = 1; });
+    } else if (t.matches('select[data-preset]')) {
+      var pre = PRESETS.filter(function (p) { return p[0] === t.value; })[0];
+      if (!pre) return;
+      upd.perms = Object.assign({}, pre[3]);
+      if (pre[2]) upd.func = pre[2];
+    } else {
+      return;
+    }
     if (!upd.name) { toast('Name darf nicht leer sein'); renderQr(Store.get()); return; }
+    if (!Object.keys(upd.perms).length) { toast('Mindestens eine Funktion auswählen'); renderQr(Store.get()); return; }
     Store.setQr(card.dataset.id, upd).catch(function () { toast('Speichern fehlgeschlagen'); });
+  };
+
+  // Podest-Auswahl für die Handys (Vorgabe aus js/config.js, bis hier etwas gespeichert wird)
+  function podestList(state) {
+    return Object.keys(state.podests).map(function (id) { var p = state.podests[id]; return { id: id, name: p.name, t: p.t }; })
+      .sort(function (a, b) { return a.t - b.t; });
+  }
+  function renderPodestEdit(state) {
+    var list = podestList(state), defs = (window.DEKR_CONFIG || {}).podests || [];
+    var chips = list.length ? list.map(function (p) { return { id: p.id, name: p.name }; }) : defs.map(function (n) { return { id: '', name: n }; });
+    $('pdEdit').innerHTML = chips.map(function (p) {
+      return '<span class="chip">' + esc(p.name) + '<button data-pdel="' + esc(p.id) + '" data-pname="' + esc(p.name) + '" title="Entfernen">×</button></span>';
+    }).join('') || '<span class="empty">Keine Auswahl – nur Texteingabe am Handy.</span>';
+  }
+  // Beim ersten Ändern wird die Vorgabe in die Datenbank übernommen
+  function seedPodests() {
+    var st = Store.get();
+    if (podestList(st).length) return [];
+    return ((window.DEKR_CONFIG || {}).podests || []).map(function (n, i) { return Store.setPodest('d' + i, { name: n, t: i }); });
+  }
+  $('pdAdd').onclick = function () {
+    var name = $('pdName').value.trim();
+    if (!name) return;
+    var jobs = seedPodests();
+    jobs.push(Store.setPodest(Util.uid(), { name: name, t: Date.now() }));
+    Promise.all(jobs).catch(function () { toast('Speichern fehlgeschlagen'); });
+    $('pdName').value = '';
+  };
+  $('pdEdit').onclick = function (e) {
+    var b = e.target.closest('button[data-pname]');
+    if (!b) return;
+    var jobs = seedPodests();
+    Promise.all(jobs).then(function () {
+      var st = Store.get().podests;
+      var id = Object.keys(st).filter(function (k) { return st[k].name === b.dataset.pname; })[0];
+      return id ? Store.setPodest(id, null) : null;
+    }).catch(function () { toast('Speichern fehlgeschlagen'); });
   };
   Store.subscribe(function (state) {
     var typing = document.activeElement && $('qrGrid').contains(document.activeElement);

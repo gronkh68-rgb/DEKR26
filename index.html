@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=7bf61ca">
+<link rel="stylesheet" href="css/style.css?v=61932d3">
 </head>
 <body>
 <div class="app">
@@ -59,8 +59,14 @@
     </section>
 
     <section class="col">
-      <div class="col-title orb"><span>Nachrichten</span></div>
+      <div class="tabs">
+        <button class="tab sel" data-tab="msgs">Nachrichten</button>
+        <button class="tab" data-tab="orders">Podest<span class="cnt" id="cOrd"></span></button>
+        <button class="tab" data-tab="probs">Probleme<span class="cnt" id="cProb"></span></button>
+      </div>
       <div class="scroll" id="msgs"></div>
+      <div class="scroll" id="orders" hidden></div>
+      <div class="scroll" id="probs" hidden></div>
       <form class="card send" id="send">
         <input id="mName" placeholder="Name" maxlength="30">
         <textarea id="mText" placeholder="Nachricht..." maxlength="300" required></textarea>
@@ -91,19 +97,24 @@
     <form class="qr-add no-print" id="qrForm">
       <input id="qrName" placeholder="Name, z.B. Platz 3" maxlength="40" required>
       <input id="qrFunc" placeholder="Funktion (optional)" maxlength="40">
+      <select id="qrPreset" title="Vorlage für die Rechte"></select>
       <button class="btn-main">Hinzufügen</button>
       <button type="button" id="qrPrint">Drucken</button>
     </form>
     <div class="note no-print" id="qrWarn" hidden>Lokal-Demo-Modus: Die Codes funktionieren nur mit gemeinsamer Datenbank (Firebase). Meldungen vom Handy erreichen das Dashboard sonst nicht.</div>
     <div class="empty no-print" id="qrHint"></div>
     <div class="qr-grid" id="qrGrid"></div>
+    <div class="no-print"><div class="empty">Podest-Auswahl am Handy:</div>
+      <div class="pd-edit" id="pdEdit"></div>
+      <div class="qr-add" style="margin-top:6px"><input id="pdName" placeholder="Podest hinzufügen" maxlength="60"><button type="button" id="pdAdd">Hinzufügen</button></div>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=7bf61ca"></script>
-<script src="js/halls.js?v=7bf61ca"></script>
-<script src="js/core.js?v=7bf61ca"></script>
-<script src="js/qrcode.js?v=7bf61ca"></script>
-<script src="js/app.js?v=7bf61ca"></script>
+<script src="js/config.js?v=61932d3"></script>
+<script src="js/halls.js?v=61932d3"></script>
+<script src="js/core.js?v=61932d3"></script>
+<script src="js/qrcode.js?v=61932d3"></script>
+<script src="js/app.js?v=61932d3"></script>
 </body>
 </html>

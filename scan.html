@@ -5,28 +5,60 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DEKR26 · Meldung</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=7bf61ca">
+<link rel="stylesheet" href="css/style.css?v=61932d3">
 </head>
 <body>
 <div class="mobile">
-  <h1>DEKR26 · Fertigmeldung</h1>
-  <div class="sub">Beipack abgeholt? KR-Nummer eintragen. <span class="tag" id="who" hidden></span></div>
-  <form class="form" id="f" autocomplete="off">
-    <label>Name
-      <input id="name" readonly tabindex="-1" placeholder="–">
-    </label>
-    <label>KR-Nummer
-      <div class="kr-in"><span>KR</span><input id="kr" autocapitalize="characters" placeholder="Nummer" required></div>
-    </label>
-    <div class="note" id="note"></div>
-    <button class="btn-ok big" id="go">FERTIG</button>
-  </form>
+  <h1>DEKR26 · Meldung</h1>
+  <div class="sub"><b id="whoName"></b> <span class="tag" id="who" hidden></span></div>
+  <div class="note" id="note"></div>
+  <div class="menu" id="menu"></div>
+
+  <section class="sec" id="v-beipack" hidden>
+    <div class="form">
+      <label>KR-Nummer
+        <div class="kr-in"><span>KR</span><input id="kr" list="krlist" autocapitalize="characters" autocomplete="off" placeholder="Nummer"></div>
+      </label>
+      <div class="card kr-info" id="krInfo" hidden></div>
+      <div class="two" id="bBtns">
+        <button type="button" class="btn-ok big" id="bOk">Fertig</button>
+        <button type="button" class="big-warn" id="bProb">Problem</button>
+      </div>
+      <button type="button" class="big-gray" id="bNot" hidden>Nicht fertig</button>
+      <div class="box" id="probBox" hidden>
+        <textarea class="full" id="probText" maxlength="400" placeholder="Problem beschreiben …"></textarea>
+        <button type="button" class="btn-main big" id="probSend">Problem senden</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="v-podest" hidden>
+    <div class="form">
+      <label>Podest auswählen</label>
+      <div class="chips" id="pdList"></div>
+      <label>Oder eigener Text
+        <input id="pdText" maxlength="100" placeholder="z.B. Podest 1,2 m mit Geländer">
+      </label>
+      <label>Für KR
+        <div class="kr-in"><span>KR</span><input id="pdKr" list="krlist" autocapitalize="characters" autocomplete="off" placeholder="Nummer"></div>
+      </label>
+      <label>Oder Position
+        <input id="pdPos" maxlength="12" placeholder="z.B. 7 42 Z">
+      </label>
+      <button type="button" class="btn-main big" id="pdGo">Bestellen</button>
+    </div>
+  </section>
+
+  <section class="sec" id="v-orders" hidden></section>
+  <section class="sec" id="v-problems" hidden></section>
+
+  <datalist id="krlist"></datalist>
   <div class="hist" id="hist"></div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=7bf61ca"></script>
-<script src="js/halls.js?v=7bf61ca"></script>
-<script src="js/core.js?v=7bf61ca"></script>
-<script src="js/scan.js?v=7bf61ca"></script>
+<script src="js/config.js?v=61932d3"></script>
+<script src="js/halls.js?v=61932d3"></script>
+<script src="js/core.js?v=61932d3"></script>
+<script src="js/scan.js?v=61932d3"></script>
 </body>
 </html>

@@ -76,7 +76,8 @@ window.Store = (function () {
   var timer = null;
 
   function norm(s) {
-    return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {} };
+    return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
+      orders: (s && s.orders) || {}, problems: (s && s.problems) || {}, podests: (s && s.podests) || {} };
   }
   function emit() { subs.forEach(function (f) { f(state); }); }
   function loadLocal() {
@@ -133,6 +134,9 @@ window.Store = (function () {
     removeTask: function (id) { return write('tasks', id, null); },
     // Spalten-/Zeilenverschiebung einer Halle: { cols: {c14: dx}, rows: {rA: dy} } oder null
     setLayout: function (hallId, ov) { return write('layout', hallId, ov); },
+    setOrder: function (id, o) { return write('orders', id, o); },
+    setProblem: function (id, p) { return write('problems', id, p); },
+    setPodest: function (id, p) { return write('podests', id, p); },
     setQr: function (id, q) { return write('qrs', id, q); },
     addMsg: function (m) {
       m.t = Date.now();
