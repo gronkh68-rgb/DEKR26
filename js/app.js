@@ -1067,11 +1067,24 @@
   });
 
   // ---------- Admin: Anmeldung und Geräte-Freigabe (nur mit authApiKey) ----------
-  function uaText(ua) {
+  // Gerätebeschreibung aus Browser-Kennung und (falls vorhanden) Modellangabe
+  function uaText(ua, x) {
     ua = String(ua || '');
-    var os = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '';
-    var br = /Edg\//.test(ua) ? 'Edge' : /Firefox/.test(ua) ? 'Firefox' : /Chrome/.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : '';
-    return [os, br].filter(Boolean).join(' · ');
+    var os = '', m;
+    if ((m = /Android ([\d.]+)/.exec(ua))) os = 'Android ' + m[1];
+    else if ((m = /(?:iPhone|CPU) OS ([\d_]+)/.exec(ua)) && /iPhone|iPad/.test(ua)) os = (/iPad/.test(ua) ? 'iPadOS ' : 'iOS ') + m[1].replace(/_/g, '.');
+    else if (/Windows NT/.test(ua)) os = 'Windows';
+    else if (/Mac OS X/.test(ua)) os = 'macOS';
+    else if (/Linux/.test(ua)) os = 'Linux';
+    var br = '';
+    if ((m = /Edg\/([\d]+)/.exec(ua))) br = 'Edge ' + m[1];
+    else if ((m = /Firefox\/([\d]+)/.exec(ua))) br = 'Firefox ' + m[1];
+    else if ((m = /(?:Chrome|CriOS)\/([\d]+)/.exec(ua))) br = 'Chrome ' + m[1];
+    else if ((m = /Version\/([\d]+).*Safari/.exec(ua))) br = 'Safari ' + m[1];
+    // Chrome meldet in der Kennung nur noch eine feste Android-Version; die echte steht in den Geräteangaben
+    if (x && x.os) os = x.os.replace(/(\d+(?:\.\d+)?)(?:\.0)*$/, '$1');
+    var model = x && x.model ? x.model : /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : '';
+    return [model, os, br].filter(Boolean).join(' · ');
   }
   function doLogin(mail, pw, errEl) {
     errEl.textContent = '';
@@ -1101,7 +1114,9 @@
       $('devList').innerHTML = ids.length ? ids.map(function (id) {
         var x = d[id], ok = x.ok === true;
         return '<div class="item' + (ok ? ' ok' : '') + '"><b>' + esc(x.n || 'Unbenannt') + ' · Code ' + esc(id.slice(-6).toUpperCase()) + '</b>' +
-          '<span class="meta">' + esc(uaText(x.ua)) + ' · angemeldet ' + new Date(x.t).toLocaleString('de-DE') + (ok ? ' · freigegeben' + (x.by ? ' von ' + esc(x.by) : '') : ' · wartet') + '</span>' +
+          '<span class="meta"><b>' + esc(uaText(x.ua, x) || 'Unbekanntes Gerät') + '</b></span>' +
+          '<span class="meta">Bildschirm ' + esc(x.scr || '–') + ' · Sprache ' + esc(x.lang || '–') + ' · Zeitzone ' + esc(x.tz || '–') + '</span>' +
+          '<span class="meta">angemeldet ' + new Date(x.t).toLocaleString('de-DE') + (ok ? ' · freigegeben' + (x.by ? ' von ' + esc(x.by) : '') : ' · wartet auf Freigabe') + '</span>' +
           '<span class="acts">' + (ok ? '' : '<button class="btn-sm btn-ok" data-dev="' + esc(id) + '" data-act="ok">Freigeben</button>') +
           '<button class="btn-sm btn-warn" data-dev="' + esc(id) + '" data-act="del">' + (ok ? 'Sperren' : 'Ablehnen') + '</button></span></div>';
       }).join('') : '<div class="empty">Keine Geräte.</div>';

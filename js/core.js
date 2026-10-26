@@ -195,11 +195,31 @@ window.Store = (function () {
     emit();
   }
   // Neues Gerät meldet sich zur Freigabe an; danach wird regelmäßig geprüft, ob es freigegeben wurde
+  // Gerätedaten, die der Browser ohnehin preisgibt (Modell, Betriebssystem, Browser, Bildschirm, Sprache, Zeitzone).
+  // Sie gehen nur an den Admin zur Freigabe; Standort und Netzwerkadresse werden nicht erfasst.
+  function deviceInfo() {
+    var info = { t: Date.now(), n: label || '', ua: String(navigator.userAgent || '').slice(0, 200) };
+    try {
+      info.scr = screen.width + '×' + screen.height;
+      info.lang = navigator.language || '';
+      info.tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    } catch (e) { /* ignorieren */ }
+    var uad = navigator.userAgentData;
+    if (uad && uad.getHighEntropyValues) {
+      return uad.getHighEntropyValues(['model', 'platform', 'platformVersion']).then(function (h) {
+        if (h.model) info.model = String(h.model).slice(0, 60);
+        if (h.platform) info.os = (h.platform + ' ' + (h.platformVersion || '')).trim().slice(0, 40);
+        return info;
+      }, function () { return info; });
+    }
+    return Promise.resolve(info);
+  }
   function registerDevice() {
     var uid = Auth.uid();
     if (!uid) return;
-    api('/devices/' + uid, { method: 'PUT', body: JSON.stringify({ t: Date.now(), n: label || '', ua: String(navigator.userAgent || '').slice(0, 160) }) })
-      .catch(function () { /* wurde schon angemeldet */ });
+    deviceInfo().then(function (info) {
+      return api('/devices/' + uid, { method: 'PUT', body: JSON.stringify(info) });
+    }).catch(function () { /* wurde schon angemeldet */ });
   }
   function startLockPoll() {
     clearInterval(lockTimer);
