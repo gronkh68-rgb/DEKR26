@@ -2,6 +2,7 @@
 //
 // Mit `grid` wird ein Positionsraster (Zeilenbuchstaben x Spaltennummern) über die Zeichnung `plan`
 // gelegt. x/y/w/h sind Koordinaten im viewBox-System der Hallenzeichnung.
+// Optional: `layout: { cols: {c14: 12}, rows: {rA: -4} }` = fest eingebaute Verschiebungen (Export aus dem Admin-Modus).
 // Optional: `valid: ['A1','A2',...]` beschränkt die Halle auf tatsächlich vorhandene Positionen.
 // Ohne `grid` entsteht ein einfaches Platzhalter-Raster (rows x cols).
 
@@ -82,6 +83,7 @@ window.Halls = (function () {
 
   // ov = { cols: { c14: dx }, rows: { rA: dy } } verschiebt einzelne Spalten/Zeilen
   function build(h, ov) {
+    ov = ov || h.layout;
     var s = spec(h), oc = (ov && ov.cols) || {}, or = (ov && ov.rows) || {};
     var valid = null, positions = [], labels = [], colKeys = [], rowKeys = [], r, c;
     if (h.valid) { valid = {}; h.valid.forEach(function (id) { valid[id] = 1; }); }

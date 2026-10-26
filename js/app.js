@@ -219,7 +219,7 @@
   function clone(o) { return JSON.parse(JSON.stringify(o || {})); }
   function ovFor(hallId) {
     if (drag && drag.hall === hallId) return draft;
-    return Store.get().layout[hallId] || {};
+    return Store.get().layout[hallId] || Halls.get(hallId).layout || {};
   }
   function toSvg(svg, e) {
     var pt = svg.createSVGPoint();
@@ -229,7 +229,7 @@
   function setEdit(on) {
     editing = on;
     $('editBar').hidden = !on;
-    $('editToggle').textContent = on ? 'Fertig' : 'Spalten anpassen';
+    $('editToggle').textContent = on ? 'Fertig' : 'Admin-Modus';
     $('editToggle').className = on ? 'btn-ok' : '';
     render(Store.get());
   }
@@ -264,6 +264,17 @@
     render(Store.get());
   }
   $('editToggle').onclick = function () { setEdit(!editing); };
+  $('editExport').onclick = function () {
+    var hall = Halls.all[hallIdx];
+    var ov = ovFor(hall.id);
+    var text = 'layout: ' + JSON.stringify({ cols: ov.cols || {}, rows: ov.rows || {} }) + ',';
+    var done = function () { toast('Layout von ' + hall.name + ' kopiert'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { window.prompt('Kopieren mit Strg+C:', text); });
+    } else {
+      window.prompt('Kopieren mit Strg+C:', text);
+    }
+  };
   $('editReset').onclick = function () {
     if (confirm('Verschiebungen dieser Halle zurücksetzen?')) {
       Store.setLayout(Halls.all[hallIdx].id, null).catch(function () { toast('Speichern fehlgeschlagen'); });
