@@ -552,11 +552,13 @@
     flashImg.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:90;pointer-events:none;display:none';
     var tryJpg = true;
     flashImg.onerror = function () {
-      if (tryJpg) { tryJpg = false; flashImg.src = 'klick.jpg?v=' + stamp; } else { flashImg = null; }
+      if (tryJpg) { tryJpg = false; flashImg.src = 'klick.jpg?v=' + stamp; }
+      else { flashImg = null; $('note').textContent += ' Bild fehlt: klick.png oder klick.jpg im Hauptordner hochladen.'; }
     };
     flashImg.src = 'klick.png?v=' + stamp;
     document.body.appendChild(flashImg);
-    document.addEventListener('click', function () {
+    // pointerdown statt click: funktioniert auch beim Tippen auf leere Flächen (iPhone löst dort kein click aus)
+    document.addEventListener('pointerdown', function () {
       if (!flashImg || !flashImg.complete || !flashImg.naturalWidth) return;
       if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       var now = Date.now();
