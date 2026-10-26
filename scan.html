@@ -16,18 +16,17 @@
       <input id="name" maxlength="30" placeholder="Dein Name" required>
     </label>
     <label>KR-Nummer
-      <div class="kr-in"><span>KR</span><input id="kr" inputmode="numeric" placeholder="12345" required></div>
+      <div class="kr-in"><span>KR</span><input id="kr" autocapitalize="characters" placeholder="Nummer" required></div>
     </label>
     <label>Position
-      <input id="pos" list="poslist" placeholder="z.B. A14" maxlength="8" required>
+      <input id="pos" placeholder="z.B. A14" maxlength="8" required>
     </label>
-    <label>Halle
+    <label id="hallRow" hidden>Halle
       <select id="hall"></select>
     </label>
     <div class="note" id="note"></div>
     <button class="btn-ok big" id="go">FERTIG</button>
   </form>
-  <datalist id="poslist"></datalist>
   <div class="hist" id="hist"></div>
 </div>
 <div class="toast" id="toast"></div>

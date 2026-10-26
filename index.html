@@ -16,14 +16,13 @@
     <span class="tag" id="week"></span>
     <span class="sp"></span>
     <span class="tag" id="mode"></span>
-    <a class="tag" href="qr.html" style="text-decoration:none">QR-Codes</a>
     <span class="orb" id="clock" style="color:var(--accent)"></span>
   </header>
   <main class="cols">
     <section class="col">
       <div class="col-title orb"><span>KR / Woche</span><button class="btn-sm" id="planToggle">+ KR</button></div>
       <form class="card plan" id="plan" hidden>
-        <div class="kr-in"><span>KR</span><input id="pKr" inputmode="numeric" placeholder="Nummer" required></div>
+        <div class="kr-in"><span>KR</span><input id="pKr" autocapitalize="characters" placeholder="Nummer" required></div>
         <div class="row">
           <select id="pDay"></select>
           <select id="pHall"></select>

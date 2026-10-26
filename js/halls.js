@@ -62,7 +62,7 @@ window.DEKR_HALLS = [
     plan: PLAN_H7,
     grid: { x: 215, y: 310, w: 1330, h: 790, rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 }
   },
-  { id: 'H2', name: 'Halle 2', rows: 'ABCDEFGHIJKL', cols: 24 } // Platzhalter bis zum Plan
+  { id: 'H2', name: 'Halle 2', rows: 'ABCDEFGHIJKL', cols: 24, valid: [] } // Platzhalter: noch keine Positionen
 ];
 
 window.Halls = (function () {

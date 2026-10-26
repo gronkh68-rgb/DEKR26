@@ -6,34 +6,32 @@
   var params = new URLSearchParams(location.search);
   var mine = [];
 
-  $('name').value = params.get('n') || Util.getName();
-  $('hall').innerHTML = Halls.all.map(function (h) {
-    return '<option value="' + h.id + '">' + esc(h.name) + '</option>';
-  }).join('');
-  if (params.get('hall') && Halls.get(params.get('hall'))) $('hall').value = params.get('hall');
-
-  function fillPositions() {
-    var lay = Halls.layout($('hall').value);
-    $('poslist').innerHTML = lay.positions.map(function (p) {
-      return '<option value="' + esc(p.id) + '">';
-    }).join('');
-  }
-  fillPositions();
-
-  // Halle anhand der Position automatisch wählen
+  // Name per QR-Code festgelegt (?n=...), sonst frei eintragbar und gemerkt
+  var fixedName = (params.get('n') || '').trim();
+  $('name').value = fixedName || Util.getName();
+  if (fixedName) $('name').readOnly = true;
+  // Halle ergibt sich aus der Position; nur wenn sie in mehreren Hallen existiert, wird gefragt
   function checkPos() {
     var pos = Util.normPos($('pos').value);
     var note = $('note');
     note.textContent = '';
+    $('hallRow').hidden = true;
     if (!pos) return;
     var halls = Halls.find(pos);
-    if (!halls.length) { note.textContent = 'Position ' + pos + ' nicht im Hallenplan – wird trotzdem gemeldet.'; return; }
-    if (halls.every(function (h) { return h.id !== $('hall').value; })) {
-      $('hall').value = halls[0].id; fillPositions();
+    if (!halls.length) {
+      note.textContent = 'Position ' + pos + ' nicht im Hallenplan – wird trotzdem gemeldet.';
+      $('hall').innerHTML = '<option value="' + Halls.all[0].id + '">' + esc(Halls.all[0].name) + '</option>';
+      return;
     }
+    var prev = $('hall').value;
+    $('hall').innerHTML = halls.map(function (h) {
+      return '<option value="' + h.id + '">' + esc(h.name) + '</option>';
+    }).join('');
+    if (halls.some(function (h) { return h.id === prev; })) $('hall').value = prev;
+    $('hallRow').hidden = halls.length < 2;
   }
   $('pos').addEventListener('input', checkPos);
-  $('hall').addEventListener('change', function () { fillPositions(); checkPos(); });
+  checkPos();
 
   function toast(t, bad) {
     var el = $('toast');

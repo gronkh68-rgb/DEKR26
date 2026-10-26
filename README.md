@@ -5,8 +5,7 @@ Statische Hilfswebsite (GitHub Pages). Mitarbeiter melden per Handy (QR-Code) �
 | Seite | Zweck |
 |---|---|
 | `index.html` | Dashboard: links KR je Wochentag (Mo–Fr), Mitte Hallenkarte (Umschalter oben rechts), rechts Nachrichten |
-| `scan.html` | Handy-Meldung (Name, KR, Position → FERTIG). Parameter: `?n=Team 1`, `?hall=H1` |
-| `qr.html` | Erzeugt druckbare QR-Codes für `scan.html` |
+| `scan.html` | Handy-Meldung (Name, KR, Position → FERTIG). Die Halle ergibt sich aus der Position. QR-Codes werden extern erstellt; `?n=Team 1` legt den Namen fest (dann nicht änderbar) |
 
 ## Live-Betrieb (mehrere Handys)
 Ohne Konfiguration läuft der **LOKAL-DEMO-Modus** (Daten nur im eigenen Browser). Für Live-Sync:
@@ -15,7 +14,7 @@ Ohne Konfiguration läuft der **LOKAL-DEMO-Modus** (Daten nur im eigenen Browser
 2. Regeln (ohne Login, nur für internen Kurzzeit-Einsatz):
    `{ "rules": { ".read": true, ".write": true } }`
 3. Datenbank-URL in `js/config.js` bei `firebaseUrl` eintragen und committen.
-4. GitHub → Settings → Pages → Branch wählen → URL in `qr.html` als Basis-URL verwenden.
+4. GitHub → Settings → Pages → Branch wählen → Adresse für die QR-Codes verwenden (`…/scan.html?n=Name`).
 
 Achtung: Mit offenen Regeln kann jeder mit der URL schreiben. Keine sensiblen Daten eintragen.
 

@@ -108,6 +108,7 @@ svg.map { display: block; width: 100%; min-width: 640px; }
 .mobile h1 { font-size: 20px; margin-bottom: 4px; }
 .mobile .sub { color: var(--dim); margin-bottom: 14px; }
 .form { display: grid; gap: 12px; }
+.form label[hidden] { display: none; }
 .form label { display: grid; gap: 4px; color: var(--dim); font-size: 13px; }
 .form input, .form select { font-size: 18px; padding: 12px; }
 .big { padding: 16px; font-size: 18px; }
