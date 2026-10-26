@@ -4,7 +4,7 @@
   var esc = Util.esc;
   var WEEK = Util.isoWeek();
   var params = new URLSearchParams(location.search);
-  var mine = [];
+  var recent = [];
 
   // Name und Funktion kommen vom QR-Code (?q=ID, im Dashboard gepflegt) und sind nicht änderbar.
   var qid = params.get('q');
@@ -41,8 +41,8 @@
   }
 
   function renderHist() {
-    $('hist').innerHTML = mine.length
-      ? '<div class="col-title orb" style="margin-bottom:6px">Zuletzt gemeldet</div>' + mine.map(function (m) {
+    $('hist').innerHTML = recent.length
+      ? '<div class="col-title orb" style="margin-bottom:6px">Zuletzt gemeldet</div>' + recent.map(function (m) {
         return '<div class="msg done">' + esc(m.text) + '<small>' + Util.time(m.t) + '</small></div>';
       }).join('') : '';
   }
@@ -56,11 +56,17 @@
 
     // Alle Positionen dieser KR (aktuelle Woche) werden fertig; ohne Eintrag entsteht einer ohne Position
     var all = Store.get().tasks;
-    var ids = Object.keys(all).filter(function (id) { return all[id].week === WEEK && all[id].kr === kr; });
+    // Woche der KR: aktuelle, sonst die nächste kommende (bzw. letzte vergangene)
+    var mine = Object.keys(all).filter(function (id) { return all[id].kr === kr; });
+    var weeks = {};
+    mine.forEach(function (id) { weeks[all[id].week] = 1; });
+    var wk = Object.keys(weeks).sort();
+    var useWeek = weeks[WEEK] ? WEEK : wk.filter(function (w) { return w > WEEK; })[0] || wk[wk.length - 1] || WEEK;
+    var ids = mine.filter(function (id) { return all[id].week === useWeek; });
     var jobs = [], places = [];
     if (!ids.length) {
-      jobs.push(Store.setTask(Util.taskId(WEEK, kr, '0', '0'), {
-        week: WEEK, kr: kr, day: Util.todayIdx(), hall: '', pos: '', done: true, doneAt: Date.now(), doneBy: qr.name
+      jobs.push(Store.setTask(Util.taskId(useWeek, kr, '0', '0'), {
+        week: useWeek, kr: kr, day: Util.todayIdx(), hall: '', pos: '', done: true, doneAt: Date.now(), doneBy: qr.name
       }));
     }
     ids.forEach(function (id) {
@@ -76,7 +82,7 @@
     Promise.all(jobs).then(function () {
       return Store.addMsg({ type: 'done', by: qr.name, text: text });
     }).then(function () {
-      mine.unshift({ t: Date.now(), text: text }); renderHist();
+      recent.unshift({ t: Date.now(), text: text }); renderHist();
       toast('Gemeldet: KR ' + kr);
       $('kr').value = '';
       $('kr').focus();

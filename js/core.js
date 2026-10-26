@@ -21,6 +21,24 @@ window.Util = (function () {
       var w = Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7);
       return y + '-W' + (w < 10 ? '0' : '') + w;
     },
+    // Wochenschlüssel "2026-W44" <-> Montag dieser Woche
+    mondayOf: function (key) {
+      var m = /^(\d{4})-W(\d{2})$/.exec(key);
+      var jan4 = new Date(+m[1], 0, 4);
+      var d = new Date(+m[1], 0, 4 - ((jan4.getDay() || 7) - 1) + 7 * (+m[2] - 1));
+      return d;
+    },
+    addWeeks: function (key, n) {
+      var d = this.mondayOf(key);
+      d.setDate(d.getDate() + 7 * n);
+      return this.isoWeek(d);
+    },
+    dayDate: function (key, day) {
+      var d = this.mondayOf(key);
+      d.setDate(d.getDate() + day - 1);
+      var p = function (x) { return (x < 10 ? '0' : '') + x; };
+      return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.';
+    },
     key: function (s) { return String(s).replace(/[^A-Za-z0-9_-]/g, '_'); },
     // KR-Nummer: nur die Nummer speichern, ein getipptes "KR" am Anfang entfällt
     normKr: function (s) { return String(s).toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^KR/, ''); },

@@ -2,7 +2,8 @@
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var esc = Util.esc;
-  var WEEK = Util.isoWeek();
+  var WEEK = Util.isoWeek();   // aktuelle Kalenderwoche
+  var viewWeek = WEEK;         // angezeigte Woche
   var hallIdx = 0;
   var sel = null;          // { hall, pos } oder { id } (Eintrag ohne Position)
   var seen = null;         // bereits gesehene Nachrichten-IDs
@@ -12,7 +13,14 @@
   var draft = null;        // Layout während des Ziehens
 
   // ---------- Kopf ----------
-  $('week').textContent = 'KW ' + WEEK.split('-W')[1];
+  function weekLabel() {
+    $('week').textContent = 'KW ' + viewWeek.split('-W')[1] + (viewWeek === WEEK ? '' : ' · ' + viewWeek.split('-W')[0]);
+    $('week').style.color = viewWeek === WEEK ? '' : 'var(--accent)';
+  }
+  weekLabel();
+  function moveWeek(n) { viewWeek = Util.addWeeks(viewWeek, n); sel = null; weekLabel(); render(Store.get()); }
+  $('weekPrev').onclick = function () { moveWeek(-1); };
+  $('weekNext').onclick = function () { moveWeek(1); };
   $('mode').textContent = Store.remote ? 'Live' : 'Lokal-Demo';
   $('mode').className = 'tag ' + (Store.remote ? 'live' : 'demo');
   function tick() {
@@ -34,18 +42,19 @@
 
   // Plant eine KR (genau eine Position). Ein früherer Eintrag derselben KR wird ersetzt, der Status bleibt.
   // Gibt die Schreib-Promises zurück.
-  function planOne(kr, pos, day, hall0, extra, forceHall) {
+  function planOne(kr, pos, day, hall0, extra, forceHall, week) {
+    week = week || viewWeek;
     var hall = !pos ? '' : forceHall || hall0;
-    var id = Util.taskId(WEEK, kr, hall || '0', pos || '0');
+    var id = Util.taskId(week, kr, hall || '0', pos || '0');
     var tasks = Store.get().tasks, wasDone = false, jobs = [];
     Object.keys(tasks).forEach(function (tid) {
-      if (tasks[tid].week === WEEK && tasks[tid].kr === kr) {
+      if (tasks[tid].week === week && tasks[tid].kr === kr) {
         wasDone = wasDone || !!tasks[tid].done;
         if (tid !== id) jobs.push(Store.removeTask(tid));
       }
     });
     var cur = tasks[id];
-    var t = { week: WEEK, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : wasDone };
+    var t = { week: week, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : wasDone };
     if (extra && extra.scope) t.scope = extra.scope;
     if (extra && extra.usa) t.usa = true;
     jobs.push(Store.setTask(id, t));
@@ -90,7 +99,7 @@
   function weekTasks(state) {
     return Object.keys(state.tasks).map(function (id) {
       var t = state.tasks[id]; t.id = id; return t;
-    }).filter(function (t) { return t.week === WEEK; });
+    }).filter(function (t) { return t.week === viewWeek; });
   }
   function hallOf(id) { return Halls.get(id); }
 
@@ -109,8 +118,9 @@
         if (!groups[t.kr]) { groups[t.kr] = []; order.push(t.kr); }
         groups[t.kr].push(t);
       });
-      html += '<div class="day' + (d === Util.todayIdx() ? ' today' : '') + '">' +
-        '<div class="day-h orb"><span>' + Util.DAYS[d] + (d === Util.todayIdx() ? ' · heute' : '') +
+      var isToday = viewWeek === WEEK && d === Util.todayIdx();
+      html += '<div class="day' + (isToday ? ' today' : '') + '">' +
+        '<div class="day-h orb"><span>' + Util.DAYS[d] + ' ' + Util.dayDate(viewWeek, d) + (isToday ? ' · heute' : '') +
         '</span><span class="cnt">' + done + '/' + dt.length + '</span></div>';
       if (!order.length) html += '<div class="empty">– keine KR –</div>';
       order.forEach(function (kr) {
@@ -387,7 +397,7 @@
   // ---------- Import (Kopieren und Einfügen) ----------
   // Nur die gewählten Spalten werden verarbeitet; alles andere wird verworfen und nie gespeichert.
   // Gespeichert werden: KR, Tag, Halle, Position, Lieferumfang (Maschine/komplett) und ein USA-Hinweis (Land = US).
-  var ROLES = [['', 'ignorieren'], ['kr', 'KR'], ['day', 'Tag'], ['hall', 'Halle'], ['num', 'Nummer'],
+  var ROLES = [['', 'ignorieren'], ['kr', 'KR'], ['year', 'Jahr'], ['kw', 'KW'], ['day', 'Tag'], ['hall', 'Halle'], ['num', 'Nummer'],
     ['letter', 'Buchstabe'], ['pos', 'Position (A14)'], ['scope', 'Lieferumfang'], ['country', 'Land (US = USA)']];
   var imp = { rows: [], cols: [] };
   var MAP_KEY = 'dekr26_impmap';
@@ -417,7 +427,7 @@
         /^(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)$/i.test(L[j + 3])) starts.push(j);
     }
     if (!starts.length) return null;
-    var rows = [['KR', 'Tag', 'Halle', 'Nummer', 'Buchstabe', 'Lieferumfang', 'Land']];
+    var rows = [['KR', 'Jahr', 'KW', 'Tag', 'Halle', 'Nummer', 'Buchstabe', 'Lieferumfang', 'Land']];
     rows.multi = 0;
     starts.forEach(function (s, i) {
       var rec = L.slice(s, i + 1 < starts.length ? starts[i + 1] : L.length);
@@ -431,7 +441,7 @@
       if (k > 1) rows.multi++;
       var c = indexWhere(rec, /^[A-Z]{2}$/, krI + 1);
       var sc = indexWhere(rec, /^(komplett|maschine|schrumpftunnel)/i, c >= 0 ? c + 2 : krI + 1);
-      rows.push([rec[krI], rec[3], R[0] || '', k ? R[k] : '', k ? R[2 * k] : '', sc >= 0 ? rec[sc] : '',
+      rows.push([rec[krI], rec[1], rec[2], rec[3], R[0] || '', k ? R[k] : '', k ? R[2 * k] : '', sc >= 0 ? rec[sc] : '',
         c >= 0 ? rec[c] : '']);
     });
     return rows;
@@ -449,6 +459,8 @@
     h = String(h || '').toLowerCase().trim();
     if (/^kr(\W|$)|kr-?nr/.test(h)) return 'kr';
     if (h === 'tag') return 'day';
+    if (/^jahr/.test(h)) return 'year';
+    if (h === 'kw') return 'kw';
     if (/^spot|^halle/.test(h)) return 'hall';
     if (/^nummer/.test(h)) return 'num';
     if (/^buchstabe/.test(h)) return 'letter';
@@ -501,7 +513,9 @@
       if (letter && num) pos = letter + num;
     }
     var usa = g('country').trim().toUpperCase() === 'US';
-    return { kr: kr, day: ci.day >= 0 ? parseDay(g('day')) || dayDef : dayDef, hall: hall, pos: pos, scope: scope, usa: usa };
+    var yr = (g('year').match(/\d{4}/) || [''])[0], kw = (g('kw').match(/\d{1,2}/) || [''])[0];
+    var week = yr && kw ? yr + '-W' + (kw.length < 2 ? '0' : '') + kw : viewWeek;
+    return { week: week, kr: kr, day: ci.day >= 0 ? parseDay(g('day')) || dayDef : dayDef, hall: hall, pos: pos, scope: scope, usa: usa };
   }
   function roleIdx() {
     var ci = {};
@@ -530,15 +544,15 @@
     var ok = ci.kr >= 0;
     $('impGo').disabled = !ok;
     // Vorschau der Auswertung (ohne zu speichern)
-    var data = rows.slice(head ? 1 : 0), cnt = { ok: 0, hall: 0, scope: 0, usa: 0 }, seen = {};
+    var data = rows.slice(head ? 1 : 0), cnt = { ok: 0, hall: 0, scope: 0, usa: 0 }, seen = {}, weeks = {};
     if (ok) data.forEach(function (r) {
       var x = readRow(r, ci, 1);
       if (x.skip === 'andere Halle') cnt.hall++;
       else if (x.skip === 'Lieferumfang') cnt.scope++;
-      else if (!x.skip && !seen[x.kr]) { seen[x.kr] = 1; cnt.ok++; if (x.usa) cnt.usa++; }
+      else if (!x.skip && !seen[x.week + x.kr]) { seen[x.week + x.kr] = 1; cnt.ok++; weeks[x.week] = 1; if (x.usa) cnt.usa++; }
     });
     $('impInfo').textContent = ok
-      ? cnt.ok + ' KR werden importiert · ' + cnt.hall + ' andere Halle · ' + cnt.scope + ' ohne Maschine/komplett (übersprungen)' +
+      ? cnt.ok + ' KR werden importiert (' + Object.keys(weeks).sort().map(function (w) { return 'KW ' + w.split('-W')[1]; }).join(', ') + ') · ' + cnt.hall + ' andere Halle · ' + cnt.scope + ' ohne Maschine/komplett (übersprungen)' +
         (cnt.usa ? ' · ' + cnt.usa + ' USA' : '') + (rows.multi ? ' · ' + rows.multi + ' mit mehreren Spots (erster wird genommen)' : '') +
         ' · nicht gewählte Spalten werden verworfen.'
       : 'Bitte über der KR-Spalte „KR" wählen.';
@@ -557,16 +571,17 @@
   };
   $('impGo').onclick = function () {
     var ci = roleIdx(), head = $('impHead').checked;
-    var dayDef = +$('impDay').value, jobs = [], seen = {}, n = 0, noPos = 0, usa = 0, skipped = 0;
+    var dayDef = +$('impDay').value, jobs = [], seen = {}, n = 0, noPos = 0, usa = 0, skipped = 0, firstWeek = '';
     imp.rows.slice(head ? 1 : 0).forEach(function (r) {
       var x = readRow(r, ci, dayDef);
       if (x.skip) { skipped++; return; }
-      if (seen[x.kr]) return;
-      seen[x.kr] = 1;
+      if (seen[x.week + x.kr]) return;
+      seen[x.week + x.kr] = 1;
+      if (!firstWeek || x.week < firstWeek) firstWeek = x.week;
       n++;
       if (!x.pos) noPos++;
       if (x.usa) usa++;
-      jobs = jobs.concat(planOne(x.kr, x.pos, x.day, x.hall || Halls.all[0].id, { scope: x.scope, usa: x.usa }, x.hall));
+      jobs = jobs.concat(planOne(x.kr, x.pos, x.day, x.hall || Halls.all[0].id, { scope: x.scope, usa: x.usa }, x.hall, x.week));
     });
     if (!n) { toast('Keine KR gefunden'); return; }
     if (head) {
@@ -578,6 +593,7 @@
       return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition', text: msg });
     }).then(function () {
       toast(msg);
+      viewWeek = firstWeek; weekLabel(); render(Store.get());
       $('impText').value = ''; imp.cols = []; renderImp();
       $('impModal').hidden = true;
     }).catch(function () { toast('Import fehlgeschlagen'); renderImp(); });
