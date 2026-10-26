@@ -1,6 +1,6 @@
 // Gemeinsame Helfer + Datenspeicher (Firebase Realtime DB per REST oder lokal).
 window.Util = (function () {
-  var DAYS = ['', 'MONTAG', 'DIENSTAG', 'MITTWOCH', 'DONNERSTAG', 'FREITAG'];
+  var DAYS = ['', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
   return {
     DAYS: DAYS,
     esc: function (s) {

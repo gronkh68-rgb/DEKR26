@@ -45,7 +45,7 @@
 
   function renderHist() {
     $('hist').innerHTML = mine.length
-      ? '<div class="col-title orb" style="margin-bottom:6px">ZULETZT GEMELDET</div>' + mine.map(function (m) {
+      ? '<div class="col-title orb" style="margin-bottom:6px">Zuletzt gemeldet</div>' + mine.map(function (m) {
         return '<div class="msg done">' + esc(m.text) + '<small>' + Util.time(m.t) + '</small></div>';
       }).join('') : '';
   }

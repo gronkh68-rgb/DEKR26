@@ -10,7 +10,7 @@
 
   // ---------- Kopf ----------
   $('week').textContent = 'KW ' + WEEK.split('-W')[1];
-  $('mode').textContent = Store.remote ? 'LIVE' : 'LOKAL-DEMO';
+  $('mode').textContent = Store.remote ? 'Live' : 'Lokal-Demo';
   $('mode').className = 'tag ' + (Store.remote ? 'live' : 'demo');
   function tick() {
     var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
@@ -89,7 +89,7 @@
         groups[t.kr].push(t);
       });
       html += '<div class="day' + (d === Util.todayIdx() ? ' today' : '') + '">' +
-        '<div class="day-h orb"><span>' + Util.DAYS[d] + (d === Util.todayIdx() ? ' · HEUTE' : '') +
+        '<div class="day-h orb"><span>' + Util.DAYS[d] + (d === Util.todayIdx() ? ' · heute' : '') +
         '</span><span class="cnt">' + done + '/' + dt.length + '</span></div>';
       if (!order.length) html += '<div class="empty">– keine KR –</div>';
       order.forEach(function (kr) {
@@ -123,7 +123,7 @@
     var ready = posKeys.filter(function (p) { return byPos[p].every(function (t) { return t.done; }); }).length;
 
     $('hallName').textContent = hall.name;
-    $('hallStat').textContent = ready + '/' + posKeys.length + ' POSITIONEN BEREIT';
+    $('hallStat').textContent = ready + '/' + posKeys.length + ' Positionen bereit';
     $('hallSwitch').textContent = '⇄ ' + Halls.all[(hallIdx + 1) % Halls.all.length].name;
     $('hallSwitch').hidden = Halls.all.length < 2;
 
@@ -154,11 +154,11 @@
     var html = '';
     if (sel && sel.hall === Halls.all[hallIdx].id) {
       var ts = byPos[sel.pos] || [];
-      html += '<div class="orb" style="font-size:12px;color:var(--cyan);margin-bottom:4px">POSITION ' + esc(sel.pos) + '</div>';
+      html += '<div class="orb" style="font-size:12px;color:var(--accent);margin-bottom:4px">Position ' + esc(sel.pos) + '</div>';
       if (!ts.length) html += '<div class="empty">Kein Beipack geplant.</div>';
       ts.forEach(function (t) {
         html += '<div class="line"><span>KR ' + esc(t.kr) + ' · ' + Util.DAYS[t.day].slice(0, 2) + ' · <b style="color:' +
-          (t.done ? 'var(--green)' : 'var(--orange)') + '">' + (t.done ? 'BEREIT' : 'OFFEN') + '</b></span><span>' +
+          (t.done ? 'var(--green)' : 'var(--orange)') + '">' + (t.done ? 'Bereit' : 'Offen') + '</b></span><span>' +
           '<button class="btn-sm" data-act="toggle" data-id="' + esc(t.id) + '">' + (t.done ? 'Wieder offen' : 'Bereit') + '</button> ' +
           '<button class="btn-sm btn-warn" data-act="del" data-id="' + esc(t.id) + '">Löschen</button></span></div>';
       });

@@ -4,8 +4,8 @@
 // Variante B (Grundriss): image = 'img/halle1.png', width/height = Bildgröße in px und
 //   positions = [{ id: 'A14', x: 120, y: 40, w: 30, h: 30 }, ...] (Koordinaten im Bild).
 window.DEKR_HALLS = [
-  { id: 'H1', name: 'HALLE 1', rows: 'ABCDEFGHIJKL', cols: 24 },
-  { id: 'H2', name: 'HALLE 2', rows: 'MNOPQRSTUVWX', cols: 36 }
+  { id: 'H1', name: 'Halle 1', rows: 'ABCDEFGHIJKL', cols: 24 },
+  { id: 'H2', name: 'Halle 2', rows: 'MNOPQRSTUVWX', cols: 36 }
 ];
 
 window.Halls = (function () {
