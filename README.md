@@ -5,7 +5,7 @@ Statische Hilfswebsite (GitHub Pages). Mitarbeiter melden per Handy (QR-Code) �
 | Seite | Zweck |
 |---|---|
 | `index.html` | Dashboard: links KR je Wochentag (Mo–Fr), Mitte Hallenkarte (Umschalter oben rechts), rechts Nachrichten |
-| `scan.html` | Handy-Meldung (Name, KR, Position → FERTIG). Die Halle ergibt sich aus der Position. QR-Codes werden extern erstellt; `?n=Team 1` legt den Namen fest (dann nicht änderbar) |
+| `scan.html` | Handy-Meldung (Name, KR, Position → FERTIG). Die Halle ergibt sich aus der Position. QR-Codes erstellst du im Dashboard (Button „QR-Codes"); `?n=Team 1` legt den Namen fest (dann nicht änderbar) |
 
 ## Live-Betrieb (mehrere Handys)
 Ohne Konfiguration läuft der **LOKAL-DEMO-Modus** (Daten nur im eigenen Browser). Für Live-Sync:

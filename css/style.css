@@ -164,3 +164,22 @@ svg.map.zoom { min-width: 2300px; }
 .handle rect { fill: rgba(91,156,245,.25); stroke: var(--accent); cursor: grab; }
 .handle text { fill: #fff; text-anchor: middle; pointer-events: none; font-weight: 600; }
 .handle:hover rect { fill: rgba(91,156,245,.5); }
+
+/* QR-Codes im Dashboard */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto; z-index: 20; }
+.modal[hidden] { display: none; }
+.modal-box { width: 100%; max-width: 960px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 10px; }
+.qr-add { display: flex; gap: 8px; }
+.qr-add input { flex: 1; }
+.qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.qr-card { text-align: center; }
+.qr-card h3 { font-size: 15px; word-break: break-word; }
+.qr-card svg { width: 100%; height: auto; background: #fff; padding: 6px; margin: 8px 0; border-radius: 4px; }
+@media print {
+  body.print-qr .app, body.print-qr .toast { display: none; }
+  body.print-qr .modal { position: static; background: #fff; padding: 0; display: block; }
+  body.print-qr .modal-box { border: 0; background: #fff; max-width: none; }
+  body.print-qr .qr-card { break-inside: avoid; background: #fff; border: 1px solid #000; }
+  body.print-qr .col-title { display: none; }
+  .no-print { display: none !important; }
+}

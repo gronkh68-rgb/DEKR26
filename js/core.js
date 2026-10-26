@@ -48,7 +48,7 @@ window.Store = (function () {
   var timer = null;
 
   function norm(s) {
-    return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {} };
+    return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {} };
   }
   function emit() { subs.forEach(function (f) { f(state); }); }
   function loadLocal() {
@@ -105,6 +105,7 @@ window.Store = (function () {
     removeTask: function (id) { return write('tasks', id, null); },
     // Spalten-/Zeilenverschiebung einer Halle: { cols: {c14: dx}, rows: {rA: dy} } oder null
     setLayout: function (hallId, ov) { return write('layout', hallId, ov); },
+    setQr: function (id, q) { return write('qrs', id, q); },
     addMsg: function (m) {
       m.t = Date.now();
       return write('msgs', Util.uid(), m);

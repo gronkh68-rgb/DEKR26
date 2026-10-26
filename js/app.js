@@ -325,6 +325,46 @@
     p.catch(function () { toast('Speichern fehlgeschlagen'); });
   };
 
+  // ---------- QR-Codes ----------
+  function scanUrl(name) {
+    var u = new URL('scan.html', location.href);
+    if (name) u.searchParams.set('n', name);
+    return u.href;
+  }
+  function renderQr(state) {
+    var list = Object.keys(state.qrs).map(function (id) {
+      var q = state.qrs[id]; q.id = id; return q;
+    }).sort(function (a, b) { return a.t - b.t; });
+    $('qrHint').textContent = list.length ? '' : 'Noch keine QR-Codes. Namen eintragen und „Hinzufügen" klicken.';
+    $('qrGrid').innerHTML = list.map(function (q) {
+      var qr = qrcode(0, 'M');
+      qr.addData(scanUrl(q.name));
+      qr.make();
+      return '<div class="card qr-card"><h3>' + esc(q.name) + '</h3>' + qr.createSvgTag(4, 2) +
+        '<button class="btn-sm btn-warn no-print" data-del="' + esc(q.id) + '">Löschen</button></div>';
+    }).join('');
+  }
+  $('qrOpen').onclick = function () { $('qrModal').hidden = false; renderQr(Store.get()); };
+  $('qrClose').onclick = function () { $('qrModal').hidden = true; };
+  $('qrPrint').onclick = function () {
+    document.body.classList.add('print-qr');
+    window.print();
+    document.body.classList.remove('print-qr');
+  };
+  $('qrForm').onsubmit = function (e) {
+    e.preventDefault();
+    var names = $('qrName').value.split(',').map(function (n) { return n.trim(); }).filter(Boolean);
+    Promise.all(names.map(function (n, i) {
+      return Store.setQr(Util.uid() + i, { name: n, t: Date.now() + i });
+    })).catch(function () { toast('Speichern fehlgeschlagen'); });
+    $('qrName').value = '';
+  };
+  $('qrGrid').onclick = function (e) {
+    var b = e.target.closest('button[data-del]');
+    if (b && confirm('QR-Code löschen?')) Store.setQr(b.dataset.del, null).catch(function () { toast('Löschen fehlgeschlagen'); });
+  };
+  Store.subscribe(function (state) { if (!$('qrModal').hidden) renderQr(state); });
+
   Store.subscribe(render);
   Store.start();
 })();
