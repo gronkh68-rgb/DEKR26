@@ -4,7 +4,7 @@
   var esc = Util.esc;
   var WEEK = Util.isoWeek();
   var hallIdx = 0;
-  var sel = null;          // { hall, pos }
+  var sel = null;          // { hall, pos } oder { id } (Eintrag ohne Position)
   var seen = null;         // bereits gesehene Nachrichten-IDs
   var toastTimer = null;
   var editing = false;     // Modus: Spalten/Zeilen verschieben
@@ -38,18 +38,19 @@
     var hall0 = $('pHall').value;
     var day = +$('pDay').value;
     var list = $('pPos').value.split(/[\s,;]+/).map(Util.normPos).filter(Boolean);
-    if (!kr || !list.length) return;
-    var jobs = list.map(function (pos) {
+    if (!kr) return;
+    // Ohne Positionen entsteht ein Eintrag ohne Kartenplatz
+    var jobs = (list.length ? list : ['']).map(function (pos) {
       var found = Halls.find(pos);
-      var hall = found.length && found.every(function (h) { return h.id !== hall0; }) ? found[0].id : hall0;
-      var id = Util.taskId(WEEK, kr, hall, pos);
+      var hall = !pos ? '' : found.length && found.every(function (h) { return h.id !== hall0; }) ? found[0].id : hall0;
+      var id = Util.taskId(WEEK, kr, hall || '0', pos || '0');
       var old = Store.get().tasks[id];
       if (old) return Promise.resolve();
       return Store.setTask(id, { week: WEEK, kr: kr, day: day, hall: hall, pos: pos, done: false });
     });
     Promise.all(jobs).then(function () {
       return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition',
-        text: 'KR ' + kr + ' geplant (' + Util.DAYS[day].slice(0, 2) + '): ' + list.join(', ') });
+        text: 'KR ' + kr + ' geplant (' + Util.DAYS[day].slice(0, 2) + ')' + (list.length ? ': ' + list.join(', ') : '') });
     }).catch(function () { toast('Speichern fehlgeschlagen'); });
     $('pKr').value = ''; $('pPos').value = '';
   };
@@ -102,10 +103,10 @@
           '<span style="color:' + (all ? 'var(--green)' : 'var(--orange)') + '">' +
           ts.filter(function (t) { return t.done; }).length + '/' + ts.length + '</span></div><div class="chips">';
         ts.sort(function (a, b) { return a.pos < b.pos ? -1 : 1; }).forEach(function (t) {
-          var isSel = sel && sel.hall === t.hall && sel.pos === t.pos;
+          var isSel = sel && (sel.id ? sel.id === t.id : sel.hall === t.hall && sel.pos === t.pos);
           html += '<button class="chip' + (t.done ? ' done' : '') + (isSel ? ' sel' : '') +
-            '" data-hall="' + esc(t.hall) + '" data-pos="' + esc(t.pos) + '">' +
-            esc(t.hall) + '·' + esc(t.pos) + '</button>';
+            '" data-id="' + esc(t.id) + '">' +
+            (t.pos ? esc(t.hall) + '·' + esc(t.pos) : 'ohne Position') + '</button>';
         });
         html += '</div></div>';
       });
@@ -165,9 +166,10 @@
   function renderDetail(byPos, missing) {
     var el = $('detail');
     var html = '';
-    if (sel && sel.hall === Halls.all[hallIdx].id) {
-      var ts = byPos[sel.pos] || [];
-      html += '<div class="orb" style="font-size:12px;color:var(--accent);margin-bottom:4px">Position ' + esc(sel.pos) + '</div>';
+    if (sel && (sel.id || sel.hall === Halls.all[hallIdx].id)) {
+      var ts = sel.id ? (Store.get().tasks[sel.id] ? [Object.assign({ id: sel.id }, Store.get().tasks[sel.id])] : []) : byPos[sel.pos] || [];
+      html += '<div class="orb" style="font-size:12px;color:var(--accent);margin-bottom:4px">' +
+        (sel.id ? 'Eintrag ohne Position' : 'Position ' + esc(sel.pos)) + '</div>';
       if (!ts.length) html += '<div class="empty">Kein Beipack geplant.</div>';
       ts.forEach(function (t) {
         html += '<div class="line"><span>KR ' + esc(t.kr) + ' · ' + Util.DAYS[t.day].slice(0, 2) + ' · <b style="color:' +
@@ -295,8 +297,14 @@
   $('week-list').onclick = function (e) {
     var b = e.target.closest('.chip');
     if (!b) return;
-    hallIdx = Math.max(0, Halls.all.findIndex(function (h) { return h.id === b.dataset.hall; }));
-    sel = { hall: b.dataset.hall, pos: b.dataset.pos };
+    var t = Store.get().tasks[b.dataset.id];
+    if (!t) return;
+    if (t.pos) {
+      hallIdx = Math.max(0, Halls.all.findIndex(function (h) { return h.id === t.hall; }));
+      sel = { hall: t.hall, pos: t.pos };
+    } else {
+      sel = { id: b.dataset.id };
+    }
     render(Store.get());
   };
   $('map').onclick = function (e) {

@@ -1,4 +1,4 @@
-// Handy-Meldeseite: Position als fertig melden
+// Handy-Meldeseite: KR als fertig melden
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var esc = Util.esc;
@@ -6,56 +6,31 @@
   var params = new URLSearchParams(location.search);
   var mine = [];
 
-  // QR-Code (?q=ID) legt Name und Funktion fest; sie werden im Dashboard gepflegt.
-  // Ohne QR-Daten ist der Name frei eintragbar und wird gemerkt (?n=Name setzt ihn fest).
+  // Name und Funktion kommen vom QR-Code (?q=ID, im Dashboard gepflegt) und sind nicht änderbar.
+  // ?n=Name dient nur zum Testen ohne gespeicherten QR-Code.
   var qid = params.get('q');
-  var qr = null;
   var fixedName = (params.get('n') || '').trim();
-  $('name').value = fixedName || Util.getName();
-  if (fixedName) $('name').readOnly = true;
-  if (qid) $('go').disabled = true;
+  var qr = fixedName ? { name: fixedName, func: '' } : null;
+
+  function setReady(ok, msg) {
+    $('go').disabled = !ok;
+    $('kr').disabled = !ok;
+    $('note').textContent = msg || '';
+  }
 
   function applyQr(state) {
-    if (!qid) return;
-    qr = state.qrs[qid] || null;
-    if (qr) {
-      $('name').value = qr.name;
-      $('name').readOnly = true;
-      $('who').textContent = qr.func || '';
-      $('who').hidden = !qr.func;
-      $('note').textContent = '';
-    } else {
-      $('name').readOnly = false;
-      $('who').hidden = true;
-      $('name').value = Util.getName();
-      $('note').textContent = 'QR-Code nicht gefunden (evtl. gelöscht) – Name bitte selbst eintragen.';
-    }
-    $('go').disabled = false;
+    if (fixedName) { qr = { name: fixedName, func: '' }; }
+    else if (qid) { qr = state.qrs[qid] || null; }
+    $('name').value = qr ? qr.name : '';
+    $('who').textContent = qr && qr.func ? qr.func : '';
+    $('who').hidden = !(qr && qr.func);
+    if (qr) setReady(true);
+    else setReady(false, qid ? 'QR-Code unbekannt oder gelöscht.' : 'Bitte über einen QR-Code öffnen.');
   }
+
+  if (qid && !fixedName) setReady(false, 'Lädt …');
   Store.subscribe(applyQr);
-  setTimeout(function () { $('go').disabled = false; }, 5000);
-  // Halle ergibt sich aus der Position; nur wenn sie in mehreren Hallen existiert, wird gefragt
-  function checkPos() {
-    var pos = Util.normPos($('pos').value);
-    var note = $('note');
-    note.textContent = '';
-    $('hallRow').hidden = true;
-    if (!pos) return;
-    var halls = Halls.find(pos);
-    if (!halls.length) {
-      note.textContent = 'Position ' + pos + ' nicht im Hallenplan – wird trotzdem gemeldet.';
-      $('hall').innerHTML = '<option value="' + Halls.all[0].id + '">' + esc(Halls.all[0].name) + '</option>';
-      return;
-    }
-    var prev = $('hall').value;
-    $('hall').innerHTML = halls.map(function (h) {
-      return '<option value="' + h.id + '">' + esc(h.name) + '</option>';
-    }).join('');
-    if (halls.some(function (h) { return h.id === prev; })) $('hall').value = prev;
-    $('hallRow').hidden = halls.length < 2;
-  }
-  $('pos').addEventListener('input', checkPos);
-  checkPos();
+  if (!qid && !fixedName) applyQr(Store.get());
 
   function toast(t, bad) {
     var el = $('toast');
@@ -74,27 +49,36 @@
 
   $('f').onsubmit = function (e) {
     e.preventDefault();
-    var name = $('name').value.trim();
     var kr = Util.normKr($('kr').value);
-    var pos = Util.normPos($('pos').value);
-    var hall = $('hall').value;
-    if (!name || !kr || !pos) return;
-    if (!qr) Util.setName(name);
-    var who = qr && qr.func ? name + ' · ' + qr.func : name;
+    if (!qr || !kr) return;
+    var who = qr.func ? qr.name + ' · ' + qr.func : qr.name;
     $('go').disabled = true;
 
-    var id = Util.taskId(WEEK, kr, hall, pos);
-    var old = Store.get().tasks[id];
-    var task = old ? Object.assign({}, old) : { week: WEEK, kr: kr, day: Util.todayIdx(), hall: hall, pos: pos };
-    task.done = true; task.doneAt = Date.now(); task.doneBy = name;
-    var text = 'KR ' + kr + ' · ' + Halls.get(hall).name + ' · ' + pos + ' bereit (' + who + ')';
+    // Alle Positionen dieser KR (aktuelle Woche) werden fertig; ohne Eintrag entsteht einer ohne Position
+    var all = Store.get().tasks;
+    var ids = Object.keys(all).filter(function (id) { return all[id].week === WEEK && all[id].kr === kr; });
+    var jobs = [], places = [];
+    if (!ids.length) {
+      jobs.push(Store.setTask(Util.taskId(WEEK, kr, '0', '0'), {
+        week: WEEK, kr: kr, day: Util.todayIdx(), hall: '', pos: '', done: true, doneAt: Date.now(), doneBy: qr.name
+      }));
+    }
+    ids.forEach(function (id) {
+      var t = all[id];
+      if (t.pos) places.push(Halls.get(t.hall) ? Halls.get(t.hall).name + ' ' + t.pos : t.pos);
+      if (t.done) return;
+      var copy = Object.assign({}, t);
+      copy.done = true; copy.doneAt = Date.now(); copy.doneBy = qr.name;
+      jobs.push(Store.setTask(id, copy));
+    });
+    var text = 'KR ' + kr + (places.length ? ' · ' + places.join(', ') : '') + ' bereit (' + who + ')';
 
-    Store.setTask(id, task).then(function () {
-      return Store.addMsg({ type: 'done', by: name, text: text });
+    Promise.all(jobs).then(function () {
+      return Store.addMsg({ type: 'done', by: qr.name, text: text });
     }).then(function () {
       mine.unshift({ t: Date.now(), text: text }); renderHist();
-      toast('Gemeldet: ' + pos);
-      $('pos').value = ''; $('kr').value = ''; $('note').textContent = '';
+      toast('Gemeldet: KR ' + kr);
+      $('kr').value = '';
       $('kr').focus();
     }).catch(function () {
       toast('Fehler – bitte erneut versuchen', true);
