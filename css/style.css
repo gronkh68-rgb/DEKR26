@@ -303,3 +303,6 @@ textarea.full { width: 100%; font-size: 16px; padding: 10px; min-height: 90px; }
 }
 .lockcover[hidden] { display: none; }
 .lockcover .modal-box { background: rgba(11, 13, 17, .88); backdrop-filter: blur(2px); }
+
+.qr-links { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; }
+.qr-links a { color: var(--accent); }

@@ -952,7 +952,8 @@
           return '<label><input type="checkbox" data-perm="' + p[0] + '"' + (pm[p[0]] ? ' checked' : '') + '>' + esc(p[1]) + '</label>';
         }).join('') + '</div>' +
         qr.createSvgTag(4, 2) +
-        '<button class="btn-sm btn-warn no-print" data-del="' + esc(q.id) + '">Löschen</button></div>';
+        '<div class="no-print qr-links"><a href="' + esc(scanUrl(q)) + '" target="_blank" rel="noopener">Seite am PC testen ↗</a> ' +
+        '<button class="btn-sm btn-warn" data-del="' + esc(q.id) + '">Löschen</button></div></div>';
     }).join('');
     renderPodestEdit(state);
   }
