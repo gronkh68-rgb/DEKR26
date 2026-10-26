@@ -31,7 +31,7 @@
 
   $('plan').onsubmit = function (e) {
     e.preventDefault();
-    var kr = $('pKr').value.trim();
+    var kr = Util.normKr($('pKr').value);
     var hall0 = $('pHall').value;
     var day = +$('pDay').value;
     var list = $('pPos').value.split(/[\s,;]+/).map(Util.normPos).filter(Boolean);
@@ -95,7 +95,7 @@
       order.forEach(function (kr) {
         var ts = groups[kr];
         var all = ts.every(function (t) { return t.done; });
-        html += '<div class="card kr ' + (all ? 'ok' : 'open') + '"><div class="kr-n"><span>' + esc(kr) + '</span>' +
+        html += '<div class="card kr ' + (all ? 'ok' : 'open') + '"><div class="kr-n"><span>KR ' + esc(kr) + '</span>' +
           '<span style="color:' + (all ? 'var(--green)' : 'var(--orange)') + '">' +
           ts.filter(function (t) { return t.done; }).length + '/' + ts.length + '</span></div><div class="chips">';
         ts.sort(function (a, b) { return a.pos < b.pos ? -1 : 1; }).forEach(function (t) {

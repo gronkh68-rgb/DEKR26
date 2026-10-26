@@ -53,7 +53,7 @@
   $('f').onsubmit = function (e) {
     e.preventDefault();
     var name = $('name').value.trim();
-    var kr = $('kr').value.trim();
+    var kr = Util.normKr($('kr').value);
     var pos = Util.normPos($('pos').value);
     var hall = $('hall').value;
     if (!name || !kr || !pos) return;

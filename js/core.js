@@ -22,6 +22,8 @@ window.Util = (function () {
       return y + '-W' + (w < 10 ? '0' : '') + w;
     },
     key: function (s) { return String(s).replace(/[^A-Za-z0-9_-]/g, '_'); },
+    // KR-Nummer: nur die Nummer speichern, ein getipptes "KR" am Anfang entfällt
+    normKr: function (s) { return String(s).toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^KR/, ''); },
     normPos: function (s) { return String(s).toUpperCase().replace(/[^A-Z0-9]/g, ''); },
     taskId: function (week, kr, hall, pos) {
       return [week, this.key(kr), hall, pos].join('_');

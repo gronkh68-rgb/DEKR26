@@ -147,3 +147,8 @@ svg.map.plan .cell { fill: rgba(255,255,255,.02); stroke: rgba(255,255,255,.07);
 svg.map.plan .cell.open { fill: rgba(232,150,58,.55); stroke: var(--orange); }
 svg.map.plan .cell.done { fill: rgba(63,184,104,.75); stroke: var(--green); }
 svg.map.plan .cell.sel { stroke: var(--accent); stroke-width: 3; }
+
+/* KR-Eingabe mit festem Präfix */
+.kr-in { display: flex; }
+.kr-in span { display: flex; align-items: center; padding: 0 12px; background: var(--line); border: 1px solid var(--line); border-right: 0; border-radius: 6px 0 0 6px; color: var(--text); font-weight: 600; }
+.kr-in input { flex: 1; min-width: 0; border-radius: 0 6px 6px 0; }
