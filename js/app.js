@@ -404,7 +404,44 @@
     }
     return DAY_KEYS[s.slice(0, 2)] || 0;
   }
+  // Kopie der Arbeitsliste: jede Zelle steht in einer eigenen Zeile, die Spaltenzahl wechselt je Eintrag
+  // (z.B. optionale Zelle "bestätigt", mehrere Spots). Ein Eintrag beginnt mit: Nr, Jahr, KW, Wochentag.
+  function indexWhere(arr, re, from) {
+    for (var i = from || 0; i < arr.length; i++) if (re.test(arr[i])) return i;
+    return -1;
+  }
+  function parseRecords(text) {
+    var L = text.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
+    var starts = [], j;
+    for (j = 0; j + 3 < L.length; j++) {
+      if (/^\d+$/.test(L[j]) && /^20\d\d$/.test(L[j + 1]) && /^\d{1,2}$/.test(L[j + 2]) &&
+        /^(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)$/i.test(L[j + 3])) starts.push(j);
+    }
+    if (!starts.length) return null;
+    var rows = [['KR', 'Tag', 'Halle', 'Nummer', 'Buchstabe', 'Lieferumfang', 'Land', 'Kunde']];
+    rows.multi = 0;
+    starts.forEach(function (s, i) {
+      var rec = L.slice(s, i + 1 < starts.length ? starts[i + 1] : L.length);
+      var t = indexWhere(rec, /Uhr$/), seg = indexWhere(rec, /^\d{5}$/, t + 1);
+      var krI = seg < 0 ? -1 : indexWhere(rec, /^KR[0-9A-Z]+$/i, seg);
+      if (t < 0 || seg < 0 || krI < 0) return;
+      // Spot-Bereich: [Hallen][Nummern][Buchstaben], bei mehreren Spots je k Zellen
+      var a = t + 1;
+      while (a < seg && !/^\d{1,2}(\.\d)?$/.test(rec[a])) a++;
+      var R = rec.slice(a, seg), k = R.length % 3 === 0 ? R.length / 3 : 0;
+      if (k > 1) rows.multi++;
+      var c = indexWhere(rec, /^[A-Z]{2}$/, krI + 1);
+      var sc = indexWhere(rec, /^(komplett|maschine|schrumpftunnel)/i, c >= 0 ? c + 2 : krI + 1);
+      rows.push([rec[krI], rec[3], R[0] || '', k ? R[k] : '', k ? R[2 * k] : '', sc >= 0 ? rec[sc] : '',
+        c >= 0 ? rec[c] : '', c >= 0 ? rec[c + 1] || '' : '']);
+    });
+    return rows;
+  }
   function parseTable(text) {
+    if (!/\t/.test(text)) {
+      var rec = parseRecords(text);
+      if (rec) return rec;
+    }
     var lines = text.split(/\r?\n/).filter(function (l) { return l.trim(); });
     var sep = /\t/.test(text) ? /\t/ : /;/.test(text) ? /;/ : /\s{2,}/;
     return lines.map(function (l) { return l.split(sep).map(function (c) { return c.trim(); }); });
@@ -413,7 +450,9 @@
     h = String(h || '').toLowerCase().trim();
     if (/^kr(\W|$)|kr-?nr/.test(h)) return 'kr';
     if (h === 'tag') return 'day';
-    if (/^spot/.test(h)) return 'hall';
+    if (/^spot|^halle/.test(h)) return 'hall';
+    if (/^nummer/.test(h)) return 'num';
+    if (/^buchstabe/.test(h)) return 'letter';
     if (/lieferumfang/.test(h)) return 'scope';
     if (/^kunde/.test(h)) return 'cust';
     if (/^land/.test(h)) return 'country';
@@ -463,7 +502,8 @@
       var num = (g('num').match(/\d+/) || [''])[0];
       if (letter && num) pos = letter + num;
     }
-    var usa = /(^|\W)(usa|us|u\.s\.a?\.?|vereinigte staaten|united states)(\W|$)/i.test(g('country') + ' ' + g('cust'));
+    var usa = /^(us|usa|vereinigte staaten|united states)$/i.test(g('country').trim()) ||
+      /(^|\W)(usa|u\.s\.a\.?|united states)(\W|$)/i.test(g('cust'));
     return { kr: kr, day: ci.day >= 0 ? parseDay(g('day')) || dayDef : dayDef, hall: hall, pos: pos, scope: scope, usa: usa };
   }
   function roleIdx() {
@@ -502,7 +542,8 @@
     });
     $('impInfo').textContent = ok
       ? cnt.ok + ' KR werden importiert · ' + cnt.hall + ' andere Halle · ' + cnt.scope + ' ohne Maschine/komplett (übersprungen)' +
-        (cnt.usa ? ' · ' + cnt.usa + ' USA' : '') + ' · nicht gewählte Spalten werden verworfen.'
+        (cnt.usa ? ' · ' + cnt.usa + ' USA' : '') + (rows.multi ? ' · ' + rows.multi + ' mit mehreren Spots (erster wird genommen)' : '') +
+        ' · nicht gewählte Spalten werden verworfen.'
       : 'Bitte über der KR-Spalte „KR" wählen.';
   }
   $('impOpen').onclick = function () { $('impModal').hidden = false; };
