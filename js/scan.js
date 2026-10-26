@@ -521,7 +521,9 @@
 
   // ---------- Start ----------
   function apply(state) {
+    $('lockCover').hidden = !Store.isLocked();
     if (Store.isLocked()) {
+      $('lockCode2').textContent = Auth.code();
       $('whoName').textContent = urlName;
       $('who').hidden = true;
       $('note').textContent = 'Dieses Gerät wartet auf Freigabe durch den Admin. Gerätecode: ' + Auth.code();
