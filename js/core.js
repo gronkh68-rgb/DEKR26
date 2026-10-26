@@ -113,3 +113,15 @@ window.Store = (function () {
     get: function () { return state; }
   };
 })();
+
+// Sichtbare Fehlermeldung statt stillem Ausfall (z.B. bei veraltetem Browser-Cache)
+window.addEventListener('error', function (e) {
+  var bar = document.getElementById('errbar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'errbar';
+    bar.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99;padding:6px 12px;background:#e5534b;color:#fff;font-size:12px';
+    document.body.appendChild(bar);
+  }
+  bar.textContent = 'Fehler: ' + e.message + ' (' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ') – Seite mit Strg+F5 neu laden';
+});
