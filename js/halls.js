@@ -3,23 +3,23 @@
 // Mit `grid` wird ein Positionsraster (Zeilenbuchstaben x Spaltennummern) über die Zeichnung `plan`
 // gelegt. x/y/w/h sind Koordinaten im viewBox-System der Hallenzeichnung.
 // Optional: `layout: { cols: {c14: 12}, rows: {rA: -4} }` = fest eingebaute Verschiebungen (Export aus dem Admin-Modus).
+// Optional: `aisles: [[x,y,w,h],...]` = Gänge ohne Positionen; `layout.off` blendet Spalten/Zeilen aus.
 // Optional: `valid: ['A1','A2',...]` beschränkt die Halle auf tatsächlich vorhandene Positionen.
 // Ohne `grid` entsteht ein einfaches Platzhalter-Raster (rows x cols).
 
 // Halle 7.1 (nachgezeichnet nach Flucht- und Rettungsplan). Koordinaten = Pixel der Planvorlage.
+// Gänge [x, y, Breite, Höhe]: dort gibt es keine Positionen
+var AISLES_H7 = [
+  [210, 308, 58, 682], [985, 308, 22, 795], [210, 480, 1295, 40], [210, 733, 1420, 42],
+  [210, 948, 1420, 42], [1465, 480, 40, 510], [1535, 990, 95, 40], [1550, 365, 20, 95]
+];
+
 var PLAN_H7 = [
   '<rect class="p-floor" x="210" y="308" width="1355" height="795"/>',
-  // Fluchtwege / Gänge
-  '<g class="p-aisle">',
-  '<rect x="210" y="308" width="58" height="682"/>',
-  '<rect x="985" y="308" width="22" height="795"/>',
-  '<rect x="210" y="480" width="1295" height="40"/>',
-  '<rect x="210" y="733" width="1420" height="42"/>',
-  '<rect x="210" y="948" width="1420" height="42"/>',
-  '<rect x="1465" y="480" width="40" height="510"/>',
-  '<rect x="1535" y="990" width="95" height="40"/>',
-  '<rect x="1550" y="365" width="20" height="95"/>',
-  '</g>',
+  // Fluchtwege / Gänge (bleiben frei, siehe AISLES_H7)
+  '<g class="p-aisle">' + AISLES_H7.map(function (a) {
+    return '<rect x="' + a[0] + '" y="' + a[1] + '" width="' + a[2] + '" height="' + a[3] + '"/>';
+  }).join('') + '</g>',
   // Arbeitsflächen
   '<g class="p-block">',
   '<rect x="268" y="308" width="717" height="172"/>',
@@ -60,6 +60,7 @@ window.DEKR_HALLS = [
     id: 'H1', name: 'Halle 7.1',
     vb: '100 270 1820 860',
     plan: PLAN_H7,
+    aisles: AISLES_H7,
     grid: { x: 215, y: 310, w: 1330, h: 790, rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 }
   },
   { id: 'H2', name: 'Halle 2', rows: 'ABCDEFGHIJKL', cols: 24, valid: [] } // Platzhalter: noch keine Positionen
@@ -81,26 +82,42 @@ window.Halls = (function () {
       plan: null, font: 9 };
   }
 
-  // ov = { cols: { c14: dx }, rows: { rA: dy } } verschiebt einzelne Spalten/Zeilen
+  // ov = { cols: { c14: dx }, rows: { rA: dy }, off: { c5: 1, rB: 1 } }
+  // verschiebt Spalten/Zeilen und blendet Spalten (cN) / Zeilen (rX) aus
+  function inAisle(h, x, y) {
+    return (h.aisles || []).some(function (a) { return x >= a[0] && x <= a[0] + a[2] && y >= a[1] && y <= a[1] + a[3]; });
+  }
+
   function build(h, ov) {
     ov = ov || h.layout;
-    var s = spec(h), oc = (ov && ov.cols) || {}, or = (ov && ov.rows) || {};
-    var valid = null, positions = [], labels = [], colKeys = [], rowKeys = [], r, c;
+    var s = spec(h), oc = (ov && ov.cols) || {}, or = (ov && ov.rows) || {}, off = (ov && ov.off) || {};
+    var valid = null, positions = [], labels = [], colKeys = [], rowKeys = [], xs = [], vis = [], wOf = {}, r, c;
     if (h.valid) { valid = {}; h.valid.forEach(function (id) { valid[id] = 1; }); }
 
     for (c = 0; c < s.cols; c++) {
+      xs.push(s.x + c * s.cw + (oc['c' + (c + 1)] || 0));
+      if (!off['c' + (c + 1)]) vis.push(c);
+    }
+    // Ausgeblendete Nachbarspalten machen die sichtbare Zelle breiter
+    vis.forEach(function (col, i) {
+      var gap = i + 1 < vis.length ? xs[vis[i + 1]] - xs[col] : s.cw;
+      wOf[col] = Math.max(2, Math.min(s.pw + gap - s.cw, s.pw + 3 * s.cw));
+    });
+
+    for (c = 0; c < s.cols; c++) {
       colKeys.push('c' + (c + 1));
-      labels.push({ t: String(c + 1), x: s.x + c * s.cw + s.pw / 2 + (oc['c' + (c + 1)] || 0), y: s.y - 8,
-        axis: 'c', i: c });
+      labels.push({ t: String(c + 1), x: xs[c] + s.pw / 2, y: s.y - 8, axis: 'c', i: c, off: !!off['c' + (c + 1)] });
     }
     for (r = 0; r < s.rows.length; r++) {
-      var rk = 'r' + s.rows[r], dy = or[rk] || 0;
+      var rk = 'r' + s.rows[r], dy = or[rk] || 0, y = s.y + r * s.ch + dy;
       rowKeys.push(rk);
-      labels.push({ t: s.rows[r], x: s.x - 12, y: s.y + r * s.ch + s.ph / 2 + 4 + dy, axis: 'r', i: r });
+      labels.push({ t: s.rows[r], x: s.x - 12, y: y + s.ph / 2 + 4, axis: 'r', i: r, off: !!off[rk] });
+      if (off[rk]) continue;
       for (c = 0; c < s.cols; c++) {
         var id = s.rows[r] + (c + 1);
-        if (valid && !valid[id]) continue;
-        positions.push({ id: id, x: s.x + c * s.cw + (oc['c' + (c + 1)] || 0), y: s.y + r * s.ch + dy, w: s.pw, h: s.ph });
+        if (off['c' + (c + 1)] || (valid && !valid[id])) continue;
+        if (inAisle(h, xs[c] + s.pw / 2, y + s.ph / 2)) continue;
+        positions.push({ id: id, x: xs[c], y: y, w: wOf[c], h: s.ph, f: h.grid ? Math.min(wOf[c], s.ph) * 0.42 : s.font });
       }
     }
     return { vb: s.vb, plan: s.plan, font: s.font, pw: s.pw, ph: s.ph, positions: positions, labels: labels,
@@ -113,7 +130,7 @@ window.Halls = (function () {
       return window.DEKR_HALLS.filter(function (h) { return h.id === id; })[0] || null;
     },
     layout: function (id, ov) {
-      if (ov && (Object.keys(ov.cols || {}).length || Object.keys(ov.rows || {}).length)) return build(this.get(id), ov);
+      if (ov && (Object.keys(ov.cols || {}).length || Object.keys(ov.rows || {}).length || Object.keys(ov.off || {}).length)) return build(this.get(id), ov);
       if (!cache[id]) cache[id] = build(this.get(id), null);
       return cache[id];
     },

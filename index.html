@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=fa1ab28">
+<link rel="stylesheet" href="css/style.css?v=7e1e4a7">
 </head>
 <body>
 <div class="app">
@@ -43,8 +43,10 @@
         </div>
       </div>
       <div class="card editbar" id="editBar" hidden>
-        <span>Spaltennummer oder Zeilenbuchstabe ziehen, um sie zu verschieben.</span>
+        <span>Nummer/Buchstabe <b>ziehen</b> = verschieben, <b>anklicken</b> = Spalte/Zeile aus- oder einblenden.</span>
         <label><input type="checkbox" id="follow" checked> Folgende mitziehen</label>
+        <span>Jede 3. Spalte ab <select id="keepStart"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+          <button class="btn-sm" id="keep3">behalten</button> <button class="btn-sm" id="keepAll">Alle Spalten</button></span>
         <button class="btn-sm" id="editExport">Layout exportieren</button>
         <button class="btn-sm btn-warn" id="editReset">Zurücksetzen</button>
       </div>
@@ -97,10 +99,10 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=fa1ab28"></script>
-<script src="js/halls.js?v=fa1ab28"></script>
-<script src="js/core.js?v=fa1ab28"></script>
-<script src="js/qrcode.js?v=fa1ab28"></script>
-<script src="js/app.js?v=fa1ab28"></script>
+<script src="js/config.js?v=7e1e4a7"></script>
+<script src="js/halls.js?v=7e1e4a7"></script>
+<script src="js/core.js?v=7e1e4a7"></script>
+<script src="js/qrcode.js?v=7e1e4a7"></script>
+<script src="js/app.js?v=7e1e4a7"></script>
 </body>
 </html>

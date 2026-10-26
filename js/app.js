@@ -151,7 +151,7 @@
       }
       var col = l.axis === 'c';
       var rx = col ? l.x - lay.pw / 2 + 1 : l.x - 15, ry = col ? l.y - 15 : l.y - 4 - lay.ph / 2 + 1;
-      svg += '<g class="handle" data-axis="' + l.axis + '" data-i="' + l.i + '"><rect x="' + rx + '" y="' + ry +
+      svg += '<g class="handle' + (l.off ? ' off' : '') + '" data-axis="' + l.axis + '" data-i="' + l.i + '"><rect x="' + rx + '" y="' + ry +
         '" width="' + (col ? lay.pw - 2 : 30) + '" height="' + (col ? 20 : lay.ph - 2) + '" rx="3"/>' +
         '<text x="' + l.x + '" y="' + l.y + '" style="font-size:13px">' + esc(l.t) + '</text></g>';
     });
@@ -162,7 +162,7 @@
       if (sel && sel.hall === hall.id && sel.pos === p.id) cls += ' sel';
       svg += '<g data-pos="' + esc(p.id) + '"><rect class="' + cls + '" x="' + p.x + '" y="' + p.y +
         '" width="' + p.w + '" height="' + p.h + '" rx="2"><title>' + esc(p.id) + '</title></rect>';
-      if (ts) svg += '<text class="cell-t" style="font-size:' + lay.font + 'px" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2 + lay.font / 3) + '">' + esc(p.id) + '</text>';
+      if (ts) svg += '<text class="cell-t" style="font-size:' + p.f + 'px" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2 + p.f / 3) + '">' + esc(p.id) + '</text>';
       svg += '</g>';
     });
     $('map').innerHTML = svg + '</svg>';
@@ -254,6 +254,7 @@
     var lay = Halls.layout(drag.hall);
     var keys = drag.axis === 'c' ? lay.colKeys : lay.rowKeys, coll = drag.axis === 'c' ? 'cols' : 'rows';
     var last = $('follow').checked ? keys.length - 1 : drag.i;
+    if (Math.abs(d) >= 1) drag.moved = true;
     draft = clone(drag.base);
     draft[coll] = draft[coll] || {};
     for (var j = drag.i; j <= last; j++) {
@@ -261,26 +262,51 @@
     }
     render(Store.get());
   }
+  // Layout speichern; leere Angaben werden entfernt
+  function saveOv(hall, ov) {
+    var out = { cols: {}, rows: {}, off: {} }, n = 0;
+    ['cols', 'rows', 'off'].forEach(function (c) {
+      Object.keys(ov[c] || {}).forEach(function (k) {
+        if (ov[c][k]) { out[c][k] = ov[c][k]; n++; }
+      });
+    });
+    Store.setLayout(hall, n ? out : null).catch(function () { toast('Speichern fehlgeschlagen'); });
+  }
   function onUp() {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     if (!drag) return;
-    var out = { cols: {}, rows: {} }, n = 0;
-    ['cols', 'rows'].forEach(function (c) {
-      Object.keys(draft[c] || {}).forEach(function (k) {
-        if (draft[c][k]) { out[c][k] = draft[c][k]; n++; }
-      });
-    });
-    var hall = drag.hall;
+    var d = drag;
     drag = null;
-    Store.setLayout(hall, n ? out : null).catch(function () { toast('Speichern fehlgeschlagen'); });
+    if (d.moved) {
+      saveOv(d.hall, draft);
+    } else {
+      // Klick ohne Ziehen: Spalte/Zeile ein- bzw. ausblenden
+      var lay = Halls.layout(d.hall);
+      var key = (d.axis === 'c' ? lay.colKeys : lay.rowKeys)[d.i];
+      var base = clone(d.base);
+      base.off = base.off || {};
+      base.off[key] = base.off[key] ? 0 : 1;
+      saveOv(d.hall, base);
+    }
     render(Store.get());
   }
+  // Spalten im Raster behalten, z.B. jede 3. ab Spalte 1 (1, 4, 7, ...)
+  function keepEvery(step, start) {
+    var hall = Halls.all[hallIdx].id, lay = Halls.layout(hall), ov = clone(ovFor(hall));
+    ov.off = {};
+    lay.colKeys.forEach(function (k, i) {
+      if (step > 1 && ((((i + 1 - start) % step) + step) % step) !== 0) ov.off[k] = 1;
+    });
+    saveOv(hall, ov);
+  }
+  $('keep3').onclick = function () { keepEvery(3, +$('keepStart').value); };
+  $('keepAll').onclick = function () { keepEvery(1, 1); };
   $('editToggle').onclick = function () { setEdit(!editing); };
   $('editExport').onclick = function () {
     var hall = Halls.all[hallIdx];
     var ov = ovFor(hall.id);
-    var text = 'layout: ' + JSON.stringify({ cols: ov.cols || {}, rows: ov.rows || {} }) + ',';
+    var text = 'layout: ' + JSON.stringify({ cols: ov.cols || {}, rows: ov.rows || {}, off: ov.off || {} }) + ',';
     var done = function () { toast('Layout von ' + hall.name + ' kopiert'); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(done, function () { window.prompt('Kopieren mit Strg+C:', text); });
