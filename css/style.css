@@ -263,3 +263,8 @@ textarea.full { width: 100%; font-size: 16px; padding: 10px; min-height: 90px; }
 
 .me { width: 150px; padding: 4px 8px; font-size: 13px; }
 .map-box { flex: 0 1 auto; }
+
+.msg.problem.pulse { border-left-color: var(--red); animation: pulseRed 1.4s ease-in-out infinite; }
+@keyframes pulseRed { 0%, 100% { background: var(--panel); box-shadow: 0 0 0 0 rgba(229,83,75,0); } 50% { background: rgba(229,83,75,.25); box-shadow: 0 0 12px 2px rgba(229,83,75,.5); } }
+.msg .acts { display: flex; gap: 8px; margin-top: 6px; }
+.msg .acts .btn-sm { margin-top: 0; }

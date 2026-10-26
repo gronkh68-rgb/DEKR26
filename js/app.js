@@ -242,8 +242,9 @@
     }).filter(function (m) { return m.type !== 'plan'; })   // Planung/Import wird nicht gemeldet
       .sort(function (a, b) { return b.t - a.t; });
     // Unbestätigte „fertig"-Meldungen stehen immer oben und pulsieren grün
-    var unack = all.filter(function (m) { return m.type === 'done' && !m.ack; });
-    var list = unack.concat(all.filter(function (m) { return !(m.type === 'done' && !m.ack); }).slice(0, 70));
+    var needsAck = function (m) { return (m.type === 'done' || m.type === 'problem') && !m.ack; };
+    var unack = all.filter(needsAck);
+    var list = unack.concat(all.filter(function (m) { return !needsAck(m); }).slice(0, 70));
     $('cMsg').textContent = unack.length || '';
 
     var fresh = {};
@@ -259,13 +260,16 @@
     list.forEach(function (m) { seen[m.id] = 1; });
 
     $('msgs').innerHTML = list.length ? list.map(function (m) {
-      var pulse = m.type === 'done' && !m.ack;
+      var pulse = needsAck(m);
       return '<div class="msg ' + esc(m.type) + (pulse ? ' pulse' : '') + (fresh[m.id] ? ' fresh' : '') + '">' + esc(m.text) +
-        '<small>' + Util.time(m.t) + ' · ' + esc(m.by || '') + (m.type === 'done' && m.ack ? ' · ✔ bestätigt von ' + esc(m.ack.by) : '') + '</small>' +
-        (pulse ? '<button class="btn-sm btn-ok" data-ack="' + esc(m.id) + '">Bestätigen</button>' : '') + '</div>';
+        '<small>' + Util.time(m.t) + ' · ' + esc(m.by || '') + (m.ack ? ' · ✔ bestätigt von ' + esc(m.ack.by) : '') + '</small>' +
+        '<span class="acts">' + (pulse ? '<button class="btn-sm btn-ok" data-ack="' + esc(m.id) + '">Bestätigen</button>' : '') +
+        '<button class="btn-sm btn-warn" data-delmsg="' + esc(m.id) + '">Löschen</button></span></div>';
     }).join('') : '<div class="empty">Keine Nachrichten.</div>';
   }
   $('msgs').onclick = function (e) {
+    var d = e.target.closest('button[data-delmsg]');
+    if (d) { Store.setMsg(d.dataset.delmsg, null).catch(function () { toast('Löschen fehlgeschlagen'); }); return; }
     var b = e.target.closest('button[data-ack]');
     var m = b && Store.get().msgs[b.dataset.ack];
     if (!m) return;

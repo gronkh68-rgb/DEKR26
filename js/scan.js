@@ -101,7 +101,8 @@
       if (m.qid !== qid || !m.ack || seenA[id]) return;
       seenA[id] = 1; changed = true;
       if (Date.now() - m.ack.t > 864e5) return;
-      var text = '✔ ' + (m.kr ? 'KR ' + m.kr + ' ' : '') + 'bestätigt von ' + m.ack.by;
+      var text = m.type === 'problem' ? '✔ Problem KR ' + m.kr + ': Empfang bestätigt von ' + m.ack.by
+        : '✔ ' + (m.kr ? 'KR ' + m.kr + ' ' : '') + 'bestätigt von ' + m.ack.by;
       done(text); toast(text); notify('Bestätigt', text, 'ack' + id);
     });
     if (changed) { try { localStorage.setItem('dekr26_ackseen', JSON.stringify(seenA)); } catch (e) { /* ignorieren */ } }
@@ -124,17 +125,34 @@
     if (changed) { try { localStorage.setItem('dekr26_ordseen', JSON.stringify(seenO)); } catch (e) { /* ignorieren */ } }
   }
 
+  // Rückmeldung zum eigenen Problem: gelöst
+  function checkProblems(state) {
+    if (!qid) return;
+    var seenP;
+    try { seenP = JSON.parse(localStorage.getItem('dekr26_probseen')) || {}; } catch (e) { seenP = {}; }
+    var changed = false;
+    Object.keys(state.problems).forEach(function (id) {
+      var p = state.problems[id];
+      if (p.qid !== qid || p.status !== 'gelöst' || p.selfDone || seenP[id]) return;
+      seenP[id] = 1; changed = true;
+      if (Date.now() - (p.solvedAt || 0) > 864e5) return;
+      var text = '✔ Problem KR ' + p.kr + ' gelöst von ' + (p.solvedBy || 'Dashboard');
+      done(text); toast(text); notify('Problem gelöst', text, 'prob' + id);
+    });
+    if (changed) { try { localStorage.setItem('dekr26_probseen', JSON.stringify(seenP)); } catch (e) { /* ignorieren */ } }
+  }
+
   // ---------- Mobiles Dashboard ----------
   var notifSeen = null;   // bereits gesehene Fertig-Meldungen (für neue Benachrichtigungen)
   function doneMsgs(state) {
     return Object.keys(state.msgs).map(function (id) { return Object.assign({ id: id }, state.msgs[id]); })
-      .filter(function (m) { return m.type === 'done'; }).sort(function (a, b) { return b.t - a.t; });
+      .filter(function (m) { return m.type === 'done' || m.type === 'problem'; }).sort(function (a, b) { return b.t - a.t; });
   }
   function watchDone(state) {
     if (!perms().dash) return;
     var ms = doneMsgs(state);
     if (notifSeen) {
-      ms.forEach(function (m) { if (!notifSeen[m.id] && !m.ack) notify('Beipack fertig', m.text, m.id); });
+      ms.forEach(function (m) { if (!notifSeen[m.id] && !m.ack) notify(m.type === 'problem' ? 'Beipack: Problem' : 'Beipack fertig', m.text, m.id); });
     }
     notifSeen = notifSeen || {};
     ms.forEach(function (m) { notifSeen[m.id] = 1; });
@@ -303,8 +321,8 @@
     var ts = tasksOf(kr), t = ts[0];
     var where = t && t.pos ? Halls.label(t.hall, t.pos) : '';
     var msg = '⚠ Problem KR ' + kr + (where ? ' · ' + where : '') + ': ' + text + ' (' + who() + ')';
-    Store.setProblem(Util.uid(), { kr: kr, where: where, text: text, by: qr.name, func: qr.func || '', t: Date.now(), status: 'offen' })
-      .then(function () { return Store.addMsg({ type: 'problem', by: qr.name, text: msg }); })
+    Store.setProblem(Util.uid(), { kr: kr, where: where, text: text, by: qr.name, func: qr.func || '', qid: qid || '', t: Date.now(), status: 'offen' })
+      .then(function () { return Store.addMsg({ type: 'problem', by: qr.name, text: msg, kr: kr, qid: qid || '' }); })
       .then(function () {
         done(msg); toast('Problem gemeldet');
         $('kr').value = ''; $('probText').value = ''; $('probBox').hidden = true; krInfo();
@@ -462,6 +480,7 @@
     watchDone(state);
     checkAcks(state);
     checkOrders(state);
+    checkProblems(state);
   }
   if (qid && !urlQr) $('note').textContent = 'Lädt …';
   Store.subscribe(apply);
