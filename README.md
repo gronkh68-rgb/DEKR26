@@ -20,7 +20,7 @@ Ohne Konfiguration läuft der **LOKAL-DEMO-Modus** (Daten nur im eigenen Browser
 Achtung: Mit offenen Regeln kann jeder mit der URL schreiben. Keine sensiblen Daten eintragen.
 
 ## Hallenpläne
-`js/halls.js`: aktuell Platzhalter-Raster. Für echte Grundrisse `image`, `width`, `height` und `positions: [{id:'A14', x, y, w, h}]` pro Halle eintragen.
+`js/halls.js`: Halle 7.1 ist nachgezeichnet (SVG `PLAN_H7`), Positionen A–Z (oben→unten) × 1–49 (links→rechts) als Raster `grid` darüber. Lage des Rasters über `grid.x/y/w/h` justieren. Halle 2 ist noch ein Platzhalter-Raster (ohne `grid`/`plan`).
 
 ## Lokal testen
 `python3 -m http.server` im Repo-Ordner, dann `http://localhost:8000`.

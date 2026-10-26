@@ -134,3 +134,16 @@ svg.map { display: block; width: 100%; min-width: 640px; }
   .scroll { max-height: 60vh; }
   .map-box { max-height: 70vh; }
 }
+
+/* Hallenzeichnung */
+.p-floor { fill: #10141a; }
+.p-aisle { fill: #1d3326; }
+.p-block { fill: #171c24; stroke: #2c3440; stroke-width: 2; }
+.p-office { fill: #1d222b; stroke: #3a4350; stroke-width: 2; }
+.p-rack { fill: none; stroke: #3a4350; stroke-width: 2; stroke-dasharray: 6 4; }
+.p-exit { fill: #2b7a4b; }
+.p-t { fill: var(--dim); font-size: 22px; }
+svg.map.plan .cell { fill: rgba(255,255,255,.02); stroke: rgba(255,255,255,.07); }
+svg.map.plan .cell.open { fill: rgba(232,150,58,.55); stroke: var(--orange); }
+svg.map.plan .cell.done { fill: rgba(63,184,104,.75); stroke: var(--green); }
+svg.map.plan .cell.sel { stroke: var(--accent); stroke-width: 3; }

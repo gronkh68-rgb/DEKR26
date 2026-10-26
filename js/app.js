@@ -127,9 +127,9 @@
     $('hallSwitch').textContent = '⇄ ' + Halls.all[(hallIdx + 1) % Halls.all.length].name;
     $('hallSwitch').hidden = Halls.all.length < 2;
 
-    var svg = '<svg class="map" viewBox="0 0 ' + lay.w + ' ' + lay.h + '">';
-    if (lay.image) svg += '<image href="' + esc(lay.image) + '" width="' + lay.w + '" height="' + lay.h + '"/>';
-    lay.labels.forEach(function (l) { svg += '<text class="axis" x="' + l.x + '" y="' + l.y + '">' + esc(l.t) + '</text>'; });
+    var svg = '<svg class="map' + (lay.plan ? ' plan' : '') + '" viewBox="' + lay.vb + '">';
+    if (lay.plan) svg += lay.plan;
+    lay.labels.forEach(function (l) { svg += '<text class="axis" style="font-size:' + Math.max(lay.font, 10) + 'px" x="' + l.x + '" y="' + l.y + '">' + esc(l.t) + '</text>'; });
     lay.positions.forEach(function (p) {
       var ts = byPos[p.id];
       var cls = 'cell';
@@ -137,7 +137,7 @@
       if (sel && sel.hall === hall.id && sel.pos === p.id) cls += ' sel';
       svg += '<g data-pos="' + esc(p.id) + '"><rect class="' + cls + '" x="' + p.x + '" y="' + p.y +
         '" width="' + p.w + '" height="' + p.h + '" rx="2"><title>' + esc(p.id) + '</title></rect>';
-      if (ts) svg += '<text class="cell-t" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2 + 3) + '">' + esc(p.id) + '</text>';
+      if (ts) svg += '<text class="cell-t" style="font-size:' + lay.font + 'px" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2 + lay.font / 3) + '">' + esc(p.id) + '</text>';
       svg += '</g>';
     });
     $('map').innerHTML = svg + '</svg>';
