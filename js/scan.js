@@ -208,7 +208,39 @@
       (ac.length ? '<div class="col-title orb" style="margin:12px 0 8px">Zuletzt bestätigt</div>' + ac.map(function (m) { return item(m, false); }).join('') : '');
     notifState();
     pushState();
+    renderAllList(state);
   }
+  // Alle KR aller Wochen mit Suche
+  var dashTab = 'new';
+  function renderAllList(state) {
+    var q = $('allFilter').value.trim().toLowerCase();
+    var probs = {};
+    Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') probs[state.problems[id].kr] = 1; });
+    var list = Object.keys(state.tasks).map(function (id) { return state.tasks[id]; }).filter(function (t) {
+      if (!q) return true;
+      return (t.kr + ' ' + (t.pos ? Halls.label(t.hall, t.pos) : '') + ' ' + (t.scope || '') + (t.usa ? ' usa' : '')).toLowerCase().indexOf(q) >= 0;
+    }).sort(function (a, b) { return a.week < b.week ? -1 : a.week > b.week ? 1 : a.day - b.day; });
+    var html = '<div class="empty" style="margin-bottom:6px">' + list.length + ' Einträge · ' + list.filter(function (t) { return t.done; }).length + ' fertig</div>', last = '';
+    list.slice(0, 300).forEach(function (t) {
+      var key = t.week + '-' + t.day;
+      if (key !== last) { html += '<div class="daysep">KW ' + esc(t.week.split('-W')[1]) + ' · ' + esc(Util.DAYS[t.day]) + ' ' + esc(Util.dayDate(t.week, t.day)) + '</div>'; last = key; }
+      html += '<div class="krrow' + (t.done ? ' ok' : '') + '"><span><b>KR ' + esc(t.kr) + '</b>' +
+        (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '') +
+        (probs[t.kr] ? ' <span class="badge prob">Problem</span>' : '') +
+        '<small>' + (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + '</small></span><span class="st">' + (t.done ? 'fertig' : 'offen') + '</span></div>';
+    });
+    $('allList').innerHTML = list.length ? html : '<div class="empty">Keine KR gefunden.</div>';
+  }
+  $('allFilter').addEventListener('input', function () { renderAllList(Store.get()); });
+  $('v-dash').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-dt]');
+    if (!b) return;
+    dashTab = b.dataset.dt;
+    Array.prototype.forEach.call($('v-dash').querySelectorAll('button[data-dt]'), function (x) { x.classList.toggle('sel', x.dataset.dt === dashTab); });
+    $('dashNew').hidden = dashTab !== 'new';
+    $('dashAll').hidden = dashTab !== 'all';
+    renderAllList(Store.get());
+  });
   $('v-dash').onclick = function (e) {
     var b = e.target.closest('button[data-ackm]');
     var m = b && Store.get().msgs[b.dataset.ackm];

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DEKR26 · Meldung</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=c6ac8d2">
+<link rel="stylesheet" href="css/style.css?v=441ec08">
 </head>
 <body>
 <div class="mobile">
@@ -54,21 +54,31 @@
   <section class="sec" id="v-orders" hidden></section>
   <section class="sec" id="v-problems" hidden></section>
   <section class="sec" id="v-dash" hidden>
-    <div class="box">
-      <button type="button" class="big-gray" id="notifBtn">Benachrichtigungen aktivieren</button>
-      <div class="empty" id="notifInfo"></div>
-      <div class="empty" id="pushInfo"></div>
+    <div class="two" style="margin-bottom:12px">
+      <button type="button" class="menu-btn sel" data-dt="new">Meldungen</button>
+      <button type="button" class="menu-btn" data-dt="all">Alle KR</button>
     </div>
-    <div id="dashList"></div>
+    <div id="dashNew">
+      <div class="box">
+        <button type="button" class="big-gray" id="notifBtn">Benachrichtigungen aktivieren</button>
+        <div class="empty" id="notifInfo"></div>
+        <div class="empty" id="pushInfo"></div>
+      </div>
+      <div id="dashList"></div>
+    </div>
+    <div id="dashAll" hidden>
+      <input id="allFilter" class="full-in" placeholder="KR oder Position suchen …" autocomplete="off">
+      <div id="allList"></div>
+    </div>
   </section>
 
   <datalist id="krlist"></datalist>
   <div class="hist" id="hist"></div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=c6ac8d2"></script>
-<script src="js/halls.js?v=c6ac8d2"></script>
-<script src="js/core.js?v=c6ac8d2"></script>
-<script src="js/scan.js?v=c6ac8d2"></script>
+<script src="js/config.js?v=441ec08"></script>
+<script src="js/halls.js?v=441ec08"></script>
+<script src="js/core.js?v=441ec08"></script>
+<script src="js/scan.js?v=441ec08"></script>
 </body>
 </html>
