@@ -61,7 +61,8 @@ window.Util = (function () {
       return p(d.getHours()) + ':' + p(d.getMinutes());
     },
     uid: function () { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); },
-    getName: function () { try { return localStorage.getItem('dekr26_name') || ''; } catch (e) { return ''; } },
+    // Standardname, solange keiner eingetragen ist
+    getName: function () { try { return localStorage.getItem('dekr26_name') || 'Deufol'; } catch (e) { return 'Deufol'; } },
     setName: function (n) { try { localStorage.setItem('dekr26_name', n); } catch (e) { /* ignorieren */ } }
   };
 })();

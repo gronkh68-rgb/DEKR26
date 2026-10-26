@@ -119,7 +119,7 @@
       if (o.qid !== qid || o.status === 'offen' || o.selfDone || seenO[key]) return;
       seenO[key] = 1; changed = true;
       if (Date.now() - (o.statusAt || 0) > 864e5) return;
-      var text = '✔ Podest-Bestellung (' + o.items.join(', ') + (o.where ? ' · ' + o.where : '') + ') ' + o.status + ' von ' + (o.statusBy || 'Dashboard');
+      var text = '✔ Podest-Bestellung (' + o.items.join(', ') + (o.where ? ' · ' + o.where : '') + ') ' + o.status + ' von ' + (o.statusBy || 'Deufol');
       done(text); toast(text); notify('Podest ' + o.status, text, 'ord' + key);
     });
     if (changed) { try { localStorage.setItem('dekr26_ordseen', JSON.stringify(seenO)); } catch (e) { /* ignorieren */ } }
@@ -136,7 +136,7 @@
       if (p.qid !== qid || p.status !== 'gelöst' || p.selfDone || seenP[id]) return;
       seenP[id] = 1; changed = true;
       if (Date.now() - (p.solvedAt || 0) > 864e5) return;
-      var text = '✔ Problem KR ' + p.kr + ' gelöst von ' + (p.solvedBy || 'Dashboard');
+      var text = '✔ Problem KR ' + p.kr + ' gelöst von ' + (p.solvedBy || 'Deufol');
       done(text); toast(text); notify('Problem gelöst', text, 'prob' + id);
     });
     if (changed) { try { localStorage.setItem('dekr26_probseen', JSON.stringify(seenP)); } catch (e) { /* ignorieren */ } }

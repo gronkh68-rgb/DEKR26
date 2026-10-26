@@ -88,7 +88,7 @@
 
   $('send').onsubmit = function (e) {
     e.preventDefault();
-    var name = $('mName').value.trim() || 'Anonym';
+    var name = $('mName').value.trim() || 'Deufol';
     var text = $('mText').value.trim();
     if (!text) return;
     Util.setName($('mName').value.trim());
@@ -97,6 +97,13 @@
     $('mText').value = '';
   };
 
+  $('dayBar').onclick = function (e) {
+    var b = e.target.closest('button[data-dayvis]');
+    if (!b) return;
+    var d = b.dataset.dayvis;
+    dayPrefs.hidden[d] = dayPrefs.hidden[d] ? 0 : 1;
+    saveDayPrefs(); render(Store.get());
+  };
   $('hallSwitch').onclick = function () { hallIdx = (hallIdx + 1) % Halls.all.length; sel = null; render(Store.get()); };
 
   // ---------- Hilfen ----------
@@ -122,9 +129,26 @@
   }
 
   // ---------- Linke Spalte ----------
+  // Tage ein-/ausklappen und ausblenden (im Browser gemerkt). Standard: nur der heutige Tag ist offen.
+  var DAYS_KEY = 'dekr26_days';
+  var dayPrefs = { open: {}, hidden: {} };
+  try { dayPrefs = Object.assign(dayPrefs, JSON.parse(localStorage.getItem(DAYS_KEY)) || {}); } catch (e) { /* ignorieren */ }
+  function saveDayPrefs() { try { localStorage.setItem(DAYS_KEY, JSON.stringify(dayPrefs)); } catch (e) { /* ignorieren */ } }
+  function dayKey(d) { return viewWeek + '-' + d; }
+  function isOpen(d) {
+    var o = dayPrefs.open[dayKey(d)];
+    if (o !== undefined) return !!o;
+    return viewWeek === WEEK ? d === Util.todayIdx() : d === 1;
+  }
   function renderWeek(tasks) {
     var html = '';
+    $('dayBar').innerHTML = [1, 2, 3, 4, 5].map(function (d) {
+      var hid = !!dayPrefs.hidden[d];
+      return '<button class="daychip' + (hid ? ' off' : '') + '" data-dayvis="' + d + '" title="' + (hid ? 'Einblenden' : 'Ausblenden') + '">' +
+        Util.DAYS[d].slice(0, 2) + '</button>';
+    }).join('');
     for (var d = 1; d <= 5; d++) {
+      if (dayPrefs.hidden[d]) continue;
       var dt = tasks.filter(function (t) { return t.day === d; });
       var done = dt.filter(function (t) { return t.done; }).length;
       var groups = {}, order = [];
@@ -133,9 +157,11 @@
         groups[t.kr].push(t);
       });
       var isToday = viewWeek === WEEK && d === Util.todayIdx();
+      var open = isOpen(d);
       html += '<div class="day' + (isToday ? ' today' : '') + '">' +
-        '<div class="day-h orb"><span>' + Util.DAYS[d] + ' ' + Util.dayDate(viewWeek, d) + (isToday ? ' · heute' : '') +
+        '<div class="day-h orb" data-day="' + d + '"><span>' + (open ? '▾ ' : '▸ ') + Util.DAYS[d] + ' ' + Util.dayDate(viewWeek, d) + (isToday ? ' · heute' : '') +
         '</span><span class="cnt">' + done + '/' + dt.length + '</span></div>';
+      if (!open) { html += '</div>'; continue; }
       if (!order.length) html += '<div class="empty">– keine KR –</div>';
       order.forEach(function (kr) {
         var ts = groups[kr];
@@ -273,7 +299,7 @@
     var b = e.target.closest('button[data-ack]');
     var m = b && Store.get().msgs[b.dataset.ack];
     if (!m) return;
-    Store.setMsg(b.dataset.ack, Object.assign({}, m, { ack: { by: Util.getName() || 'Dashboard', t: Date.now() } }))
+    Store.setMsg(b.dataset.ack, Object.assign({}, m, { ack: { by: Util.getName() || 'Deufol', t: Date.now() } }))
       .catch(function () { toast('Bestätigen fehlgeschlagen'); });
   };
 
@@ -318,7 +344,7 @@
     var o = b && Store.get().orders[b.dataset.oid];
     if (!o) return;
     var p = b.dataset.st === 'del' ? Store.setOrder(b.dataset.oid, null)
-      : Store.setOrder(b.dataset.oid, Object.assign({}, o, { status: b.dataset.st, statusBy: Util.getName() || 'Dashboard', statusAt: Date.now() }));
+      : Store.setOrder(b.dataset.oid, Object.assign({}, o, { status: b.dataset.st, statusBy: Util.getName() || 'Deufol', statusAt: Date.now() }));
     p.catch(function () { toast('Speichern fehlgeschlagen'); });
   };
   $('probs').onclick = function (e) {
@@ -326,7 +352,7 @@
     var pr = b && Store.get().problems[b.dataset.pid];
     if (!pr) return;
     var p = b.dataset.st === 'del' ? Store.setProblem(b.dataset.pid, null)
-      : Store.setProblem(b.dataset.pid, Object.assign({}, pr, { status: 'gelöst', solvedBy: Util.getName() || 'Dashboard', solvedAt: Date.now() }));
+      : Store.setProblem(b.dataset.pid, Object.assign({}, pr, { status: 'gelöst', solvedBy: Util.getName() || 'Deufol', solvedAt: Date.now() }));
     p.catch(function () { toast('Speichern fehlgeschlagen'); });
   };
 
@@ -450,6 +476,13 @@
 
   // ---------- Klicks ----------
   $('week-list').onclick = function (e) {
+    var h = e.target.closest('.day-h');
+    if (h) {
+      var d = +h.dataset.day;
+      dayPrefs.open[dayKey(d)] = isOpen(d) ? 0 : 1;
+      saveDayPrefs(); render(Store.get());
+      return;
+    }
     var b = e.target.closest('.chip');
     if (!b) return;
     var t = Store.get().tasks[b.dataset.id];
@@ -482,7 +515,7 @@
       var copy = {}; Object.keys(t).forEach(function (k) { if (k !== 'id') copy[k] = t[k]; });
       copy.done = !t.done;
       copy.doneAt = copy.done ? Date.now() : null;
-      copy.doneBy = copy.done ? (Util.getName() || 'Dashboard') : null;
+      copy.doneBy = copy.done ? (Util.getName() || 'Deufol') : null;
       p = Store.setTask(b.dataset.id, copy);
     }
     p.catch(function () { toast('Speichern fehlgeschlagen'); });

@@ -268,3 +268,10 @@ textarea.full { width: 100%; font-size: 16px; padding: 10px; min-height: 90px; }
 @keyframes pulseRed { 0%, 100% { background: var(--panel); box-shadow: 0 0 0 0 rgba(229,83,75,0); } 50% { background: rgba(229,83,75,.25); box-shadow: 0 0 12px 2px rgba(229,83,75,.5); } }
 .msg .acts { display: flex; gap: 8px; margin-top: 6px; }
 .msg .acts .btn-sm { margin-top: 0; }
+
+/* Tage ein-/ausklappen */
+.daybar { display: flex; gap: 6px; }
+.daychip { flex: 1; padding: 3px 0; font-size: 12px; }
+.daychip.off { opacity: .45; text-decoration: line-through; }
+.day-h { cursor: pointer; user-select: none; }
+.day-h:hover { color: var(--text); }
