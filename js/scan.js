@@ -7,7 +7,7 @@
   var RECENT_KEY = 'dekr26_recent_' + (new URLSearchParams(location.search).get('q') || 'x');
   var recent = [];
   try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { recent = []; }
-  var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash'];
+  var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash', 'dk2'];
   var VIEWS = ['beipack', 'podest', 'orders', 'problems', 'dash'];
 
   // Name, Funktion und Rechte kommen vom QR-Code (?q=ID, im Dashboard gepflegt).
@@ -539,6 +539,34 @@
     }).catch(fail);
   };
 
+  // ---------- Klick-Bild (Option „DK2"): zeigt bei jedem Tippen kurz ein Bild ----------
+  // Bild: klick.png oder klick.jpg im Hauptordner des Repos (zum Ändern einfach neu hochladen).
+  // Zur Sicherheit höchstens ca. 3 Einblendungen pro Sekunde, und nicht bei reduzierter Bewegung.
+  var flashImg = null, flashLast = 0, flashOn = false;
+  function enableFlash() {
+    if (flashOn) return;
+    flashOn = true;
+    var stamp = Math.floor(Date.now() / 6e5);   // alle 10 Minuten neu laden, falls das Bild getauscht wurde
+    flashImg = document.createElement('img');
+    flashImg.alt = '';
+    flashImg.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:90;pointer-events:none;display:none';
+    var tryJpg = true;
+    flashImg.onerror = function () {
+      if (tryJpg) { tryJpg = false; flashImg.src = 'klick.jpg?v=' + stamp; } else { flashImg = null; }
+    };
+    flashImg.src = 'klick.png?v=' + stamp;
+    document.body.appendChild(flashImg);
+    document.addEventListener('click', function () {
+      if (!flashImg || !flashImg.complete || !flashImg.naturalWidth) return;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var now = Date.now();
+      if (now - flashLast < 350) return;
+      flashLast = now;
+      flashImg.style.display = 'block';
+      setTimeout(function () { flashImg.style.display = 'none'; }, 100);
+    }, true);
+  }
+
   // ---------- Start ----------
   function apply(state) {
     $('lockCover').hidden = !Store.isLocked();
@@ -568,6 +596,10 @@
       return;
     }
     $('note').textContent = Store.remote ? '' : 'Demo-Modus: Meldungen erreichen das Dashboard nicht.';
+    if (perms().dk2) {
+      enableFlash();
+      $('note').textContent += (Store.remote ? '' : ' ') + 'Klick-Bild aktiv.';
+    }
     fillKrList(state);
     renderMenu();
     renderPodestList(state);

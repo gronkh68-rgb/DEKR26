@@ -933,7 +933,7 @@
   // ohne dass ausgedruckte Codes ungültig werden.
   var PERM_LABELS = [['report', 'Beipack melden (fertig/Problem)'], ['order', 'Podest bestellen'],
     ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Fertig/Nicht fertig setzen'],
-    ['dash', 'Mobiles Dashboard']];
+    ['dash', 'Mobiles Dashboard'], ['dk2', 'Klick-Bild (DK2)']];
   var PRESETS = [
     ['standard', 'Standard (melden + bestellen)', '', { report: 1, order: 1 }],
     ['podest', 'Podest-Empfänger', 'Podest-Empfänger', { podest: 1, order: 1 }],
