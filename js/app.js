@@ -35,8 +35,7 @@
   // Plant eine KR (genau eine Position). Ein früherer Eintrag derselben KR wird ersetzt, der Status bleibt.
   // Gibt die Schreib-Promises zurück.
   function planOne(kr, pos, day, hall0, extra, forceHall) {
-    var found = pos && !forceHall ? Halls.find(pos) : [];
-    var hall = !pos ? '' : forceHall ? forceHall : found.length && found.every(function (h) { return h.id !== hall0; }) ? found[0].id : hall0;
+    var hall = !pos ? '' : forceHall || hall0;
     var id = Util.taskId(WEEK, kr, hall || '0', pos || '0');
     var tasks = Store.get().tasks, wasDone = false, jobs = [];
     Object.keys(tasks).forEach(function (tid) {
@@ -153,6 +152,7 @@
     if (lay.plan) svg += lay.plan;
     lay.labels.forEach(function (l) {
       if (!editing) {
+        if (l.off) return;
         svg += '<text class="axis" style="font-size:' + Math.max(lay.font, 10) + 'px" x="' + l.x + '" y="' + l.y + '">' + esc(l.t) + '</text>';
         return;
       }
@@ -162,7 +162,16 @@
         '" width="' + (col ? lay.pw - 2 : 30) + '" height="' + (col ? 20 : lay.ph - 2) + '" rx="3"/>' +
         '<text x="' + l.x + '" y="' + l.y + '" style="font-size:13px">' + esc(l.t) + '</text></g>';
     });
-    lay.positions.forEach(function (p) {
+    // Normalansicht: nur Positionen aus der Liste; im Admin-Modus das ganze Raster
+    var known = {};
+    lay.positions.forEach(function (p) { known[p.id] = p; });
+    var missing = [], drawn = [];
+    posKeys.forEach(function (id) {
+      var cell = known[id] || Halls.cellFor(hall.id, id, ovFor(hall.id));
+      if (cell) drawn.push(cell); else missing.push(id);
+    });
+    if (editing) drawn = lay.positions.concat(drawn.filter(function (c) { return !known[c.id]; }));
+    drawn.forEach(function (p) {
       var ts = byPos[p.id];
       var cls = 'cell';
       if (ts) cls += ts.every(function (t) { return t.done; }) ? ' done' : ' open';
@@ -174,10 +183,6 @@
     });
     $('map').innerHTML = svg + '</svg>';
 
-    // Positionen, die nicht im Hallenplan existieren, trotzdem melden
-    var known = {};
-    lay.positions.forEach(function (p) { known[p.id] = 1; });
-    var missing = posKeys.filter(function (p) { return !known[p]; });
     renderDetail(byPos, missing);
   }
 
@@ -199,7 +204,7 @@
       html += '<div class="empty">Position auf der Karte oder in der Liste anklicken.</div>';
     }
     if (missing.length) {
-      html += '<div class="note" style="margin-top:6px">Nicht im Hallenplan: ' + missing.map(esc).join(', ') + '</div>';
+      html += '<div class="note" style="margin-top:6px">Außerhalb des Rasters: ' + missing.map(esc).join(', ') + '</div>';
     }
     el.innerHTML = html;
   }
@@ -277,6 +282,8 @@
         if (ov[c][k]) { out[c][k] = ov[c][k]; n++; }
       });
     });
+    // Alles eingeblendet, obwohl die Halle ein Standardlayout hat: ausdrücklich merken
+    if (!n && Halls.get(hall).layout) { out.all = 1; n = 1; }
     Store.setLayout(hall, n ? out : null).catch(function () { toast('Speichern fehlgeschlagen'); });
   }
   function onUp() {

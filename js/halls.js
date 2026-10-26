@@ -55,12 +55,21 @@ var PLAN_H7 = [
   '<text class="p-t" x="1822" y="1000" text-anchor="end">Eingang</text>'
 ].join('');
 
+// Jede n-te Spalte behalten (z.B. 3, 6, 9, ...), alle anderen ausblenden
+function everyNth(cols, n) {
+  var off = {};
+  for (var i = 1; i <= cols; i++) if (i % n) off['c' + i] = 1;
+  return off;
+}
+
 window.DEKR_HALLS = [
   {
     id: 'H1', name: 'Halle 7.1',
     vb: '100 270 1820 860',
     plan: PLAN_H7,
     aisles: AISLES_H7,
+    // Aus den Spots der Arbeitsliste (9, 12, 21, 24, 30, 42): nur Vielfache von 3 werden genutzt
+    layout: { off: everyNth(49, 3) },
     grid: { x: 215, y: 310, w: 1330, h: 790, rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 }
   },
   { id: 'H2', name: 'Halle 6', rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 } // Platzhalter-Raster bis zum Plan
@@ -117,7 +126,7 @@ window.Halls = (function () {
         var id = s.rows[r] + (c + 1);
         if (off['c' + (c + 1)] || (valid && !valid[id])) continue;
         if (inAisle(h, xs[c] + s.pw / 2, y + s.ph / 2)) continue;
-        positions.push({ id: id, x: xs[c], y: y, w: wOf[c], h: s.ph, f: h.grid ? Math.min(wOf[c], s.ph) * 0.42 : s.font });
+        positions.push({ id: id, x: xs[c] - (wOf[c] - s.pw) / 2, y: y, w: wOf[c], h: s.ph, f: h.grid ? Math.min(wOf[c], s.ph) * 0.42 : s.font });
       }
     }
     return { vb: s.vb, plan: s.plan, font: s.font, pw: s.pw, ph: s.ph, positions: positions, labels: labels,
@@ -130,9 +139,21 @@ window.Halls = (function () {
       return window.DEKR_HALLS.filter(function (h) { return h.id === id; })[0] || null;
     },
     layout: function (id, ov) {
-      if (ov && (Object.keys(ov.cols || {}).length || Object.keys(ov.rows || {}).length || Object.keys(ov.off || {}).length)) return build(this.get(id), ov);
+      if (ov && (ov.all || Object.keys(ov.cols || {}).length || Object.keys(ov.rows || {}).length || Object.keys(ov.off || {}).length)) return build(this.get(id), ov);
       if (!cache[id]) cache[id] = build(this.get(id), null);
       return cache[id];
+    },
+    // Zelle einer Position aus der Liste, auch wenn das Raster sie ausblendet (Liste hat Vorrang)
+    cellFor: function (id, pos, ov) {
+      var h = this.get(id), s = spec(h);
+      ov = ov || h.layout || {};
+      var m = /^([A-Z])(\d+)$/.exec(pos);
+      if (!m) return null;
+      var r = s.rows.indexOf(m[1]), c = +m[2] - 1;
+      if (r < 0 || c < 0 || c >= s.cols) return null;
+      var wide = ov.off && Object.keys(ov.off).length ? s.pw + 2 * s.cw : s.pw;
+      var x = s.x + c * s.cw + ((ov.cols || {})['c' + (c + 1)] || 0), y = s.y + r * s.ch + ((ov.rows || {})['r' + m[1]] || 0);
+      return { id: pos, x: x - (wide - s.pw) / 2, y: y, w: wide, h: s.ph, f: h.grid ? Math.min(wide, s.ph) * 0.42 : s.font };
     },
     // Hallen, in denen die Position existiert
     find: function (pos) {
