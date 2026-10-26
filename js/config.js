@@ -9,6 +9,6 @@ window.DEKR_CONFIG = {
   ntfyTopic: 'dekr26-o2ry1ls8he5sph',
   // Geräte-Freigabe (optional): Web-API-Schlüssel des Firebase-Projekts eintragen (Projekteinstellungen > Allgemein).
   // Dann müssen neue Geräte vom Admin freigegeben werden. Einrichtung: siehe README. Leer = aus.
-  authApiKey: '',
+  authApiKey: 'AIzaSyCjjiFoHvsXMrqid-3M9zTMyXa9M1tgEqA',
   firebaseUrl: 'https://dekr26-34b05-default-rtdb.europe-west1.firebasedatabase.app'
 };
