@@ -7,6 +7,9 @@
   var sel = null;          // { hall, pos }
   var seen = null;         // bereits gesehene Nachrichten-IDs
   var toastTimer = null;
+  var editing = false;     // Modus: Spalten/Zeilen verschieben
+  var drag = null;         // laufender Zieh-Vorgang { hall, axis, i, p0, base }
+  var draft = null;        // Layout während des Ziehens
 
   // ---------- Kopf ----------
   $('week').textContent = 'KW ' + WEEK.split('-W')[1];
@@ -114,7 +117,7 @@
   // ---------- Karte ----------
   function renderMap(tasks) {
     var hall = Halls.all[hallIdx];
-    var lay = Halls.layout(hall.id);
+    var lay = Halls.layout(hall.id, ovFor(hall.id));
     var byPos = {};
     tasks.filter(function (t) { return t.hall === hall.id; }).forEach(function (t) {
       (byPos[t.pos] = byPos[t.pos] || []).push(t);
@@ -127,9 +130,19 @@
     $('hallSwitch').textContent = '⇄ ' + Halls.all[(hallIdx + 1) % Halls.all.length].name;
     $('hallSwitch').hidden = Halls.all.length < 2;
 
-    var svg = '<svg class="map' + (lay.plan ? ' plan' : '') + '" viewBox="' + lay.vb + '">';
+    var svg = '<svg class="map' + (lay.plan ? ' plan' : '') + (editing ? ' zoom' : '') + '" viewBox="' + lay.vb + '">';
     if (lay.plan) svg += lay.plan;
-    lay.labels.forEach(function (l) { svg += '<text class="axis" style="font-size:' + Math.max(lay.font, 10) + 'px" x="' + l.x + '" y="' + l.y + '">' + esc(l.t) + '</text>'; });
+    lay.labels.forEach(function (l) {
+      if (!editing) {
+        svg += '<text class="axis" style="font-size:' + Math.max(lay.font, 10) + 'px" x="' + l.x + '" y="' + l.y + '">' + esc(l.t) + '</text>';
+        return;
+      }
+      var col = l.axis === 'c';
+      var rx = col ? l.x - lay.pw / 2 + 1 : l.x - 15, ry = col ? l.y - 15 : l.y - 4 - lay.ph / 2 + 1;
+      svg += '<g class="handle" data-axis="' + l.axis + '" data-i="' + l.i + '"><rect x="' + rx + '" y="' + ry +
+        '" width="' + (col ? lay.pw - 2 : 30) + '" height="' + (col ? 20 : lay.ph - 2) + '" rx="3"/>' +
+        '<text x="' + l.x + '" y="' + l.y + '" style="font-size:13px">' + esc(l.t) + '</text></g>';
+    });
     lay.positions.forEach(function (p) {
       var ts = byPos[p.id];
       var cls = 'cell';
@@ -202,6 +215,71 @@
     renderMsgs(state);
   }
 
+  // ---------- Spalten / Zeilen verschieben ----------
+  function clone(o) { return JSON.parse(JSON.stringify(o || {})); }
+  function ovFor(hallId) {
+    if (drag && drag.hall === hallId) return draft;
+    return Store.get().layout[hallId] || {};
+  }
+  function toSvg(svg, e) {
+    var pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function setEdit(on) {
+    editing = on;
+    $('editBar').hidden = !on;
+    $('editToggle').textContent = on ? 'Fertig' : 'Spalten anpassen';
+    $('editToggle').className = on ? 'btn-ok' : '';
+    render(Store.get());
+  }
+  function onMove(e) {
+    var svg = $('map').querySelector('svg');
+    if (!drag || !svg) return;
+    var p = toSvg(svg, e);
+    var d = Math.round((drag.axis === 'c' ? p.x - drag.p0.x : p.y - drag.p0.y) * 2) / 2;
+    var lay = Halls.layout(drag.hall);
+    var keys = drag.axis === 'c' ? lay.colKeys : lay.rowKeys, coll = drag.axis === 'c' ? 'cols' : 'rows';
+    var last = $('follow').checked ? keys.length - 1 : drag.i;
+    draft = clone(drag.base);
+    draft[coll] = draft[coll] || {};
+    for (var j = drag.i; j <= last; j++) {
+      draft[coll][keys[j]] = ((drag.base[coll] || {})[keys[j]] || 0) + d;
+    }
+    render(Store.get());
+  }
+  function onUp() {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    if (!drag) return;
+    var out = { cols: {}, rows: {} }, n = 0;
+    ['cols', 'rows'].forEach(function (c) {
+      Object.keys(draft[c] || {}).forEach(function (k) {
+        if (draft[c][k]) { out[c][k] = draft[c][k]; n++; }
+      });
+    });
+    var hall = drag.hall;
+    drag = null;
+    Store.setLayout(hall, n ? out : null).catch(function () { toast('Speichern fehlgeschlagen'); });
+    render(Store.get());
+  }
+  $('editToggle').onclick = function () { setEdit(!editing); };
+  $('editReset').onclick = function () {
+    if (confirm('Verschiebungen dieser Halle zurücksetzen?')) {
+      Store.setLayout(Halls.all[hallIdx].id, null).catch(function () { toast('Speichern fehlgeschlagen'); });
+    }
+  };
+  $('map').addEventListener('pointerdown', function (e) {
+    var h = editing && e.target.closest('.handle');
+    if (!h) return;
+    e.preventDefault();
+    var hall = Halls.all[hallIdx].id;
+    drag = { hall: hall, axis: h.dataset.axis, i: +h.dataset.i, p0: toSvg($('map').querySelector('svg'), e), base: clone(ovFor(hall)) };
+    draft = clone(drag.base);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  });
+
   // ---------- Klicks ----------
   $('week-list').onclick = function (e) {
     var b = e.target.closest('.chip');
@@ -211,6 +289,7 @@
     render(Store.get());
   };
   $('map').onclick = function (e) {
+    if (editing) return;
     var g = e.target.closest('g[data-pos]');
     if (!g) return;
     sel = { hall: Halls.all[hallIdx].id, pos: g.dataset.pos };

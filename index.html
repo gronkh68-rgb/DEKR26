@@ -37,7 +37,15 @@
     <section class="col map-wrap">
       <div class="map-head">
         <div><h2 id="hallName" style="display:inline"></h2><span class="stat" id="hallStat"></span></div>
-        <button class="btn-main" id="hallSwitch"></button>
+        <div class="btns">
+          <button id="editToggle">Spalten anpassen</button>
+          <button class="btn-main" id="hallSwitch"></button>
+        </div>
+      </div>
+      <div class="card editbar" id="editBar" hidden>
+        <span>Spaltennummer oder Zeilenbuchstabe ziehen, um sie zu verschieben.</span>
+        <label><input type="checkbox" id="follow" checked> Folgende mitziehen</label>
+        <button class="btn-sm btn-warn" id="editReset">Zurücksetzen</button>
       </div>
       <div class="map-box" id="map"></div>
       <div class="card detail" id="detail"></div>

@@ -2,6 +2,7 @@
 //
 // Mit `grid` wird ein Positionsraster (Zeilenbuchstaben x Spaltennummern) über die Zeichnung `plan`
 // gelegt. x/y/w/h sind Koordinaten im viewBox-System der Hallenzeichnung.
+// Optional: `valid: ['A1','A2',...]` beschränkt die Halle auf tatsächlich vorhandene Positionen.
 // Ohne `grid` entsteht ein einfaches Platzhalter-Raster (rows x cols).
 
 // Halle 7.1 (nachgezeichnet nach Flucht- und Rettungsplan). Koordinaten = Pixel der Planvorlage.
@@ -67,36 +68,41 @@ window.Halls = (function () {
   var CELL = 30, GAP = 3, PAD = 26;
   var cache = {};
 
-  function buildGrid(h) {
-    var g = h.grid, cw = g.w / g.cols, ch = g.h / g.rows.length, positions = [], labels = [], r, c;
-    for (c = 0; c < g.cols; c++) {
-      labels.push({ t: String(c + 1), x: g.x + c * cw + cw / 2, y: g.y - 6 });
+  // Raster-Parameter: Startpunkt, Zellabstand (cw/ch) und Zellgröße (pw/ph)
+  function spec(h) {
+    if (h.grid) {
+      var g = h.grid, cw = g.w / g.cols, ch = g.h / g.rows.length;
+      return { x: g.x, y: g.y, cw: cw, ch: ch, pw: cw, ph: ch, rows: g.rows, cols: g.cols,
+        vb: h.vb, plan: h.plan, font: Math.min(cw, ch) * 0.42 };
     }
-    for (r = 0; r < g.rows.length; r++) {
-      labels.push({ t: g.rows[r], x: g.x - 10, y: g.y + r * ch + ch / 2 + 4 });
-      for (c = 0; c < g.cols; c++) {
-        positions.push({ id: g.rows[r] + (c + 1), x: g.x + c * cw, y: g.y + r * ch, w: cw, h: ch });
-      }
-    }
-    return { vb: h.vb, plan: h.plan, font: Math.min(cw, ch) * 0.42, positions: positions, labels: labels };
+    return { x: PAD, y: PAD, cw: CELL + GAP, ch: CELL + GAP, pw: CELL, ph: CELL, rows: h.rows, cols: h.cols,
+      vb: '0 0 ' + (PAD * 2 + h.cols * (CELL + GAP)) + ' ' + (PAD * 2 + h.rows.length * (CELL + GAP)),
+      plan: null, font: 9 };
   }
 
-  function buildRaster(h) {
-    var positions = [], labels = [], r, c;
-    for (c = 1; c <= h.cols; c++) {
-      labels.push({ t: String(c), x: PAD + (c - 1) * (CELL + GAP) + CELL / 2, y: PAD - 8 });
+  // ov = { cols: { c14: dx }, rows: { rA: dy } } verschiebt einzelne Spalten/Zeilen
+  function build(h, ov) {
+    var s = spec(h), oc = (ov && ov.cols) || {}, or = (ov && ov.rows) || {};
+    var valid = null, positions = [], labels = [], colKeys = [], rowKeys = [], r, c;
+    if (h.valid) { valid = {}; h.valid.forEach(function (id) { valid[id] = 1; }); }
+
+    for (c = 0; c < s.cols; c++) {
+      colKeys.push('c' + (c + 1));
+      labels.push({ t: String(c + 1), x: s.x + c * s.cw + s.pw / 2 + (oc['c' + (c + 1)] || 0), y: s.y - 8,
+        axis: 'c', i: c });
     }
-    for (r = 0; r < h.rows.length; r++) {
-      var y = PAD + r * (CELL + GAP);
-      labels.push({ t: h.rows[r], x: PAD - 12, y: y + CELL / 2 + 4 });
-      for (c = 1; c <= h.cols; c++) {
-        positions.push({ id: h.rows[r] + c, x: PAD + (c - 1) * (CELL + GAP), y: y, w: CELL, h: CELL });
+    for (r = 0; r < s.rows.length; r++) {
+      var rk = 'r' + s.rows[r], dy = or[rk] || 0;
+      rowKeys.push(rk);
+      labels.push({ t: s.rows[r], x: s.x - 12, y: s.y + r * s.ch + s.ph / 2 + 4 + dy, axis: 'r', i: r });
+      for (c = 0; c < s.cols; c++) {
+        var id = s.rows[r] + (c + 1);
+        if (valid && !valid[id]) continue;
+        positions.push({ id: id, x: s.x + c * s.cw + (oc['c' + (c + 1)] || 0), y: s.y + r * s.ch + dy, w: s.pw, h: s.ph });
       }
     }
-    return {
-      vb: '0 0 ' + (PAD * 2 + h.cols * (CELL + GAP)) + ' ' + (PAD * 2 + h.rows.length * (CELL + GAP)),
-      plan: null, font: 9, positions: positions, labels: labels
-    };
+    return { vb: s.vb, plan: s.plan, font: s.font, pw: s.pw, ph: s.ph, positions: positions, labels: labels,
+      colKeys: colKeys, rowKeys: rowKeys };
   }
 
   return {
@@ -104,11 +110,9 @@ window.Halls = (function () {
     get: function (id) {
       return window.DEKR_HALLS.filter(function (h) { return h.id === id; })[0] || null;
     },
-    layout: function (id) {
-      if (!cache[id]) {
-        var h = this.get(id);
-        cache[id] = h.grid ? buildGrid(h) : buildRaster(h);
-      }
+    layout: function (id, ov) {
+      if (ov && (Object.keys(ov.cols || {}).length || Object.keys(ov.rows || {}).length)) return build(this.get(id), ov);
+      if (!cache[id]) cache[id] = build(this.get(id), null);
       return cache[id];
     },
     // Hallen, in denen die Position existiert

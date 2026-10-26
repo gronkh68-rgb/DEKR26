@@ -47,7 +47,9 @@ window.Store = (function () {
   var subs = [];
   var timer = null;
 
-  function norm(s) { return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {} }; }
+  function norm(s) {
+    return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {} };
+  }
   function emit() { subs.forEach(function (f) { f(state); }); }
   function loadLocal() {
     try { state = norm(JSON.parse(localStorage.getItem(LS))); } catch (e) { state = norm(null); }
@@ -101,6 +103,8 @@ window.Store = (function () {
     },
     setTask: function (id, t) { return write('tasks', id, t); },
     removeTask: function (id) { return write('tasks', id, null); },
+    // Spalten-/Zeilenverschiebung einer Halle: { cols: {c14: dx}, rows: {rA: dy} } oder null
+    setLayout: function (hallId, ov) { return write('layout', hallId, ov); },
     addMsg: function (m) {
       m.t = Date.now();
       return write('msgs', Util.uid(), m);
