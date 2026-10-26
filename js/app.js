@@ -70,13 +70,15 @@
     var kr = Util.normKr($('pKr').value);
     var hall0 = $('pHall').value;
     var day = +$('pDay').value;
-    var list = $('pPos').value.split(/[\s,;]+/).map(Util.normPos).filter(Boolean);
+    var raw = $('pPos').value.trim();
     if (!kr) return;
-    if (list.length > 1) { toast('Pro KR nur eine Position'); return; }
-    var pos = list[0] || '';
-    Promise.all(planOne(kr, pos, day, hall0)).then(function () {
+    var pp = raw ? Util.parsePos(raw) : null;
+    if (raw && !pp) { toast('Position nicht erkannt, z.B. 7 42 Z'); return; }
+    var pos = pp ? pp.pos : '';
+    var hallId = (pp && pp.hall && Halls.byShort(pp.hall)) || hall0;
+    Promise.all(planOne(kr, pos, day, hallId, null, hallId)).then(function () {
       return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition',
-        text: 'KR ' + kr + ' geplant (' + Util.DAYS[day].slice(0, 2) + ')' + (pos ? ': ' + pos : '') });
+        text: 'KR ' + kr + ' geplant (' + Util.DAYS[day].slice(0, 2) + ')' + (pos ? ': ' + Halls.label(hallId, pos) : '') });
     }).catch(function () { toast('Speichern fehlgeschlagen'); });
     $('pKr').value = ''; $('pPos').value = '';
   };
@@ -139,7 +141,7 @@
           var isSel = sel && (sel.id ? sel.id === t.id : sel.hall === t.hall && sel.pos === t.pos);
           html += '<button class="chip' + (t.done ? ' done' : '') + (isSel ? ' sel' : '') +
             '" data-id="' + esc(t.id) + '">' +
-            (t.pos ? esc(t.hall) + '·' + esc(t.pos) : 'ohne Position') + '</button>';
+            (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + '</button>';
         });
         html += '</div></div>';
       });
@@ -193,8 +195,8 @@
       if (ts) cls += ts.every(function (t) { return t.done; }) ? ' done' : ' open';
       if (sel && sel.hall === hall.id && sel.pos === p.id) cls += ' sel';
       svg += '<g data-pos="' + esc(p.id) + '"><rect class="' + cls + '" x="' + p.x + '" y="' + p.y +
-        '" width="' + p.w + '" height="' + p.h + '" rx="2"><title>' + esc(p.id) + '</title></rect>';
-      if (ts) svg += '<text class="cell-t" style="font-size:' + p.f + 'px" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2 + p.f / 3) + '">' + esc(p.id) + '</text>';
+        '" width="' + p.w + '" height="' + p.h + '" rx="2"><title>' + esc(Halls.label(hall.id, p.id)) + '</title></rect>';
+      if (ts) svg += '<text class="cell-t" style="font-size:' + p.f + 'px" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2 + p.f / 3) + '">' + esc(Halls.label('', p.id)) + '</text>';
       svg += '</g>';
     });
     $('map').innerHTML = svg + '</svg>';
@@ -208,7 +210,7 @@
     if (sel && (sel.id || sel.hall === Halls.all[hallIdx].id)) {
       var ts = sel.id ? (Store.get().tasks[sel.id] ? [Object.assign({ id: sel.id }, Store.get().tasks[sel.id])] : []) : byPos[sel.pos] || [];
       html += '<div class="orb" style="font-size:12px;color:var(--accent);margin-bottom:4px">' +
-        (sel.id ? 'Eintrag ohne Position' : 'Position ' + esc(sel.pos)) + '</div>';
+        (sel.id ? 'Eintrag ohne Position' : 'Position ' + esc(Halls.label(sel.hall, sel.pos))) + '</div>';
       var notes = ts.filter(function (t) { return t.chg && Date.now() - t.chgAt < 864e5; });
       if (!ts.length) html += '<div class="empty">Kein Beipack geplant.</div>';
       notes.forEach(function (t) { html += '<div class="note">KR ' + esc(t.kr) + ': ' + esc(t.chg) + '</div>'; });
@@ -222,7 +224,7 @@
       html += '<div class="empty">Position auf der Karte oder in der Liste anklicken.</div>';
     }
     if (missing.length) {
-      html += '<div class="note" style="margin-top:6px">Außerhalb des Rasters: ' + missing.map(esc).join(', ') + '</div>';
+      html += '<div class="note" style="margin-top:6px">Außerhalb des Rasters: ' + missing.map(function (id) { return esc(Halls.label(hall.id, id)); }).join(', ') + '</div>';
     }
     el.innerHTML = html;
   }
@@ -548,7 +550,7 @@
     return out;
   }
   function posText(hall, pos) {
-    return pos ? (Halls.get(hall) ? Halls.get(hall).name : hall) + ' ' + pos : '–';
+    return Halls.label(hall, pos);
   }
   function kwText(w) { return 'KW ' + w.split('-W')[1]; }
   // Vergleicht die Liste mit dem gespeicherten Stand: neu, verschoben, geändert, entfallen

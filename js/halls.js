@@ -64,7 +64,7 @@ function everyNth(cols, n) {
 
 window.DEKR_HALLS = [
   {
-    id: 'H1', name: 'Halle 7.1',
+    id: 'H1', name: 'Halle 7.1', short: '7',
     vb: '100 270 1820 860',
     plan: PLAN_H7,
     aisles: AISLES_H7,
@@ -72,7 +72,7 @@ window.DEKR_HALLS = [
     layout: { off: everyNth(49, 3) },
     grid: { x: 215, y: 310, w: 1330, h: 790, rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 }
   },
-  { id: 'H2', name: 'Halle 6', rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 } // Platzhalter-Raster bis zum Plan
+  { id: 'H2', name: 'Halle 6', short: '6', rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 } // Platzhalter-Raster bis zum Plan
 ];
 
 window.Halls = (function () {
@@ -142,6 +142,17 @@ window.Halls = (function () {
       if (ov && (ov.all || Object.keys(ov.cols || {}).length || Object.keys(ov.rows || {}).length || Object.keys(ov.off || {}).length)) return build(this.get(id), ov);
       if (!cache[id]) cache[id] = build(this.get(id), null);
       return cache[id];
+    },
+    // Anzeige wie in der Arbeitsliste: Halle, Nummer, Buchstabe (z.B. "7 42 Z")
+    label: function (hallId, pos) {
+      if (!pos) return '–';
+      var h = this.get(hallId), m = /^([A-Z])(\d+)$/.exec(pos);
+      return (h && h.short ? h.short + ' ' : '') + (m ? m[2] + ' ' + m[1] : pos);
+    },
+    // Hallennummer ("7", "7.1", "6") -> Hallen-ID
+    byShort: function (s) {
+      var major = String(s).split('.')[0], r = window.DEKR_HALLS.filter(function (h) { return h.short === major; })[0];
+      return r ? r.id : '';
     },
     // Zelle einer Position aus der Liste, auch wenn das Raster sie ausblendet (Liste hat Vorrang)
     cellFor: function (id, pos, ov) {

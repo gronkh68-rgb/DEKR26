@@ -42,6 +42,16 @@ window.Util = (function () {
     key: function (s) { return String(s).replace(/[^A-Za-z0-9_-]/g, '_'); },
     // KR-Nummer: nur die Nummer speichern, ein getipptes "KR" am Anfang entfällt
     normKr: function (s) { return String(s).toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^KR/, ''); },
+    // Eingabe wie "7 42 Z", "42 Z" oder "Z42" -> { hall: '7'|'', pos: 'Z42' }, sonst null
+    parsePos: function (raw) {
+      var tk = String(raw).toUpperCase().match(/[A-Z]|\d+(?:\.\d)?/g) || [];
+      var letters = tk.filter(function (t) { return /^[A-Z]$/.test(t); });
+      var nums = tk.filter(function (t) { return !/^[A-Z]$/.test(t); });
+      if (letters.length !== 1 || nums.length < 1 || nums.length > 2) return null;
+      var num = nums[nums.length - 1];
+      if (!/^\d+$/.test(num)) return null;
+      return { hall: nums.length === 2 ? nums[0] : '', pos: letters[0] + num };
+    },
     normPos: function (s) { return String(s).toUpperCase().replace(/[^A-Z0-9]/g, ''); },
     taskId: function (week, kr, hall, pos) {
       return [week, this.key(kr), hall, pos].join('_');

@@ -71,7 +71,7 @@
     }
     ids.forEach(function (id) {
       var t = all[id];
-      if (t.pos) places.push(Halls.get(t.hall) ? Halls.get(t.hall).name + ' ' + t.pos : t.pos);
+      if (t.pos) places.push(Halls.label(t.hall, t.pos));
       if (t.done) return;
       var copy = Object.assign({}, t);
       copy.done = true; copy.doneAt = Date.now(); copy.doneBy = qr.name;
