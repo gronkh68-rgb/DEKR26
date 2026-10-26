@@ -39,18 +39,25 @@
     var day = +$('pDay').value;
     var list = $('pPos').value.split(/[\s,;]+/).map(Util.normPos).filter(Boolean);
     if (!kr) return;
-    // Ohne Positionen entsteht ein Eintrag ohne Kartenplatz
-    var jobs = (list.length ? list : ['']).map(function (pos) {
-      var found = Halls.find(pos);
-      var hall = !pos ? '' : found.length && found.every(function (h) { return h.id !== hall0; }) ? found[0].id : hall0;
-      var id = Util.taskId(WEEK, kr, hall || '0', pos || '0');
-      var old = Store.get().tasks[id];
-      if (old) return Promise.resolve();
-      return Store.setTask(id, { week: WEEK, kr: kr, day: day, hall: hall, pos: pos, done: false });
+    if (list.length > 1) { toast('Pro KR nur eine Position'); return; }
+    var pos = list[0] || '';
+    var found = pos ? Halls.find(pos) : [];
+    var hall = !pos ? '' : found.length && found.every(function (h) { return h.id !== hall0; }) ? found[0].id : hall0;
+    var id = Util.taskId(WEEK, kr, hall || '0', pos || '0');
+
+    // Jede KR hat genau eine Position: ein früherer Eintrag dieser KR wird ersetzt (Status bleibt erhalten)
+    var tasks = Store.get().tasks, wasDone = false, jobs = [];
+    Object.keys(tasks).forEach(function (tid) {
+      if (tasks[tid].week === WEEK && tasks[tid].kr === kr) {
+        wasDone = wasDone || !!tasks[tid].done;
+        if (tid !== id) jobs.push(Store.removeTask(tid));
+      }
     });
+    var cur = tasks[id];
+    jobs.push(Store.setTask(id, { week: WEEK, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : wasDone }));
     Promise.all(jobs).then(function () {
       return Store.addMsg({ type: 'plan', by: Util.getName() || 'Disposition',
-        text: 'KR ' + kr + ' geplant (' + Util.DAYS[day].slice(0, 2) + ')' + (list.length ? ': ' + list.join(', ') : '') });
+        text: 'KR ' + kr + ' geplant (' + Util.DAYS[day].slice(0, 2) + ')' + (pos ? ': ' + pos : '') });
     }).catch(function () { toast('Speichern fehlgeschlagen'); });
     $('pKr').value = ''; $('pPos').value = '';
   };
@@ -336,19 +343,23 @@
   // ---------- QR-Codes ----------
   // Der Code enthält nur die ID (?q=...). Name und Funktion lassen sich daher jederzeit ändern,
   // ohne dass ausgedruckte Codes ungültig werden.
-  function scanUrl(id) {
+  // n/f sind nur ein Rückfall, falls das Handy die QR-Daten nicht aus der Datenbank laden kann
+  function scanUrl(q) {
     var u = new URL('scan.html', location.href);
-    u.searchParams.set('q', id);
+    u.searchParams.set('q', q.id);
+    u.searchParams.set('n', q.name);
+    if (q.func) u.searchParams.set('f', q.func);
     return u.href;
   }
   function renderQr(state) {
     var list = Object.keys(state.qrs).map(function (id) {
       var q = state.qrs[id]; q.id = id; return q;
     }).sort(function (a, b) { return a.t - b.t; });
+    $('qrWarn').hidden = Store.remote;
     $('qrHint').textContent = list.length ? '' : 'Noch keine QR-Codes. Name (und Funktion) eintragen und „Hinzufügen" klicken.';
     $('qrGrid').innerHTML = list.map(function (q) {
       var qr = qrcode(0, 'M');
-      qr.addData(scanUrl(q.id));
+      qr.addData(scanUrl(q));
       qr.make();
       return '<div class="card qr-card" data-id="' + esc(q.id) + '">' +
         '<h3 class="print-only">' + esc(q.name) + '</h3>' +

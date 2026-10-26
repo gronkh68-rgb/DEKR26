@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=8767536">
+<link rel="stylesheet" href="css/style.css?v=087a03f">
 </head>
 <body>
 <div class="app">
@@ -28,7 +28,7 @@
           <select id="pDay"></select>
           <select id="pHall"></select>
         </div>
-        <input id="pPos" placeholder="Positionen (optional): A14 X36 ...">
+        <input id="pPos" placeholder="Position (optional), z.B. A14">
         <button class="btn-main">Planen</button>
       </form>
       <div class="scroll" id="week-list"></div>
@@ -77,15 +77,16 @@
       <button class="btn-main">Hinzufügen</button>
       <button type="button" id="qrPrint">Drucken</button>
     </form>
+    <div class="note no-print" id="qrWarn" hidden>Lokal-Demo-Modus: Die Codes funktionieren nur mit gemeinsamer Datenbank (Firebase). Meldungen vom Handy erreichen das Dashboard sonst nicht.</div>
     <div class="empty no-print" id="qrHint"></div>
     <div class="qr-grid" id="qrGrid"></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=8767536"></script>
-<script src="js/halls.js?v=8767536"></script>
-<script src="js/core.js?v=8767536"></script>
-<script src="js/qrcode.js?v=8767536"></script>
-<script src="js/app.js?v=8767536"></script>
+<script src="js/config.js?v=087a03f"></script>
+<script src="js/halls.js?v=087a03f"></script>
+<script src="js/core.js?v=087a03f"></script>
+<script src="js/qrcode.js?v=087a03f"></script>
+<script src="js/app.js?v=087a03f"></script>
 </body>
 </html>

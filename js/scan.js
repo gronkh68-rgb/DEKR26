@@ -7,10 +7,11 @@
   var mine = [];
 
   // Name und Funktion kommen vom QR-Code (?q=ID, im Dashboard gepflegt) und sind nicht änderbar.
-  // ?n=Name dient nur zum Testen ohne gespeicherten QR-Code.
   var qid = params.get('q');
-  var fixedName = (params.get('n') || '').trim();
-  var qr = fixedName ? { name: fixedName, func: '' } : null;
+  // ?n / ?f im Link sind nur Rückfall, falls die QR-Daten nicht aus der Datenbank kommen
+  var urlName = (params.get('n') || '').trim();
+  var urlQr = urlName ? { name: urlName, func: (params.get('f') || '').trim() } : null;
+  var qr = urlQr;
 
   function setReady(ok, msg) {
     $('go').disabled = !ok;
@@ -19,18 +20,17 @@
   }
 
   function applyQr(state) {
-    if (fixedName) { qr = { name: fixedName, func: '' }; }
-    else if (qid) { qr = state.qrs[qid] || null; }
+    qr = (qid && state.qrs[qid]) || urlQr;
     $('name').value = qr ? qr.name : '';
     $('who').textContent = qr && qr.func ? qr.func : '';
     $('who').hidden = !(qr && qr.func);
-    if (qr) setReady(true);
+    if (qr) setReady(true, Store.remote ? '' : 'Demo-Modus: Die Meldung erreicht das Dashboard nicht.');
     else setReady(false, qid ? 'QR-Code unbekannt oder gelöscht.' : 'Bitte über einen QR-Code öffnen.');
   }
 
-  if (qid && !fixedName) setReady(false, 'Lädt …');
+  if (qid && !urlQr) setReady(false, 'Lädt …');
   Store.subscribe(applyQr);
-  if (!qid && !fixedName) applyQr(Store.get());
+  if (!qid && !urlQr) applyQr(Store.get());
 
   function toast(t, bad) {
     var el = $('toast');
