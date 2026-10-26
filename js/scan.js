@@ -318,6 +318,20 @@
     pdSel[b.dataset.n] = !pdSel[b.dataset.n];
     renderPodestList(Store.get());
   };
+  // KR gewählt -> hinterlegte Position wird eingetragen (solange sie nicht von Hand geändert wurde)
+  var pdAuto = '';   // zuletzt automatisch eingetragene Position
+  function fillPdPos() {
+    var kr = Util.normKr($('pdKr').value), t = kr ? tasksOf(kr)[0] : null;
+    var cur = $('pdPos').value.trim();
+    var auto = t && t.pos ? Halls.label(t.hall, t.pos) : '';
+    if (!cur || cur === pdAuto) {
+      $('pdPos').value = auto;
+      pdAuto = auto;
+    }
+  }
+  $('pdKr').addEventListener('input', fillPdPos);
+  $('pdKr').addEventListener('change', fillPdPos);
+  $('pdPos').addEventListener('input', function () { if ($('pdPos').value.trim() !== pdAuto) pdAuto = ''; });
   $('pdGo').onclick = function () {
     var items = Object.keys(pdSel).filter(function (n) { return pdSel[n]; });
     var free = $('pdText').value.trim();
@@ -337,7 +351,7 @@
       .then(function () { return Store.addMsg({ type: 'order', by: qr.name, text: msg }); })
       .then(function () {
         done(msg); toast('Bestellt');
-        pdSel = {}; $('pdText').value = ''; $('pdKr').value = ''; $('pdPos').value = '';
+        pdSel = {}; $('pdText').value = ''; $('pdKr').value = ''; $('pdPos').value = ''; pdAuto = '';
         renderPodestList(Store.get());
       }).catch(fail).then(function () { $('pdGo').disabled = false; });
   };
