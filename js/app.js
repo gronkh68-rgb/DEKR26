@@ -386,10 +386,9 @@
 
   // ---------- Import (Kopieren und Einfügen) ----------
   // Nur die gewählten Spalten werden verarbeitet; alles andere wird verworfen und nie gespeichert.
-  // Gespeichert werden: KR, Tag, Halle, Position, Lieferumfang (Maschine/komplett) und ein USA-Hinweis.
+  // Gespeichert werden: KR, Tag, Halle, Position, Lieferumfang (Maschine/komplett) und ein USA-Hinweis (Land = US).
   var ROLES = [['', 'ignorieren'], ['kr', 'KR'], ['day', 'Tag'], ['hall', 'Halle'], ['num', 'Nummer'],
-    ['letter', 'Buchstabe'], ['pos', 'Position (A14)'], ['scope', 'Lieferumfang'], ['cust', 'Kunde (nur USA-Prüfung)'],
-    ['country', 'Land']];
+    ['letter', 'Buchstabe'], ['pos', 'Position (A14)'], ['scope', 'Lieferumfang'], ['country', 'Land (US = USA)']];
   var imp = { rows: [], cols: [] };
   var MAP_KEY = 'dekr26_impmap';
   var DAY_KEYS = { mo: 1, di: 2, mi: 3, do: 4, fr: 5 };
@@ -418,7 +417,7 @@
         /^(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)$/i.test(L[j + 3])) starts.push(j);
     }
     if (!starts.length) return null;
-    var rows = [['KR', 'Tag', 'Halle', 'Nummer', 'Buchstabe', 'Lieferumfang', 'Land', 'Kunde']];
+    var rows = [['KR', 'Tag', 'Halle', 'Nummer', 'Buchstabe', 'Lieferumfang', 'Land']];
     rows.multi = 0;
     starts.forEach(function (s, i) {
       var rec = L.slice(s, i + 1 < starts.length ? starts[i + 1] : L.length);
@@ -433,7 +432,7 @@
       var c = indexWhere(rec, /^[A-Z]{2}$/, krI + 1);
       var sc = indexWhere(rec, /^(komplett|maschine|schrumpftunnel)/i, c >= 0 ? c + 2 : krI + 1);
       rows.push([rec[krI], rec[3], R[0] || '', k ? R[k] : '', k ? R[2 * k] : '', sc >= 0 ? rec[sc] : '',
-        c >= 0 ? rec[c] : '', c >= 0 ? rec[c + 1] || '' : '']);
+        c >= 0 ? rec[c] : '']);
     });
     return rows;
   }
@@ -454,7 +453,6 @@
     if (/^nummer/.test(h)) return 'num';
     if (/^buchstabe/.test(h)) return 'letter';
     if (/lieferumfang/.test(h)) return 'scope';
-    if (/^kunde/.test(h)) return 'cust';
     if (/^land/.test(h)) return 'country';
     if (/^pos|^platz/.test(h)) return 'pos';
     return '';
@@ -502,8 +500,7 @@
       var num = (g('num').match(/\d+/) || [''])[0];
       if (letter && num) pos = letter + num;
     }
-    var usa = /^(us|usa|vereinigte staaten|united states)$/i.test(g('country').trim()) ||
-      /(^|\W)(usa|u\.s\.a\.?|united states)(\W|$)/i.test(g('cust'));
+    var usa = g('country').trim().toUpperCase() === 'US';
     return { kr: kr, day: ci.day >= 0 ? parseDay(g('day')) || dayDef : dayDef, hall: hall, pos: pos, scope: scope, usa: usa };
   }
   function roleIdx() {
