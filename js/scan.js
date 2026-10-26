@@ -4,7 +4,9 @@
   var esc = Util.esc;
   var WEEK = Util.isoWeek();
   var params = new URLSearchParams(location.search);
+  var RECENT_KEY = 'dekr26_recent_' + (new URLSearchParams(location.search).get('q') || 'x');
   var recent = [];
+  try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { recent = []; }
   var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash'];
   var VIEWS = ['beipack', 'podest', 'orders', 'problems', 'dash'];
 
@@ -33,12 +35,20 @@
     setTimeout(function () { el.classList.remove('show'); }, 3500);
   }
   function fail() { toast('Fehler – bitte erneut versuchen', true); }
+  function renderRecent() {
+    $('hist').innerHTML = recent.length
+      ? '<div class="col-title orb" style="margin-bottom:6px">Zuletzt</div>' + recent.slice(0, 15).map(function (m) {
+        return '<div class="msg done">' + esc(m.text) + '<small>' + Util.time(m.t) + '</small></div>';
+      }).join('') : '';
+  }
+  // Die Liste bleibt über Neuladen und Schließen erhalten (nur im Browser dieses Handys)
   function done(text) {
     recent.unshift({ t: Date.now(), text: text });
-    $('hist').innerHTML = '<div class="col-title orb" style="margin-bottom:6px">Zuletzt</div>' + recent.slice(0, 6).map(function (m) {
-      return '<div class="msg done">' + esc(m.text) + '<small>' + Util.time(m.t) + '</small></div>';
-    }).join('');
+    recent = recent.slice(0, 30);
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch (e) { /* ignorieren */ }
+    renderRecent();
   }
+  renderRecent();
 
   // ---------- Benachrichtigungen ----------
   // Push aufs Handy über ntfy.sh (nur wenn in js/config.js ein Thema eingetragen ist)
@@ -105,7 +115,7 @@
     var changed = false;
     Object.keys(state.orders).forEach(function (id) {
       var o = state.orders[id], key = id + ':' + o.status;
-      if (o.qid !== qid || o.status === 'offen' || seenO[key]) return;
+      if (o.qid !== qid || o.status === 'offen' || o.selfDone || seenO[key]) return;
       seenO[key] = 1; changed = true;
       if (Date.now() - (o.statusAt || 0) > 864e5) return;
       var text = '✔ Podest-Bestellung (' + o.items.join(', ') + (o.where ? ' · ' + o.where : '') + ') ' + o.status + ' von ' + (o.statusBy || 'Dashboard');
@@ -356,6 +366,29 @@
       }).catch(fail).then(function () { $('pdGo').disabled = false; });
   };
 
+  // Eigene offene Bestellungen: der Besteller kann sie selbst als erledigt abhaken
+  function renderMyOrders(state) {
+    var ids = qid ? Object.keys(state.orders).filter(function (id) {
+      return state.orders[id].qid === qid && state.orders[id].status !== 'erledigt';
+    }).sort(function (a, b) { return state.orders[b].t - state.orders[a].t; }) : [];
+    $('myOrders').innerHTML = ids.length
+      ? '<div class="col-title orb" style="margin-bottom:8px">Meine offenen Bestellungen</div>' + ids.map(function (id) {
+        var o = state.orders[id];
+        return '<div class="item"><b>' + esc(o.items.join(', ')) + '</b><span>' + esc(o.where) + '</span><span class="meta">' + Util.time(o.t) +
+          ' · <b>' + esc(o.status) + '</b>' + (o.statusBy ? ' von ' + esc(o.statusBy) : '') + '</span>' +
+          '<span class="acts"><button class="btn-ok" data-mine="' + id + '">Erledigt</button></span></div>';
+      }).join('') : '';
+  }
+  $('myOrders').onclick = function (e) {
+    var b = e.target.closest('button[data-mine]');
+    var o = b && Store.get().orders[b.dataset.mine];
+    if (!o) return;
+    b.disabled = true;
+    Store.setOrder(b.dataset.mine, Object.assign({}, o, { status: 'erledigt', statusBy: qr.name, statusAt: Date.now(), selfDone: 1 }))
+      .then(function () { done('Podest-Bestellung (' + o.items.join(', ') + (o.where ? ' · ' + o.where : '') + ') erledigt'); toast('Als erledigt markiert'); })
+      .catch(fail);
+  };
+
   // ---------- Bestellungen bearbeiten / Probleme lösen ----------
   function openOrders() {
     var o = Store.get().orders;
@@ -424,6 +457,7 @@
     renderPodestList(state);
     renderLists();
     krInfo();
+    renderMyOrders(state);
     renderDash(state);
     watchDone(state);
     checkAcks(state);
