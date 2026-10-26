@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.firebasedatabase.app https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://ntfy.sh; worker-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+<meta name="robots" content="noindex, nofollow">
 <title>DEUKRO26 · Beipack-Abholung</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=0b82ea3">
+<link rel="stylesheet" href="css/style.css?v=b14fe45">
 </head>
 <body>
 <div class="app">
@@ -113,7 +115,7 @@
     </form>
     <div class="note" id="admErr"></div>
     <div id="admBody" hidden>
-      <div class="qr-add"><span class="empty" id="admWho" style="flex:1"></span><button class="btn-sm" id="admLogout">Abmelden</button></div>
+      <div class="qr-add"><span class="empty" id="admWho" style="flex:1"></span><button class="btn-sm" id="admBackup">Daten sichern</button> <button class="btn-sm" id="admLogout">Abmelden</button></div>
       <div class="col-title orb" style="margin:10px 0 6px">Geräte</div>
       <div id="devList"></div>
     </div>
@@ -155,10 +157,10 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=0b82ea3"></script>
-<script src="js/halls.js?v=0b82ea3"></script>
-<script src="js/core.js?v=0b82ea3"></script>
-<script src="js/qrcode.js?v=0b82ea3"></script>
-<script src="js/app.js?v=0b82ea3"></script>
+<script src="js/config.js?v=b14fe45"></script>
+<script src="js/halls.js?v=b14fe45"></script>
+<script src="js/core.js?v=b14fe45"></script>
+<script src="js/qrcode.js?v=b14fe45"></script>
+<script src="js/app.js?v=b14fe45"></script>
 </body>
 </html>

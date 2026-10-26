@@ -14,7 +14,8 @@
   // n/f/p im Link sind nur Rückfall, falls die Daten nicht aus der Datenbank kommen.
   var qid = params.get('q');
   var urlName = (params.get('n') || '').trim();
-  var urlQr = urlName ? { name: urlName, func: (params.get('f') || '').trim(), perms: toPerms(params.get('p')) } : null;
+  // Rückfall nur ohne gemeinsame Datenbank (Demo): sonst muss ein gelöschter QR-Code ungültig werden
+  var urlQr = urlName && !Store.remote ? { name: urlName, func: (params.get('f') || '').trim(), perms: toPerms(params.get('p')) } : null;
   var qr = urlQr, view = '', pdSel = {};
 
   function toPerms(s) {
@@ -66,7 +67,8 @@
     if (!canNotify()) return;
     var plain = function () { try { new Notification(title, { body: body, tag: tag }); } catch (e) { /* ignorieren */ } };
     if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-      navigator.serviceWorker.ready.then(function (reg) { reg.showNotification(title, { body: body, tag: tag }); }).catch(plain);
+      var timeout = new Promise(function (_, rej) { setTimeout(rej, 2000); });
+      Promise.race([navigator.serviceWorker.ready, timeout]).then(function (reg) { reg.showNotification(title, { body: body, tag: tag }); }).catch(plain);
     } else plain();
   }
   function notifState() {
@@ -168,8 +170,8 @@
     if (!m) return;
     var rd = readSet(); rd[b.dataset.dm] = 1;
     try { localStorage.setItem('dekr26_dmread', JSON.stringify(rd)); } catch (err) { /* ignorieren */ }
-    var reads = Object.assign({}, m.reads); reads[qid || 'x'] = { by: qr.name, t: Date.now() };
-    Store.setMsg(b.dataset.dm, Object.assign({}, m, { reads: reads })).catch(function () { /* Lesebestätigung ist optional */ });
+    var rf = {}; rf['reads/' + (qid || 'x')] = { by: qr.name, t: Date.now() };
+    Store.updateMsg(b.dataset.dm, rf).catch(function () { /* Lesebestätigung ist optional */ });
     renderInbox(Store.get());
   };
 
@@ -213,6 +215,7 @@
   // Alle KR aller Wochen mit Suche
   var dashTab = 'new';
   function renderAllList(state) {
+    if ($('dashAll').hidden) return;
     var q = $('allFilter').value.trim().toLowerCase();
     var probs = {};
     Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') probs[state.problems[id].kr] = 1; });
@@ -245,7 +248,7 @@
     var b = e.target.closest('button[data-ackm]');
     var m = b && Store.get().msgs[b.dataset.ackm];
     if (!m) return;
-    Store.setMsg(b.dataset.ackm, Object.assign({}, m, { ack: { by: qr.name, t: Date.now() } })).catch(fail);
+    Store.updateMsg(b.dataset.ackm, { ack: { by: qr.name, t: Date.now() } }).catch(fail);
   };
 
   // ---------- KR-Daten ----------
@@ -269,11 +272,13 @@
   function fillKrList(state) {
     var list = Object.keys(state.tasks).map(function (id) { return state.tasks[id]; });
     list.sort(function (a, b) { return a.week < b.week ? -1 : a.week > b.week ? 1 : a.day - b.day; });
-    $('krlist').innerHTML = list.slice(0, 500).map(function (t) {
+    var html = list.slice(0, 500).map(function (t) {
       return '<option value="' + esc(t.kr) + '">KR ' + esc(t.kr) + (t.pos ? ' · ' + esc(Halls.label(t.hall, t.pos)) : '') +
         ' · ' + esc(Util.DAYS[t.day].slice(0, 2)) + (t.done ? ' · fertig' : '') + '</option>';
     }).join('');
+    if (html !== lastKrHtml) { lastKrHtml = html; $('krlist').innerHTML = html; }   // nur bei Änderung, sonst flackert die Auswahl
   }
+  var lastKrHtml = '';
   function krInfo() {
     var kr = Util.normKr($('kr').value), box = $('krInfo');
     if (!kr) { box.hidden = true; return; }
@@ -289,26 +294,18 @@
 
   // Alle Positionen der KR fertig bzw. wieder offen; ohne Eintrag entsteht einer ohne Position
   function markKr(kr, isDone) {
-    var mine = tasksOf(kr), useWeek = weekOf(mine), jobs = [], places = [];
+    var mine = tasksOf(kr), useWeek = weekOf(mine), ops = [], places = [];
     var ids = mine.filter(function (t) { return t.week === useWeek; });
-    if (!ids.length) {
-      if (isDone) {
-        jobs.push(Store.setTask(Util.taskId(useWeek, kr, '0', '0'), {
-          week: useWeek, kr: kr, day: Util.todayIdx(), hall: '', pos: '', done: true, doneAt: Date.now(), doneBy: qr.name
-        }));
-      }
+    if (!ids.length && isDone) {
+      ops.push({ coll: 'tasks', id: Util.taskId(useWeek, kr, '0', '0'), val: {
+        week: useWeek, kr: kr, day: Util.todayIdx(), hall: '', pos: '', done: true, doneAt: Date.now(), doneBy: qr.name } });
     }
     ids.forEach(function (t) {
       if (t.pos) places.push(Halls.label(t.hall, t.pos));
       if (!!t.done === isDone) return;
-      var copy = {};
-      Object.keys(t).forEach(function (k) { if (k !== 'id') copy[k] = t[k]; });
-      copy.done = isDone;
-      copy.doneAt = isDone ? Date.now() : null;
-      copy.doneBy = isDone ? qr.name : null;
-      jobs.push(Store.setTask(t.id, copy));
+      ops.push({ coll: 'tasks', id: t.id, val: { done: isDone, doneAt: isDone ? Date.now() : null, doneBy: isDone ? qr.name : null }, patch: true });
     });
-    return { jobs: jobs, where: places.length ? ' · ' + places.join(', ') : '' };
+    return { ops: ops, where: places.length ? ' · ' + places.join(', ') : '' };
   }
 
   // ---------- Menü ----------
@@ -361,7 +358,7 @@
     busy(true);
     var m = markKr(kr, isDone);
     var text = 'KR ' + kr + m.where + (isDone ? ' bereit' : ' nicht fertig') + ' (' + who() + ')';
-    Promise.all(m.jobs).then(function () {
+    Store.batchUpdate(m.ops).then(function () {
       return Store.addMsg({ type: isDone ? 'done' : 'info', by: qr.name, text: text, kr: kr, qid: qid || '' });
     }).then(function () {
       done(text); toast((isDone ? 'Gemeldet: KR ' : 'Zurückgenommen: KR ') + kr);
@@ -465,7 +462,7 @@
     var o = b && Store.get().orders[b.dataset.mine];
     if (!o) return;
     b.disabled = true;
-    Store.setOrder(b.dataset.mine, Object.assign({}, o, { status: 'erledigt', statusBy: qr.name, statusAt: Date.now(), selfDone: 1 }))
+    Store.updateOrder(b.dataset.mine, { status: 'erledigt', statusBy: qr.name, statusAt: Date.now(), selfDone: 1 })
       .then(function () { done('Podest-Bestellung (' + o.items.join(', ') + (o.where ? ' · ' + o.where : '') + ') erledigt'); toast('Als erledigt markiert'); })
       .catch(fail);
   };
@@ -504,8 +501,7 @@
     var b = e.target.closest('button[data-oid]');
     var o = b && Store.get().orders[b.dataset.oid];
     if (!o) return;
-    var upd = Object.assign({}, o, { status: b.dataset.st, statusBy: qr.name, statusAt: Date.now() });
-    Store.setOrder(b.dataset.oid, upd).then(function () {
+    Store.updateOrder(b.dataset.oid, { status: b.dataset.st, statusBy: qr.name, statusAt: Date.now() }).then(function () {
       return Store.addMsg({ type: 'order', by: qr.name, text: 'Podest-Bestellung (' + o.items.join(', ') + ' · ' + o.where + ') ' + b.dataset.st + ' (' + who() + ')' });
     }).catch(fail);
   };
@@ -513,8 +509,7 @@
     var b = e.target.closest('button[data-pid]');
     var p = b && Store.get().problems[b.dataset.pid];
     if (!p) return;
-    var upd = Object.assign({}, p, { status: 'gelöst', solvedBy: qr.name, solvedAt: Date.now() });
-    Store.setProblem(b.dataset.pid, upd).then(function () {
+    Store.updateProblem(b.dataset.pid, { status: 'gelöst', solvedBy: qr.name, solvedAt: Date.now() }).then(function () {
       return Store.addMsg({ type: 'info', by: qr.name, text: 'Problem KR ' + p.kr + ' gelöst (' + who() + ')' });
     }).catch(fail);
   };
@@ -533,6 +528,10 @@
     }
     qr = (qid && state.qrs[qid]) || urlQr;
     var ok = !!qr;
+    if (!ok && Store.isOffline()) {
+      $('note').textContent = 'Keine Verbindung – bitte Internet prüfen und die Seite neu laden.';
+      return;
+    }
     $('whoName').textContent = ok ? qr.name : '';
     $('who').textContent = ok && qr.func ? qr.func : '';
     $('who').hidden = !(ok && qr.func);

@@ -44,3 +44,9 @@ Damit nur freigegebene Geräte die Daten lesen und schreiben können (und das La
 5. Dashboard öffnen: Es zeigt „Gerät wartet auf Freigabe". Dort mit der Admin-E-Mail anmelden. Danach erscheinen neue Geräte unter **Admin → Geräte** (mit Name und Gerätecode) zum **Freigeben**.
 
 So funktioniert es: Jedes Gerät meldet sich anonym an und bekommt einen Gerätecode. Ohne Freigabe sieht es nichts und kann nichts ändern. Löscht ein Gerät seine Browserdaten, braucht es eine neue Freigabe. Layout, QR-Codes und Podest-Liste kann nur der angemeldete Admin ändern.
+
+## Betrieb und Technik (Stand der Überarbeitung)
+- **Adresse:** `https://deukro26.de/` (GitHub Pages, Domain bei IONOS, Datei `CNAME`).
+- **Datenmenge:** Die Seiten laden die Datenbank einmal und bekommen danach nur noch Änderungen (Live-Stream). Mehrere Änderungen (z. B. Import) gehen in einer Anfrage raus. Als Admin angemeldet, räumt das Dashboard einmal pro Sitzung auf: Nachrichten > 14 Tage, erledigte Bestellungen/gelöste Probleme > 30 Tage und KR-Einträge älter als 8 Wochen werden gelöscht.
+- **Sicherung:** Admin → „Daten sichern" lädt alle Daten als JSON-Datei herunter.
+- **Sicherheit:** Content-Security-Policy in den Seiten (nur eigene Skripte, nur Verbindungen zu Firebase und ntfy), Suchmaschinen sind per `noindex`/`robots.txt` ausgeschlossen. Ein gelöschter QR-Code ist sofort ungültig.

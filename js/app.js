@@ -22,6 +22,10 @@
   $('weekPrev').onclick = function () { moveWeek(-1); };
   $('weekNext').onclick = function () { moveWeek(1); };
   $('mode').textContent = Store.remote ? 'Live' : 'Lokal-Demo';
+  Store.subscribe(function () {
+    $('mode').textContent = Store.isOffline() ? 'Offline' : Store.remote ? 'Live' : 'Lokal-Demo';
+    $('mode').className = 'tag ' + (Store.isOffline() ? 'demo' : Store.remote ? 'live' : 'demo');
+  });
   $('mode').className = 'tag ' + (Store.remote ? 'live' : 'demo');
   function tick() {
     var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
@@ -47,18 +51,18 @@
   $('planToggle').onclick = function () { $('plan').hidden = !$('plan').hidden; };
 
   // Plant eine KR (genau eine Position). Ein früherer Eintrag derselben KR wird ersetzt, der Status bleibt.
-  // Gibt die Schreib-Promises zurück.
-  function planOne(kr, pos, day, hall0, extra, forceHall, week) {
+  // Gibt die Schreib-Operationen zurück (für Store.batch).
+  function planOps(kr, pos, day, hall0, extra, forceHall, week) {
     week = week || viewWeek;
     var hall = !pos ? '' : forceHall || hall0;
     var id = Util.taskId(week, kr, hall || '0', pos || '0');
-    var tasks = Store.get().tasks, wasDone = false, jobs = [], prev = null;
+    var tasks = Store.get().tasks, wasDone = false, ops = [], prev = null;
     // Jede KR gibt es nur einmal (auch wochenübergreifend): frühere Einträge werden ersetzt
     Object.keys(tasks).forEach(function (tid) {
       if (tasks[tid].kr === kr) {
         prev = prev || tasks[tid];
         wasDone = wasDone || !!tasks[tid].done;
-        if (tid !== id) jobs.push(Store.removeTask(tid));
+        if (tid !== id) ops.push({ coll: 'tasks', id: tid, val: null });
       }
     });
     var cur = tasks[id];
@@ -67,8 +71,8 @@
     if (extra && extra.usa) t.usa = true;
     if (extra && extra.chg) { t.chg = extra.chg; t.chgK = extra.chgK; t.chgAt = Date.now(); }
     else if (prev && prev.chg) { t.chg = prev.chg; t.chgK = prev.chgK; t.chgAt = prev.chgAt; }
-    jobs.push(Store.setTask(id, t));
-    return jobs;
+    ops.push({ coll: 'tasks', id: id, val: t });
+    return ops;
   }
 
   $('plan').onsubmit = function (e) {
@@ -82,7 +86,7 @@
     if (raw && !pp) { toast('Position nicht erkannt, z.B. 7 42 Z'); return; }
     var pos = pp ? pp.pos : '';
     var hallId = (pp && pp.hall && Halls.byShort(pp.hall)) || hall0;
-    Promise.all(planOne(kr, pos, day, hallId, null, hallId)).catch(function () { toast('Speichern fehlgeschlagen'); });
+    Store.batch(planOps(kr, pos, day, hallId, null, hallId)).catch(function () { toast('Speichern fehlgeschlagen'); });
     $('pKr').value = ''; $('pPos').value = '';
   };
 
@@ -136,7 +140,6 @@
       var t = state.tasks[id]; t.id = id; return t;
     }).filter(function (t) { return allMode || t.week === viewWeek; });
   }
-  function hallOf(id) { return Halls.get(id); }
 
   var openProb = {};   // KR -> offenes Problem vorhanden
   function badges(t) {
@@ -194,7 +197,7 @@
     var done = list.filter(function (t) { return t.done; }).length;
     var html = '<div class="empty" style="margin-bottom:6px">' + list.length + ' Einträge · ' + done + ' fertig' + (q ? ' (gefiltert)' : '') + '</div>';
     var last = '';
-    for (var d = 0, wk = {}; d < list.length; d++) {
+    for (var d = 0; d < list.length; d++) {
       var t = list[d], key = t.week + '-' + t.day;
       if (key !== last) {
         if (last) html += '</div>';
@@ -316,13 +319,14 @@
       html += '<div class="empty">Position auf der Karte oder in der Liste anklicken.</div>';
     }
     if (missing.length) {
-      html += '<div class="note" style="margin-top:6px">Außerhalb des Rasters: ' + missing.map(function (id) { return esc(Halls.label(hall.id, id)); }).join(', ') + '</div>';
+      html += '<div class="note" style="margin-top:6px">Außerhalb des Rasters: ' + missing.map(function (id) { return esc(Halls.label(Halls.all[hallIdx].id, id)); }).join(', ') + '</div>';
     }
     el.innerHTML = html;
   }
 
   // ---------- Nachrichten ----------
   function renderMsgs(state) {
+    if (Store.isLocked()) return;   // noch keine Daten: nichts vormerken, sonst gelten später alle als neu
     var all = Object.keys(state.msgs).map(function (id) {
       var m = state.msgs[id]; m.id = id; return m;
     }).filter(function (m) { return m.type !== 'plan'; })   // Planung/Import wird nicht gemeldet
@@ -359,7 +363,7 @@
     var b = e.target.closest('button[data-ack]');
     var m = b && Store.get().msgs[b.dataset.ack];
     if (!m) return;
-    Store.setMsg(b.dataset.ack, Object.assign({}, m, { ack: { by: Util.getName() || 'Deufol', t: Date.now() } }))
+    Store.updateMsg(b.dataset.ack, { ack: { by: Util.getName() || 'Deufol', t: Date.now() } })
       .catch(function () { toast('Bestätigen fehlgeschlagen'); });
   };
 
@@ -458,7 +462,7 @@
     var o = b && Store.get().orders[b.dataset.oid];
     if (!o) return;
     var p = b.dataset.st === 'del' ? Store.setOrder(b.dataset.oid, null)
-      : Store.setOrder(b.dataset.oid, Object.assign({}, o, { status: b.dataset.st, statusBy: Util.getName() || 'Deufol', statusAt: Date.now() }));
+      : Store.updateOrder(b.dataset.oid, { status: b.dataset.st, statusBy: Util.getName() || 'Deufol', statusAt: Date.now() });
     p.catch(function () { toast('Speichern fehlgeschlagen'); });
   };
   $('probs').onclick = function (e) {
@@ -466,7 +470,7 @@
     var pr = b && Store.get().problems[b.dataset.pid];
     if (!pr) return;
     var p = b.dataset.st === 'del' ? Store.setProblem(b.dataset.pid, null)
-      : Store.setProblem(b.dataset.pid, Object.assign({}, pr, { status: 'gelöst', solvedBy: Util.getName() || 'Deufol', solvedAt: Date.now() }));
+      : Store.updateProblem(b.dataset.pid, { status: 'gelöst', solvedBy: Util.getName() || 'Deufol', solvedAt: Date.now() });
     p.catch(function () { toast('Speichern fehlgeschlagen'); });
   };
 
@@ -628,11 +632,8 @@
       if (!confirm('KR ' + t.kr + ' / ' + t.pos + ' löschen?')) return;
       p = Store.removeTask(b.dataset.id);
     } else {
-      var copy = {}; Object.keys(t).forEach(function (k) { if (k !== 'id') copy[k] = t[k]; });
-      copy.done = !t.done;
-      copy.doneAt = copy.done ? Date.now() : null;
-      copy.doneBy = copy.done ? (Util.getName() || 'Deufol') : null;
-      p = Store.setTask(b.dataset.id, copy);
+      var nd = !t.done;
+      p = Store.updateTask(b.dataset.id, { done: nd, doneAt: nd ? Date.now() : null, doneBy: nd ? (Util.getName() || 'Deufol') : null });
     }
     p.catch(function () { toast('Speichern fehlgeschlagen'); });
   };
@@ -884,20 +885,19 @@
   $('impGo').onclick = function () {
     var c = collect(), head = $('impHead').checked;
     if (!c.items.length) { toast('Keine KR gefunden'); return; }
-    var d = diffItems(c.items), jobs = [], firstWeek = '';
+    var d = diffItems(c.items), ops = [], firstWeek = '';
     c.items.forEach(function (x) {
       if (!firstWeek || x.week < firstWeek) firstWeek = x.week;
       var extra = { scope: x.scope, usa: x.usa };
       if (x.how === 'verschoben' || x.how === 'geändert') { extra.chg = x.chg; extra.chgK = x.how; }
-      jobs = jobs.concat(planOne(x.kr, x.pos, x.day, x.hallEff || Halls.all[0].id, extra, x.hallEff, x.week));
+      ops = ops.concat(planOps(x.kr, x.pos, x.day, x.hallEff || Halls.all[0].id, extra, x.hallEff, x.week));
     });
-    var dropped = 0;
-    if ($('impDrop').checked) d.gone.forEach(function (t) { jobs.push(Store.removeTask(t.id)); dropped++; });
+    if ($('impDrop').checked) d.gone.forEach(function (t) { ops.push({ coll: 'tasks', id: t.id, val: null }); });
     if (head) {
       try { localStorage.setItem(MAP_KEY, JSON.stringify({ sig: sigOf(imp.rows[0]), cols: imp.cols })); } catch (e) { /* ignorieren */ }
     }
     $('impGo').disabled = true;
-    Promise.all(jobs).then(function () {
+    Store.batch(ops).then(function () {
       toast('Import: ' + d.neu.length + ' neu, ' + d.moved.length + ' verschoben, ' + d.chg.length + ' geändert');
       viewWeek = firstWeek; weekLabel(); render(Store.get());
       $('impText').value = ''; imp.cols = []; renderImp();
@@ -1060,6 +1060,7 @@
     }).then(function () {
       // Die Anfrage des Geräts vor der Admin-Anmeldung ist überflüssig
       if (oldUid) Store.setDevice(oldUid, null).catch(function () { /* nicht schlimm */ });
+      applyRoleUi();
       renderAdmin();
     }).catch(function (e) {
       errEl.textContent = 'Anmeldung fehlgeschlagen' + (e && e.message ? ' (' + e.message + ')' : '');
@@ -1067,7 +1068,7 @@
   }
   $('lockLogin').onsubmit = function (e) { e.preventDefault(); doLogin($('lockMail'), $('lockPw'), $('lockErr')); };
   $('admLogin').onsubmit = function (e) { e.preventDefault(); doLogin($('admMail'), $('admPw'), $('admErr')); };
-  var pendingDev = 0, devTimer = null;
+  var pendingDev = 0;
   function loadDevices() {
     if (!Auth.isAdmin()) return;
     Store.devices().then(function (d) {
@@ -1100,11 +1101,20 @@
   }
   $('admOpen').onclick = function () { $('admModal').hidden = false; renderAdmin(); };
   $('admClose').onclick = function () { $('admModal').hidden = true; };
+  // Komplette Daten als Datei herunterladen (Sicherung)
+  $('admBackup').onclick = function () {
+    var blob = new Blob([JSON.stringify(Store.get(), null, 2)], { type: 'application/json' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'deukro26-sicherung-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(function () { URL.revokeObjectURL(link.href); }, 2000);
+  };
   $('admLogout').onclick = function () { Auth.logout(); location.reload(); };
   if (Store.secure) {
     $('admOpen').hidden = false;
     $('lockCode').textContent = Auth.code();
-    devTimer = setInterval(function () { if (Auth.isAdmin()) loadDevices(); }, 10000);
+    setInterval(function () { if (Auth.isAdmin()) loadDevices(); }, 10000);
     Store.subscribe(function () {
       $('lockModal').hidden = !Store.isLocked();
       $('lockCode').textContent = Auth.code();
@@ -1112,6 +1122,36 @@
     // Das Gerät trägt sich mit dem gemerkten Namen zur Freigabe ein
     Store.setDeviceLabel('Dashboard ' + Util.getName());
   }
+
+  // Nur der Admin ändert Layout und QR-Codes (die Datenbank-Regeln erzwingen es; hier werden die Knöpfe ausgeblendet)
+  function applyRoleUi() {
+    var adm = !Store.secure || Auth.isAdmin();
+    $('editToggle').hidden = !adm;
+    $('qrOpen').hidden = !adm;
+  }
+  applyRoleUi();
+
+  // Alte Einträge werden einmal pro Sitzung aufgeräumt (nur Admin): Nachrichten > 14 Tage, erledigte Bestellungen und
+  // gelöste Probleme > 30 Tage, KR-Einträge von Wochen, die mehr als 8 Wochen zurückliegen. Hält die Datenmenge klein.
+  var pruned = false;
+  function pruneOld(state) {
+    if (pruned || Store.isLocked() || (Store.secure && !Auth.isAdmin())) return;
+    if (!Object.keys(state.tasks).length && !Object.keys(state.msgs).length) return;
+    pruned = true;
+    var now = Date.now(), day = 864e5, ops = [], cutoff = Util.addWeeks(WEEK, -8);
+    Object.keys(state.msgs).forEach(function (id) { if (now - state.msgs[id].t > 14 * day) ops.push({ coll: 'msgs', id: id, val: null }); });
+    Object.keys(state.orders).forEach(function (id) {
+      var o = state.orders[id];
+      if (o.status === 'erledigt' && now - (o.statusAt || o.t) > 30 * day) ops.push({ coll: 'orders', id: id, val: null });
+    });
+    Object.keys(state.problems).forEach(function (id) {
+      var p = state.problems[id];
+      if (p.status !== 'offen' && now - (p.solvedAt || p.t) > 30 * day) ops.push({ coll: 'problems', id: id, val: null });
+    });
+    Object.keys(state.tasks).forEach(function (id) { if (state.tasks[id].week < cutoff) ops.push({ coll: 'tasks', id: id, val: null }); });
+    if (ops.length) Store.batch(ops).catch(function () { /* nächstes Mal */ });
+  }
+  Store.subscribe(pruneOld);
 
   Store.subscribe(render);
   Store.start();

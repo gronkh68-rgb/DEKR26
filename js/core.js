@@ -140,10 +140,11 @@ window.Store = (function () {
   var base = (cfg.firebaseUrl || '').replace(/\/$/, '');
   var remote = !!base;
   var LS = 'dekr26_state';
+  var raw = {};                 // Rohdaten der Datenbank (Stream-Änderungen werden hier eingearbeitet)
   var state = norm(null);
   var subs = [];
-  var timer = null, es = null, esTimer = null, lockTimer = null;
-  var locked = false, label = '';
+  var es = null, esTimer = null, lockTimer = null;
+  var locked = false, offline = false, connected = false, label = '';
 
   function norm(s) {
     return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
@@ -152,6 +153,32 @@ window.Store = (function () {
   function emit() { subs.forEach(function (f) { f(state); }); }
   function loadLocal() {
     try { state = norm(JSON.parse(localStorage.getItem(LS))); } catch (e) { state = norm(null); }
+  }
+  function isObj(x) { return x !== null && typeof x === 'object'; }
+  // Schlüssel wie "reads/abc" setzen/löschen einen verschachtelten Wert (wie bei Firebase-Teil-Updates)
+  function setDeep(obj, path, val) {
+    var parts = path.split('/'), o = obj, i;
+    for (i = 0; i < parts.length - 1; i++) { if (!isObj(o[parts[i]])) o[parts[i]] = {}; o = o[parts[i]]; }
+    if (val === null) delete o[parts[parts.length - 1]]; else o[parts[parts.length - 1]] = val;
+  }
+
+  // Änderung am Pfad einarbeiten (Stream: "put" ersetzt, "patch" mischt)
+  function applyAt(path, data, merge) {
+    var parts = String(path).split('/').filter(Boolean), o = raw, i, k;
+    if (!parts.length) {
+      if (merge && isObj(data)) { for (k in data) { if (data[k] === null) delete raw[k]; else raw[k] = data[k]; } }
+      else raw = isObj(data) ? data : {};
+    } else {
+      for (i = 0; i < parts.length - 1; i++) { if (!isObj(o[parts[i]])) o[parts[i]] = {}; o = o[parts[i]]; }
+      var last = parts[parts.length - 1];
+      if (merge && isObj(data)) {
+        if (!isObj(o[last])) o[last] = {};
+        for (k in data) { if (data[k] === null) delete o[last][k]; else o[last][k] = data[k]; }
+      } else if (data === null) delete o[last];
+      else o[last] = data;
+    }
+    state = norm(raw);
+    emit();
   }
 
   // Anfrage an die Datenbank, mit Token falls die Anmeldung aktiv ist
@@ -183,49 +210,85 @@ window.Store = (function () {
     }, 4000);
   }
 
+  // Vollständiges Laden (Start, nach Fehlern, nach Freigabe)
   function refresh() {
     if (!remote) { loadLocal(); emit(); return Promise.resolve(); }
     return api('/').then(function (r) {
       if (r.status === 401 || r.status === 403) { setLocked(true); return undefined; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json().then(function (data) { setLocked(false); state = norm(data); emit(); });
-    });
+      return r.json().then(function (data) {
+        raw = isObj(data) ? data : {};
+        state = norm(raw);
+        offline = false;
+        setLocked(false);
+        emit();
+      });
+    }).catch(function (e) { if (!offline) { offline = true; emit(); } throw e; });
   }
 
-  function write(coll, id, val) {
+  // Schreiben: erst lokal (sofort sichtbar), dann zur Datenbank. ops = [{ coll, id, val, patch }]:
+  // val null löscht den Eintrag; patch:true mischt nur die angegebenen Felder in den bestehenden Eintrag.
+  // Mehrere Änderungen gehen in einer einzigen Anfrage raus.
+  function commit(ops) {
+    if (!remote) { loadLocal(); raw = state; }   // lokal: aktuellen Stand aus dem Speicher nehmen (andere Tabs)
+    ops.forEach(function (o) {
+      if (!isObj(raw[o.coll])) raw[o.coll] = {};
+      var cur = raw[o.coll][o.id];
+      if (o.val === null) delete raw[o.coll][o.id];
+      else if (o.patch) {
+        var m = isObj(cur) ? JSON.parse(JSON.stringify(cur)) : {};
+        Object.keys(o.val).forEach(function (k) { setDeep(m, k, o.val[k]); });
+        raw[o.coll][o.id] = m;
+      } else raw[o.coll][o.id] = o.val;
+    });
     if (!remote) {
-      loadLocal();
-      if (val === null) delete state[coll][id]; else state[coll][id] = val;
-      try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) { return Promise.reject(e); }
-      emit();
+      try { localStorage.setItem(LS, JSON.stringify(norm(raw))); } catch (e) { return Promise.reject(e); }
+      state = norm(raw); emit();
       return Promise.resolve();
     }
-    if (val === null) delete state[coll][id]; else state[coll][id] = val;
-    emit();
-    return api('/' + coll + '/' + id, {
-      method: val === null ? 'DELETE' : 'PUT',
-      body: JSON.stringify(val)
-    }).then(function (r) {
+    state = norm(raw); emit();
+    var req, o0 = ops[0];
+    if (ops.length === 1) {
+      req = api('/' + o0.coll + '/' + o0.id, { method: o0.patch ? 'PATCH' : o0.val === null ? 'DELETE' : 'PUT', body: JSON.stringify(o0.val) });
+    } else {
+      var body = {};
+      ops.forEach(function (o) {
+        if (o.patch) Object.keys(o.val).forEach(function (k) { body[o.coll + '/' + o.id + '/' + k] = o.val[k]; });
+        else body[o.coll + '/' + o.id] = o.val;
+      });
+      req = api('/', { method: 'PATCH', body: JSON.stringify(body) });
+    }
+    return req.then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
     }).catch(function (e) { refresh().catch(function () {}); throw e; });
   }
+  function one(coll, id, val) { return commit([{ coll: coll, id: id, val: val }]); }
+  function upd(coll, id, fields) { return commit([{ coll: coll, id: id, val: fields, patch: true }]); }
 
-  // Live-Stream der Datenbank; bei abgelaufenem Token wird neu verbunden
+  // Live-Stream: schickt nur Änderungen. Bei abgelaufenem Token oder Fehler wird neu verbunden.
   function startStream() {
     if (!remote || locked) return;
     if (es) { try { es.close(); } catch (e) { /* ignorieren */ } es = null; }
+    connected = false;
     clearTimeout(esTimer);
     Auth.token().then(function (t) {
       try {
         es = new EventSource(base + '/.json' + (t ? '?auth=' + encodeURIComponent(t) : ''));
-        var kick = function () {
-          clearTimeout(timer);
-          timer = setTimeout(function () { refresh().catch(function () {}); }, 150);
+        var handler = function (merge) {
+          return function (ev) {
+            var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+            if (!connected) { connected = true; offline = false; }
+            applyAt(m.path, m.data, merge);
+          };
         };
-        es.addEventListener('put', kick);
-        es.addEventListener('patch', kick);
+        es.addEventListener('put', handler(false));
+        es.addEventListener('patch', handler(true));
         es.addEventListener('auth_revoked', function () { esTimer = setTimeout(startStream, 500); });
-        es.onerror = function () { if (es && es.readyState === 2) esTimer = setTimeout(startStream, 5000); };
+        es.addEventListener('cancel', function () { connected = false; refresh().catch(function () {}); });
+        es.onerror = function () {
+          connected = false;
+          if (es && es.readyState === 2) esTimer = setTimeout(function () { refresh().catch(function () {}).then(startStream); }, 5000);
+        };
         esTimer = setTimeout(startStream, 40 * 60 * 1000);   // vor Ablauf des Tokens neu verbinden
       } catch (e) { /* Polling reicht als Fallback */ }
     }).catch(function () { esTimer = setTimeout(startStream, 10000); });
@@ -235,12 +298,14 @@ window.Store = (function () {
     remote: remote,
     secure: remote && Auth.enabled,
     isLocked: function () { return locked; },
+    isOffline: function () { return offline; },
     setDeviceLabel: function (n) { label = String(n || '').slice(0, 40); },
     subscribe: function (f) { subs.push(f); },
     start: function () {
       refresh().then(startStream).catch(function () { startStream(); });
       if (remote) {
-        setInterval(function () { if (!locked) refresh().catch(function () {}); }, 15000);
+        // Nur wenn der Live-Stream nicht läuft, wird gelegentlich komplett nachgeladen
+        setInterval(function () { if (!locked && !connected) refresh().catch(function () {}); }, 30000);
       } else {
         window.addEventListener('storage', function (e) { if (e.key === LS) refresh(); });
       }
@@ -256,21 +321,29 @@ window.Store = (function () {
         if (!r.ok) throw new Error('HTTP ' + r.status);
       });
     },
-    setTask: function (id, t) { return write('tasks', id, t); },
-    removeTask: function (id) { return write('tasks', id, null); },
+    // Mehrere Änderungen auf einmal: [{ coll, id, val }]
+    batch: function (ops) { return ops.length ? commit(ops) : Promise.resolve(); },
+    batchUpdate: function (ops) { return ops.length ? commit(ops) : Promise.resolve(); },
+    // Nur einzelne Felder ändern (überschreibt keine gleichzeitigen Änderungen anderer Felder)
+    updateTask: function (id, f) { return upd('tasks', id, f); },
+    updateMsg: function (id, f) { return upd('msgs', id, f); },
+    updateOrder: function (id, f) { return upd('orders', id, f); },
+    updateProblem: function (id, f) { return upd('problems', id, f); },
+    setTask: function (id, t) { return one('tasks', id, t); },
+    removeTask: function (id) { return one('tasks', id, null); },
     // Spalten-/Zeilenverschiebung einer Halle: { cols: {c14: dx}, rows: {rA: dy} } oder null
-    setLayout: function (hallId, ov) { return write('layout', hallId, ov); },
-    setOrder: function (id, o) { return write('orders', id, o); },
-    setProblem: function (id, p) { return write('problems', id, p); },
-    setPodest: function (id, p) { return write('podests', id, p); },
-    setQr: function (id, q) { return write('qrs', id, q); },
+    setLayout: function (hallId, ov) { return one('layout', hallId, ov); },
+    setOrder: function (id, o) { return one('orders', id, o); },
+    setProblem: function (id, p) { return one('problems', id, p); },
+    setPodest: function (id, p) { return one('podests', id, p); },
+    setQr: function (id, q) { return one('qrs', id, q); },
     // Gibt die ID der Nachricht zurück
     addMsg: function (m) {
       m.t = Date.now();
       var id = Util.uid();
-      return write('msgs', id, m).then(function () { return id; });
+      return one('msgs', id, m).then(function () { return id; });
     },
-    setMsg: function (id, m) { return write('msgs', id, m); },
+    setMsg: function (id, m) { return one('msgs', id, m); },
     get: function () { return state; }
   };
 })();
