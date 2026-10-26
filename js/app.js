@@ -113,6 +113,8 @@
     $('mText').value = '';
   };
 
+  $('allToggle').onclick = function () { allMode = !allMode; sel = null; render(Store.get()); };
+  $('krFilter').oninput = function () { krFilter = $('krFilter').value; renderAllKr(weekTasks(Store.get())); };
   $('dayBar').onclick = function (e) {
     var b = e.target.closest('button[data-dayvis]');
     if (!b) return;
@@ -132,7 +134,7 @@
   function weekTasks(state) {
     return Object.keys(state.tasks).map(function (id) {
       var t = state.tasks[id]; t.id = id; return t;
-    }).filter(function (t) { return t.week === viewWeek; });
+    }).filter(function (t) { return allMode || t.week === viewWeek; });
   }
   function hallOf(id) { return Halls.get(id); }
 
@@ -156,7 +158,62 @@
     if (o !== undefined) return !!o;
     return viewWeek === WEEK ? d === Util.todayIdx() : d === 1;
   }
+  // Karten der KR einer Liste von Einträgen (je KR eine Karte)
+  function krCards(dt) {
+    var groups = {}, order = [], html = '';
+    dt.forEach(function (t) {
+      if (!groups[t.kr]) { groups[t.kr] = []; order.push(t.kr); }
+      groups[t.kr].push(t);
+    });
+    order.forEach(function (kr) {
+      var ts = groups[kr];
+      var all = ts.every(function (t) { return t.done; });
+      html += '<div class="card kr ' + (all ? 'ok' : 'open') + '"><div class="kr-n"><span>KR ' + esc(kr) + badges(ts[0]) + '</span>' +
+        '<span style="color:' + (all ? 'var(--green)' : 'var(--orange)') + '">' +
+        ts.filter(function (t) { return t.done; }).length + '/' + ts.length + '</span></div><div class="chips">';
+      ts.sort(function (a, b) { return a.pos < b.pos ? -1 : 1; }).forEach(function (t) {
+        var isSel = sel && (sel.id ? sel.id === t.id : sel.hall === t.hall && sel.pos === t.pos);
+        html += '<button class="chip' + (t.done ? ' done' : '') + (isSel ? ' sel' : '') +
+          '" data-id="' + esc(t.id) + '">' +
+          (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + '</button>';
+      });
+      html += '</div></div>';
+    });
+    return html;
+  }
+
+  // Alle KR aller Wochen, nach Woche und Tag geordnet, mit Suchfilter (KR, Position, Lieferumfang)
+  var allMode = false, krFilter = '';
+  function renderAllKr(tasks) {
+    var q = krFilter.trim().toLowerCase();
+    var list = tasks.filter(function (t) {
+      if (!q) return true;
+      var hay = (t.kr + ' ' + (t.pos ? Halls.label(t.hall, t.pos) : '') + ' ' + (t.scope || '') + (t.usa ? ' usa' : '')).toLowerCase();
+      return hay.indexOf(q) >= 0;
+    }).sort(function (a, b) { return a.week < b.week ? -1 : a.week > b.week ? 1 : a.day - b.day; });
+    var done = list.filter(function (t) { return t.done; }).length;
+    var html = '<div class="empty" style="margin-bottom:6px">' + list.length + ' Einträge · ' + done + ' fertig' + (q ? ' (gefiltert)' : '') + '</div>';
+    var last = '';
+    for (var d = 0, wk = {}; d < list.length; d++) {
+      var t = list[d], key = t.week + '-' + t.day;
+      if (key !== last) {
+        if (last) html += '</div>';
+        var grp = list.filter(function (x) { return x.week === t.week && x.day === t.day; });
+        html += '<div class="day"><div class="day-h orb"><span>' + kwText(t.week) + ' · ' + Util.DAYS[t.day] + ' ' + Util.dayDate(t.week, t.day) +
+          '</span><span class="cnt">' + grp.filter(function (x) { return x.done; }).length + '/' + grp.length + '</span></div>';
+        html += krCards(grp);
+        last = key;
+      }
+    }
+    if (last) html += '</div>';
+    $('week-list').innerHTML = list.length ? html : '<div class="empty">Keine KR gefunden.</div>';
+  }
+
   function renderWeek(tasks) {
+    $('dayBar').hidden = allMode;
+    $('krFilter').hidden = !allMode;
+    $('allToggle').textContent = allMode ? 'Woche' : 'Alle KR';
+    if (allMode) { renderAllKr(tasks); return; }
     var html = '';
     $('dayBar').innerHTML = [1, 2, 3, 4, 5].map(function (d) {
       var hid = !!dayPrefs.hidden[d];
@@ -179,20 +236,7 @@
         '</span><span class="cnt">' + done + '/' + dt.length + '</span></div>';
       if (!open) { html += '</div>'; continue; }
       if (!order.length) html += '<div class="empty">– keine KR –</div>';
-      order.forEach(function (kr) {
-        var ts = groups[kr];
-        var all = ts.every(function (t) { return t.done; });
-        html += '<div class="card kr ' + (all ? 'ok' : 'open') + '"><div class="kr-n"><span>KR ' + esc(kr) + badges(ts[0]) + '</span>' +
-          '<span style="color:' + (all ? 'var(--green)' : 'var(--orange)') + '">' +
-          ts.filter(function (t) { return t.done; }).length + '/' + ts.length + '</span></div><div class="chips">';
-        ts.sort(function (a, b) { return a.pos < b.pos ? -1 : 1; }).forEach(function (t) {
-          var isSel = sel && (sel.id ? sel.id === t.id : sel.hall === t.hall && sel.pos === t.pos);
-          html += '<button class="chip' + (t.done ? ' done' : '') + (isSel ? ' sel' : '') +
-            '" data-id="' + esc(t.id) + '">' +
-            (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + '</button>';
-        });
-        html += '</div></div>';
-      });
+      html += krCards(dt);
       html += '</div>';
     }
     $('week-list').innerHTML = html;
@@ -548,7 +592,7 @@
 
   // ---------- Klicks ----------
   $('week-list').onclick = function (e) {
-    var h = e.target.closest('.day-h');
+    var h = !allMode && e.target.closest('.day-h');
     if (h) {
       var d = +h.dataset.day;
       dayPrefs.open[dayKey(d)] = isOpen(d) ? 0 : 1;
