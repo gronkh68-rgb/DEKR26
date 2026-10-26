@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=34bd919">
+<link rel="stylesheet" href="css/style.css?v=56187ae">
 </head>
 <body>
 <div class="app">
@@ -18,6 +18,7 @@
     <input id="me" class="me" placeholder="Dein Name" maxlength="30" title="Mit diesem Namen werden Bestätigungen und Änderungen im Dashboard gezeichnet">
     <span class="tag" id="mode"></span>
     <button class="btn-sm" id="qrOpen">QR-Codes</button>
+    <button class="btn-sm" id="admOpen" hidden>Admin</button>
     <span class="orb" id="clock" style="color:var(--accent)"></span>
   </header>
   <main class="cols">
@@ -89,6 +90,34 @@
     </section>
   </main>
 </div>
+<div class="modal" id="lockModal" hidden>
+  <div class="modal-box" style="max-width:440px">
+    <h2>Gerät wartet auf Freigabe</h2>
+    <div class="empty">Dieses Gerät ist neu. Ein Admin muss es freigeben. Gerätecode: <b id="lockCode"></b></div>
+    <form id="lockLogin" class="plan">
+      <input id="lockMail" type="email" placeholder="Admin-E-Mail" autocomplete="username" required>
+      <input id="lockPw" type="password" placeholder="Passwort" autocomplete="current-password" required>
+      <button class="btn-main">Als Admin anmelden</button>
+    </form>
+    <div class="note" id="lockErr"></div>
+  </div>
+</div>
+<div class="modal" id="admModal" hidden>
+  <div class="modal-box">
+    <div class="col-title orb"><span>Admin</span><button class="btn-sm" id="admClose">Schließen</button></div>
+    <form id="admLogin" class="plan" hidden>
+      <input id="admMail" type="email" placeholder="Admin-E-Mail" autocomplete="username" required>
+      <input id="admPw" type="password" placeholder="Passwort" autocomplete="current-password" required>
+      <button class="btn-main">Anmelden</button>
+    </form>
+    <div class="note" id="admErr"></div>
+    <div id="admBody" hidden>
+      <div class="qr-add"><span class="empty" id="admWho" style="flex:1"></span><button class="btn-sm" id="admLogout">Abmelden</button></div>
+      <div class="col-title orb" style="margin:10px 0 6px">Geräte</div>
+      <div id="devList"></div>
+    </div>
+  </div>
+</div>
 <div class="modal" id="impModal" hidden>
   <div class="modal-box">
     <div class="col-title orb"><span>KR importieren</span><button class="btn-sm" id="impClose">Schließen</button></div>
@@ -125,10 +154,10 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=34bd919"></script>
-<script src="js/halls.js?v=34bd919"></script>
-<script src="js/core.js?v=34bd919"></script>
-<script src="js/qrcode.js?v=34bd919"></script>
-<script src="js/app.js?v=34bd919"></script>
+<script src="js/config.js?v=56187ae"></script>
+<script src="js/halls.js?v=56187ae"></script>
+<script src="js/core.js?v=56187ae"></script>
+<script src="js/qrcode.js?v=56187ae"></script>
+<script src="js/app.js?v=56187ae"></script>
 </body>
 </html>

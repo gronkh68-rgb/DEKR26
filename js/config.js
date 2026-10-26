@@ -7,5 +7,8 @@ window.DEKR_CONFIG = {
   // Push-Nachricht aufs Handy bei „Beipack fertig" über den kostenlosen Dienst ntfy.sh (siehe README).
   // Leer lassen = aus. Das Thema wie ein Passwort wählen (lang, zufällig); jeder, der es kennt, sieht die Meldungen.
   ntfyTopic: 'dekr26-o2ry1ls8he5sph',
+  // Geräte-Freigabe (optional): Web-API-Schlüssel des Firebase-Projekts eintragen (Projekteinstellungen > Allgemein).
+  // Dann müssen neue Geräte vom Admin freigegeben werden. Einrichtung: siehe README. Leer = aus.
+  authApiKey: '',
   firebaseUrl: 'https://dekr26-34b05-default-rtdb.europe-west1.firebasedatabase.app'
 };

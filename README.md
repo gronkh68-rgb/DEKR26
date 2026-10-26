@@ -33,3 +33,14 @@ Eine statische Seite kann nicht selbst Push senden. Kostenlos geht es über **nt
 Achtung: Der Text der Meldung (KR, Position, Name) läuft dabei über ntfy.sh, und jeder, der das Thema kennt, kann mitlesen. Ohne Eintrag ist die Funktion aus.
 
 Ohne ntfy gibt es im QR-Typ „Mobiles Dashboard" Benachrichtigungen, solange die Seite auf dem Handy geöffnet ist (Knopf „Benachrichtigungen aktivieren").
+
+## Geräte-Freigabe und Admin-Login (optional, empfohlen)
+Damit nur freigegebene Geräte die Daten lesen und schreiben können (und das Layout/die QR-Codes nur du als Admin änderst):
+
+1. **Firebase-Konsole → Authentication → Anmeldemethode:** „Anonym" und „E-Mail/Passwort" aktivieren.
+2. **Authentication → Nutzer → Nutzer hinzufügen:** Admin-E-Mail und Passwort anlegen. Die **Nutzer-UID** kopieren.
+3. **Realtime Database → Regeln:** den Inhalt von `firebase-rules.json` einfügen, **`ADMIN_UID` überall durch die UID ersetzen** (6 Stellen), „Veröffentlichen". Das ersetzt auch den 30-Tage-Testmodus.
+4. **Projekteinstellungen → Allgemein → Web-API-Schlüssel** kopieren und in `js/config.js` bei `authApiKey` eintragen.
+5. Dashboard öffnen: Es zeigt „Gerät wartet auf Freigabe". Dort mit der Admin-E-Mail anmelden. Danach erscheinen neue Geräte unter **Admin → Geräte** (mit Name und Gerätecode) zum **Freigeben**.
+
+So funktioniert es: Jedes Gerät meldet sich anonym an und bekommt einen Gerätecode. Ohne Freigabe sieht es nichts und kann nichts ändern. Löscht ein Gerät seine Browserdaten, braucht es eine neue Freigabe. Layout, QR-Codes und Podest-Liste kann nur der angemeldete Admin ändern.

@@ -999,6 +999,76 @@
     if (!$('qrModal').hidden && !typing) renderQr(state);
   });
 
+  // ---------- Admin: Anmeldung und Geräte-Freigabe (nur mit authApiKey) ----------
+  function uaText(ua) {
+    ua = String(ua || '');
+    var os = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '';
+    var br = /Edg\//.test(ua) ? 'Edge' : /Firefox/.test(ua) ? 'Firefox' : /Chrome/.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : '';
+    return [os, br].filter(Boolean).join(' · ');
+  }
+  function doLogin(mail, pw, errEl) {
+    errEl.textContent = '';
+    var oldUid = '';
+    Auth.login(mail.value.trim(), pw.value).then(function (old) {
+      oldUid = old;
+      pw.value = '';
+      return Store.reconnect();
+    }).then(function () {
+      // Die Anfrage des Geräts vor der Admin-Anmeldung ist überflüssig
+      if (oldUid) Store.setDevice(oldUid, null).catch(function () { /* nicht schlimm */ });
+      renderAdmin();
+    }).catch(function (e) {
+      errEl.textContent = 'Anmeldung fehlgeschlagen' + (e && e.message ? ' (' + e.message + ')' : '');
+    });
+  }
+  $('lockLogin').onsubmit = function (e) { e.preventDefault(); doLogin($('lockMail'), $('lockPw'), $('lockErr')); };
+  $('admLogin').onsubmit = function (e) { e.preventDefault(); doLogin($('admMail'), $('admPw'), $('admErr')); };
+  var pendingDev = 0, devTimer = null;
+  function loadDevices() {
+    if (!Auth.isAdmin()) return;
+    Store.devices().then(function (d) {
+      var ids = Object.keys(d).sort(function (a, b) { return (d[a].ok === true) - (d[b].ok === true) || d[b].t - d[a].t; });
+      pendingDev = ids.filter(function (id) { return d[id].ok !== true; }).length;
+      $('admOpen').textContent = 'Admin' + (pendingDev ? ' (' + pendingDev + ')' : '');
+      $('devList').innerHTML = ids.length ? ids.map(function (id) {
+        var x = d[id], ok = x.ok === true;
+        return '<div class="item' + (ok ? ' ok' : '') + '"><b>' + esc(x.n || 'Unbenannt') + ' · Code ' + esc(id.slice(-6).toUpperCase()) + '</b>' +
+          '<span class="meta">' + esc(uaText(x.ua)) + ' · angemeldet ' + new Date(x.t).toLocaleString('de-DE') + (ok ? ' · freigegeben' + (x.by ? ' von ' + esc(x.by) : '') : ' · wartet') + '</span>' +
+          '<span class="acts">' + (ok ? '' : '<button class="btn-sm btn-ok" data-dev="' + esc(id) + '" data-act="ok">Freigeben</button>') +
+          '<button class="btn-sm btn-warn" data-dev="' + esc(id) + '" data-act="del">' + (ok ? 'Sperren' : 'Ablehnen') + '</button></span></div>';
+      }).join('') : '<div class="empty">Keine Geräte.</div>';
+    }).catch(function () { /* keine Berechtigung oder offline */ });
+  }
+  $('devList').onclick = function (e) {
+    var b = e.target.closest('button[data-dev]');
+    if (!b) return;
+    Store.devices().then(function (d) {
+      var x = d[b.dataset.dev] || {};
+      return Store.setDevice(b.dataset.dev, b.dataset.act === 'ok' ? Object.assign({}, x, { ok: true, by: Util.getName(), at: Date.now() }) : null);
+    }).then(loadDevices).catch(function () { toast('Fehlgeschlagen (Admin angemeldet?)'); });
+  };
+  function renderAdmin() {
+    var adm = Auth.isAdmin();
+    $('admLogin').hidden = adm;
+    $('admBody').hidden = !adm;
+    $('admWho').textContent = adm ? 'Angemeldet als ' + Auth.email() : '';
+    if (adm) loadDevices();
+  }
+  $('admOpen').onclick = function () { $('admModal').hidden = false; renderAdmin(); };
+  $('admClose').onclick = function () { $('admModal').hidden = true; };
+  $('admLogout').onclick = function () { Auth.logout(); location.reload(); };
+  if (Store.secure) {
+    $('admOpen').hidden = false;
+    $('lockCode').textContent = Auth.code();
+    devTimer = setInterval(function () { if (Auth.isAdmin()) loadDevices(); }, 10000);
+    Store.subscribe(function () {
+      $('lockModal').hidden = !Store.isLocked();
+      $('lockCode').textContent = Auth.code();
+    });
+    // Das Gerät trägt sich mit dem gemerkten Namen zur Freigabe ein
+    Store.setDeviceLabel('Dashboard ' + Util.getName());
+  }
+
   Store.subscribe(render);
   Store.start();
 })();

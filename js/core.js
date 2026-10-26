@@ -67,6 +67,74 @@ window.Util = (function () {
   };
 })();
 
+// Anmeldung (optional): jedes Gerät meldet sich anonym bei Firebase an und braucht die Freigabe eines Admins.
+// Aktiv nur, wenn in js/config.js ein authApiKey steht (siehe README und firebase-rules.json).
+window.Auth = (function () {
+  var cfg = window.DEKR_CONFIG || {};
+  var key = cfg.authApiKey || '';
+  var KEY = 'dekr26_auth';
+  var st = {};
+  try { st = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { st = {}; }
+  var idToken = '', exp = 0, pending = null;
+
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* ignorieren */ } }
+  function post(url, body, form) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': form ? 'application/x-www-form-urlencoded' : 'application/json' },
+      body: form ? body : JSON.stringify(body)
+    }).then(function (r) {
+      return r.json().then(function (j) {
+        if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+        return j;
+      });
+    });
+  }
+  function adopt(j) {
+    idToken = j.idToken || j.id_token;
+    exp = Date.now() + (+(j.expiresIn || j.expires_in || 3600)) * 1000 - 120000;
+    st.refresh = j.refreshToken || j.refresh_token;
+    st.uid = j.localId || j.user_id;
+    save();
+    return idToken;
+  }
+  function fresh() {
+    if (st.refresh) {
+      return post('https://securetoken.googleapis.com/v1/token?key=' + key,
+        'grant_type=refresh_token&refresh_token=' + encodeURIComponent(st.refresh), true).then(adopt).catch(function () {
+        st = {}; save();
+        return post('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + key, { returnSecureToken: true }).then(adopt);
+      });
+    }
+    return post('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + key, { returnSecureToken: true }).then(adopt);
+  }
+
+  return {
+    enabled: !!key,
+    // Gültiges Token (leer, wenn die Anmeldung aus ist)
+    token: function () {
+      if (!key) return Promise.resolve('');
+      if (idToken && Date.now() < exp) return Promise.resolve(idToken);
+      if (!pending) pending = fresh().then(function (t) { pending = null; return t; }, function (e) { pending = null; throw e; });
+      return pending;
+    },
+    uid: function () { return st.uid || ''; },
+    code: function () { return (st.uid || '').slice(-6).toUpperCase(); },
+    isAdmin: function () { return !!st.admin; },
+    email: function () { return st.email || ''; },
+    // Gibt die bisherige Geräte-ID zurück (deren Freigabeanfrage danach überflüssig ist)
+    login: function (email, pw) {
+      var old = st.uid;
+      return post('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + key,
+        { email: email, password: pw, returnSecureToken: true }).then(function (j) {
+        adopt(j); st.admin = true; st.email = email; save();
+        return old && old !== st.uid ? old : '';
+      });
+    },
+    logout: function () { st = {}; idToken = ''; exp = 0; save(); }
+  };
+})();
+
 window.Store = (function () {
   var cfg = window.DEKR_CONFIG || {};
   var base = (cfg.firebaseUrl || '').replace(/\/$/, '');
@@ -74,7 +142,8 @@ window.Store = (function () {
   var LS = 'dekr26_state';
   var state = norm(null);
   var subs = [];
-  var timer = null;
+  var timer = null, es = null, esTimer = null, lockTimer = null;
+  var locked = false, label = '';
 
   function norm(s) {
     return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
@@ -85,12 +154,42 @@ window.Store = (function () {
     try { state = norm(JSON.parse(localStorage.getItem(LS))); } catch (e) { state = norm(null); }
   }
 
+  // Anfrage an die Datenbank, mit Token falls die Anmeldung aktiv ist
+  function api(path, opts) {
+    return Auth.token().then(function (t) {
+      return fetch(base + path + '.json' + (t ? '?auth=' + encodeURIComponent(t) : ''), opts);
+    });
+  }
+
+  function setLocked(v) {
+    if (locked === v) return;
+    locked = v;
+    if (v) { registerDevice(); startLockPoll(); } else { clearInterval(lockTimer); startStream(); }
+    emit();
+  }
+  // Neues Gerät meldet sich zur Freigabe an; danach wird regelmäßig geprüft, ob es freigegeben wurde
+  function registerDevice() {
+    var uid = Auth.uid();
+    if (!uid) return;
+    api('/devices/' + uid, { method: 'PUT', body: JSON.stringify({ t: Date.now(), n: label || '', ua: String(navigator.userAgent || '').slice(0, 160) }) })
+      .catch(function () { /* wurde schon angemeldet */ });
+  }
+  function startLockPoll() {
+    clearInterval(lockTimer);
+    lockTimer = setInterval(function () {
+      api('/devices/' + Auth.uid()).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+        if (d && d.ok === true) refresh().catch(function () {});
+      }).catch(function () { /* nächster Versuch */ });
+    }, 4000);
+  }
+
   function refresh() {
     if (!remote) { loadLocal(); emit(); return Promise.resolve(); }
-    return fetch(base + '/.json').then(function (r) {
+    return api('/').then(function (r) {
+      if (r.status === 401 || r.status === 403) { setLocked(true); return undefined; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    }).then(function (data) { state = norm(data); emit(); });
+      return r.json().then(function (data) { setLocked(false); state = norm(data); emit(); });
+    });
   }
 
   function write(coll, id, val) {
@@ -103,7 +202,7 @@ window.Store = (function () {
     }
     if (val === null) delete state[coll][id]; else state[coll][id] = val;
     emit();
-    return fetch(base + '/' + coll + '/' + id + '.json', {
+    return api('/' + coll + '/' + id, {
       method: val === null ? 'DELETE' : 'PUT',
       body: JSON.stringify(val)
     }).then(function (r) {
@@ -111,25 +210,51 @@ window.Store = (function () {
     }).catch(function (e) { refresh().catch(function () {}); throw e; });
   }
 
+  // Live-Stream der Datenbank; bei abgelaufenem Token wird neu verbunden
+  function startStream() {
+    if (!remote || locked) return;
+    if (es) { try { es.close(); } catch (e) { /* ignorieren */ } es = null; }
+    clearTimeout(esTimer);
+    Auth.token().then(function (t) {
+      try {
+        es = new EventSource(base + '/.json' + (t ? '?auth=' + encodeURIComponent(t) : ''));
+        var kick = function () {
+          clearTimeout(timer);
+          timer = setTimeout(function () { refresh().catch(function () {}); }, 150);
+        };
+        es.addEventListener('put', kick);
+        es.addEventListener('patch', kick);
+        es.addEventListener('auth_revoked', function () { esTimer = setTimeout(startStream, 500); });
+        es.onerror = function () { if (es && es.readyState === 2) esTimer = setTimeout(startStream, 5000); };
+        esTimer = setTimeout(startStream, 40 * 60 * 1000);   // vor Ablauf des Tokens neu verbinden
+      } catch (e) { /* Polling reicht als Fallback */ }
+    }).catch(function () { esTimer = setTimeout(startStream, 10000); });
+  }
+
   return {
     remote: remote,
+    secure: remote && Auth.enabled,
+    isLocked: function () { return locked; },
+    setDeviceLabel: function (n) { label = String(n || '').slice(0, 40); },
     subscribe: function (f) { subs.push(f); },
     start: function () {
-      refresh().catch(function () {});
+      refresh().then(startStream).catch(function () { startStream(); });
       if (remote) {
-        try {
-          var es = new EventSource(base + '/.json');
-          var kick = function () {
-            clearTimeout(timer);
-            timer = setTimeout(function () { refresh().catch(function () {}); }, 150);
-          };
-          es.addEventListener('put', kick);
-          es.addEventListener('patch', kick);
-        } catch (e) { /* Polling reicht als Fallback */ }
-        setInterval(function () { refresh().catch(function () {}); }, 15000);
+        setInterval(function () { if (!locked) refresh().catch(function () {}); }, 15000);
       } else {
         window.addEventListener('storage', function (e) { if (e.key === LS) refresh(); });
       }
+    },
+    // Nach dem Admin-Login: neu verbinden
+    reconnect: function () { locked = false; clearInterval(lockTimer); return refresh().then(startStream); },
+    // Admin: Geräteliste und Freigabe
+    devices: function () {
+      return api('/devices').then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function (d) { return d || {}; });
+    },
+    setDevice: function (uid, d) {
+      return api('/devices/' + uid, { method: d === null ? 'DELETE' : 'PUT', body: JSON.stringify(d) }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+      });
     },
     setTask: function (id, t) { return write('tasks', id, t); },
     removeTask: function (id) { return write('tasks', id, null); },

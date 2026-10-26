@@ -489,6 +489,14 @@
 
   // ---------- Start ----------
   function apply(state) {
+    if (Store.isLocked()) {
+      $('whoName').textContent = urlName;
+      $('who').hidden = true;
+      $('note').textContent = 'Dieses Gerät wartet auf Freigabe durch den Admin. Gerätecode: ' + Auth.code();
+      $('menu').innerHTML = ''; $('inbox').innerHTML = '';
+      VIEWS.forEach(function (k) { $('v-' + k).hidden = true; });
+      return;
+    }
     qr = (qid && state.qrs[qid]) || urlQr;
     var ok = !!qr;
     $('whoName').textContent = ok ? qr.name : '';
@@ -515,6 +523,7 @@
     checkOrders(state);
     checkProblems(state);
   }
+  Store.setDeviceLabel(urlName || (qid ? 'QR ' + qid : 'Handy'));
   if (qid && !urlQr) $('note').textContent = 'Lädt …';
   Store.subscribe(apply);
   if (!qid && !urlQr) apply(Store.get());
