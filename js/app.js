@@ -137,7 +137,12 @@
     dayPrefs.hidden[d] = dayPrefs.hidden[d] ? 0 : 1;
     saveDayPrefs(); render(Store.get());
   };
-  $('hallSwitch').onclick = function () { hallIdx = (hallIdx + 1) % Halls.all.length; sel = null; render(Store.get()); };
+  $('hallSwitch').onclick = function (e) {
+    var b = e.target.closest('button[data-hall]');
+    if (!b) return;
+    hallIdx = Math.max(0, Halls.all.findIndex(function (x) { return x.id === b.dataset.hall; }));
+    sel = null; render(Store.get());
+  };
 
   // ---------- Hilfen ----------
   function toast(t) {
@@ -282,7 +287,9 @@
 
     $('hallName').textContent = hall.name;
     $('hallStat').textContent = ready + '/' + activeKeys.length + ' Positionen bereit' + (closedN ? ' · ' + closedN + ' abgeschlossen' : '');
-    $('hallSwitch').textContent = '⇄ ' + Halls.all[(hallIdx + 1) % Halls.all.length].name;
+    $('hallSwitch').innerHTML = Halls.all.map(function (x, i) {
+      return '<button type="button" class="' + (i === hallIdx ? 'btn-main' : '') + '" data-hall="' + x.id + '">' + esc(x.name) + '</button>';
+    }).join('');
     $('hallSwitch').hidden = Halls.all.length < 2;
 
     // Kartengröße: Zoom in Prozent der Breite (im Admin-Modus mindestens 200 %), Schrift unabhängig davon
@@ -873,7 +880,7 @@
     var hall = '';
     if (ci.hall >= 0) {
       var major = g('hall').trim().split('.')[0];
-      hall = major === '7' ? 'H1' : major === '6' ? 'H2' : '';
+      hall = Halls.byShort(major);   // Hallen 3, 6 und 7; alle anderen werden übersprungen
       if (!hall) return { skip: 'andere Halle' };
     }
     var scope = '';

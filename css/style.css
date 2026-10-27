@@ -326,3 +326,6 @@ textarea.full { width: 100%; font-size: 16px; padding: 10px; min-height: 90px; }
 .mapctl { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--dim); margin: -2px 0 6px; }
 .mapctl .val { min-width: 42px; text-align: center; color: var(--text); }
 .mapctl .sep { width: 10px; }
+
+.halltabs { display: inline-flex; gap: 6px; }
+.halltabs[hidden] { display: none; }
