@@ -179,7 +179,7 @@ window.Sound = (function () {
     order: [[880, 0, 0.12], [880, 0.2, 0.2]],                                // Bestellung/Anfrage: Doppel-Ping
     ding: [[659, 0, 0.3]]                                                    // Rückmeldung: sanfter Ton
   };
-  var KIND_NAMES = { done: 'Beipack fertig', problem: 'Probleme', order: 'Bestellungen und Anfragen', ding: 'Rückmeldungen und Nachrichten' };
+  var KIND_NAMES = { done: 'Beipack bereit', problem: 'Probleme', order: 'Bestellungen und Anfragen', ding: 'Rückmeldungen und Nachrichten' };
   function play(kind, force) {
     if (!cfg.on && !force) return;
     if (!force && cfg.kinds[kind] === 0) return;

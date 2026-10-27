@@ -71,6 +71,8 @@
     if (extra && extra.usa) t.usa = true;
     if (extra && extra.chg) { t.chg = extra.chg; t.chgK = extra.chgK; t.chgAt = Date.now(); }
     else if (prev && prev.chg) { t.chg = prev.chg; t.chgK = prev.chgK; t.chgAt = prev.chgAt; }
+    var src = cur || prev;   // „abgeschlossen" bleibt bei erneutem Planen/Import erhalten
+    if (src && src.closed) { t.done = true; t.closed = true; t.closedAt = src.closedAt; t.closedBy = src.closedBy; }
     ops.push({ coll: 'tasks', id: id, val: t });
     return ops;
   }
@@ -170,6 +172,11 @@
     if (o !== undefined) return !!o;
     return viewWeek === WEEK ? d === Util.todayIdx() : d === 1;
   }
+  // Status einer KR: nicht bereit (offen) -> bereit (Handy/Dashboard) -> abgeschlossen (nur Dashboard)
+  function stOf(t) { return t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit'; }
+  var showClosed = false;
+  try { showClosed = localStorage.getItem('dekr26_showclosed') === '1'; } catch (e) { /* ignorieren */ }
+
   // Karten der KR einer Liste von Einträgen (je KR eine Karte)
   function krCards(dt) {
     var groups = {}, order = [], html = '';
@@ -179,13 +186,13 @@
     });
     order.forEach(function (kr) {
       var ts = groups[kr];
-      var all = ts.every(function (t) { return t.done; });
-      html += '<div class="card kr ' + (all ? 'ok' : 'open') + '"><div class="kr-n"><span>KR ' + esc(kr) + badges(ts[0]) + '</span>' +
-        '<span style="color:' + (all ? 'var(--green)' : 'var(--orange)') + '">' +
-        ts.filter(function (t) { return t.done; }).length + '/' + ts.length + '</span></div><div class="chips">';
+      var all = ts.every(function (t) { return t.done; }), allClosed = ts.every(function (t) { return t.closed; });
+      html += '<div class="card kr ' + (allClosed ? 'closed' : all ? 'ok' : 'open') + '"><div class="kr-n"><span>KR ' + esc(kr) + badges(ts[0]) + '</span>' +
+        '<span style="color:' + (allClosed ? 'var(--dim)' : all ? 'var(--green)' : 'var(--orange)') + '">' +
+        (allClosed ? 'abgeschlossen' : ts.filter(function (t) { return t.done; }).length + '/' + ts.length) + '</span></div><div class="chips">';
       ts.sort(function (a, b) { return a.pos < b.pos ? -1 : 1; }).forEach(function (t) {
         var isSel = sel && (sel.id ? sel.id === t.id : sel.hall === t.hall && sel.pos === t.pos);
-        html += '<button class="chip' + (t.done ? ' done' : '') + (isSel ? ' sel' : '') +
+        html += '<button class="chip' + (t.closed ? ' closed' : t.done ? ' done' : '') + (isSel ? ' sel' : '') +
           '" data-id="' + esc(t.id) + '">' +
           (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + '</button>';
       });
@@ -262,11 +269,19 @@
     tasks.filter(function (t) { return t.hall === hall.id; }).forEach(function (t) {
       (byPos[t.pos] = byPos[t.pos] || []).push(t);
     });
-    var posKeys = Object.keys(byPos);
-    var ready = posKeys.filter(function (p) { return byPos[p].every(function (t) { return t.done; }); }).length;
+    // Abgeschlossene Positionen sind erledigt: sie stehen nur auf der Karte, wenn „Abgeschlossene zeigen" gewählt ist
+    var mapPos = {};
+    Object.keys(byPos).forEach(function (p) {
+      var ts = byPos[p].filter(function (t) { return showClosed || !t.closed; });
+      if (ts.length) mapPos[p] = ts;
+    });
+    var posKeys = Object.keys(mapPos);
+    var activeKeys = Object.keys(byPos).filter(function (p) { return byPos[p].some(function (t) { return !t.closed; }); });
+    var ready = activeKeys.filter(function (p) { return byPos[p].filter(function (t) { return !t.closed; }).every(function (t) { return t.done; }); }).length;
+    var closedN = Object.keys(byPos).length - activeKeys.length;
 
     $('hallName').textContent = hall.name;
-    $('hallStat').textContent = ready + '/' + posKeys.length + ' Positionen bereit';
+    $('hallStat').textContent = ready + '/' + activeKeys.length + ' Positionen bereit' + (closedN ? ' · ' + closedN + ' abgeschlossen' : '');
     $('hallSwitch').textContent = '⇄ ' + Halls.all[(hallIdx + 1) % Halls.all.length].name;
     $('hallSwitch').hidden = Halls.all.length < 2;
 
@@ -295,9 +310,12 @@
     });
     if (editing) drawn = lay.positions.concat(drawn.filter(function (c) { return !known[c.id]; }));
     drawn.forEach(function (p) {
-      var ts = byPos[p.id];
+      var ts = mapPos[p.id];
       var cls = 'cell';
-      if (ts) cls += ts.every(function (t) { return t.done; }) ? ' done' : ' open';
+      if (ts) {
+        var act = ts.filter(function (t) { return !t.closed; });
+        cls += !act.length ? ' closed' : act.every(function (t) { return t.done; }) ? ' done' : ' open';
+      }
       if (sel && sel.hall === hall.id && sel.pos === p.id) cls += ' sel';
       svg += '<g data-pos="' + esc(p.id) + '"><rect class="' + cls + '" x="' + p.x + '" y="' + p.y +
         '" width="' + p.w + '" height="' + p.h + '" rx="2"><title>' + esc(Halls.label(hall.id, p.id)) + '</title></rect>';
@@ -321,8 +339,12 @@
       notes.forEach(function (t) { html += '<div class="note">KR ' + esc(t.kr) + ': ' + esc(t.chg) + '</div>'; });
       ts.forEach(function (t) {
         html += '<div class="line"><span>KR ' + esc(t.kr) + badges(t) + ' · ' + Util.DAYS[t.day].slice(0, 2) + ' · <b style="color:' +
-          (t.done ? 'var(--green)' : 'var(--orange)') + '">' + (t.done ? 'Bereit' : 'Offen') + '</b></span><span>' +
-          '<button class="btn-sm" data-act="toggle" data-id="' + esc(t.id) + '">' + (t.done ? 'Wieder offen' : 'Bereit') + '</button> ' +
+          (t.closed ? 'var(--dim)' : t.done ? 'var(--green)' : 'var(--orange)') + '">' + esc(stOf(t)) + '</b>' +
+          (t.closed && t.closedBy ? ' <span class="meta">von ' + esc(t.closedBy) + '</span>' : '') + '</span><span>' +
+          (t.closed
+            ? '<button class="btn-sm" data-act="reopen" data-id="' + esc(t.id) + '">Wieder öffnen</button> '
+            : '<button class="btn-sm" data-act="toggle" data-id="' + esc(t.id) + '">' + (t.done ? 'Nicht bereit' : 'Bereit') + '</button> ' +
+              '<button class="btn-sm btn-ok" data-act="close" data-id="' + esc(t.id) + '">Abschließen</button> ') +
           '<button class="btn-sm btn-warn" data-act="del" data-id="' + esc(t.id) + '">Löschen</button></span></div>';
       });
     } else {
@@ -663,6 +685,14 @@
     window.addEventListener('pointerup', onUp);
   });
 
+  // Abgeschlossene auf der Karte zeigen/verbergen
+  $('showClosed').checked = showClosed;
+  $('showClosed').onchange = function () {
+    showClosed = $('showClosed').checked;
+    try { localStorage.setItem('dekr26_showclosed', showClosed ? '1' : '0'); } catch (e) { /* ignorieren */ }
+    render(Store.get());
+  };
+
   // ---------- Klicks ----------
   $('week-list').onclick = function (e) {
     var h = !allMode && e.target.closest('.day-h');
@@ -700,6 +730,12 @@
     if (b.dataset.act === 'del') {
       if (!confirm('KR ' + t.kr + ' / ' + t.pos + ' löschen?')) return;
       p = Store.removeTask(b.dataset.id);
+    } else if (b.dataset.act === 'close') {
+      // „Abgeschlossen" setzen nur wir am Dashboard (nicht am Handy)
+      var who = Util.getName() || 'Deufol';
+      p = Store.updateTask(b.dataset.id, { done: true, doneAt: t.doneAt || Date.now(), doneBy: t.doneBy || who, closed: true, closedAt: Date.now(), closedBy: who });
+    } else if (b.dataset.act === 'reopen') {
+      p = Store.updateTask(b.dataset.id, { closed: null, closedAt: null, closedBy: null });
     } else {
       var nd = !t.done;
       p = Store.updateTask(b.dataset.id, { done: nd, doneAt: nd ? Date.now() : null, doneBy: nd ? (Util.getName() || 'Deufol') : null });
@@ -978,8 +1014,8 @@
   // ---------- QR-Codes ----------
   // Der Code enthält nur die ID (?q=...). Name, Funktion und Rechte lassen sich daher jederzeit ändern,
   // ohne dass ausgedruckte Codes ungültig werden.
-  var PERM_LABELS = [['report', 'Beipack melden (fertig/Problem)'], ['order', 'Podest bestellen'],
-    ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Fertig/Nicht fertig setzen'],
+  var PERM_LABELS = [['report', 'Beipack melden (bereit/Problem)'], ['order', 'Podest bestellen'],
+    ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Bereit/Nicht bereit setzen'],
     ['dash', 'Mobiles Dashboard'], ['ueber', 'Anfrage Überspielen']];
   var PRESETS = [
     ['standard', 'Standard (melden + bestellen)', '', { report: 1, order: 1 }],

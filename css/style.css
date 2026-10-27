@@ -314,3 +314,10 @@ textarea.full { width: 100%; font-size: 16px; padding: 10px; min-height: 90px; }
 .chk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dim); padding: 6px 0; }
 .chk input { width: auto; padding: 0; }
 .chk[hidden] { display: none; }
+
+/* Status abgeschlossen */
+.cell.closed, svg.map.plan .cell.closed { fill: rgba(138,147,160,.25); stroke: var(--dim); }
+.chip.closed { border-color: var(--dim); color: var(--dim); background: transparent; text-decoration: line-through; }
+.card.closed { border-left-color: var(--dim); opacity: .7; }
+.krrow.closed { border-left-color: var(--dim); opacity: .7; }
+.krrow.closed .st { color: var(--dim); }

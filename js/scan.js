@@ -173,7 +173,7 @@
     if (!perms().dash) return;
     var ms = doneMsgs(state);
     if (notifSeen) {
-      ms.forEach(function (m) { if (!notifSeen[m.id] && !m.ack) notify(m.type === 'problem' ? 'Beipack: Problem' : 'Beipack fertig', m.text, m.id, m.type === 'problem' ? 'problem' : 'done'); });
+      ms.forEach(function (m) { if (!notifSeen[m.id] && !m.ack) notify(m.type === 'problem' ? 'Beipack: Problem' : 'Beipack bereit', m.text, m.id, m.type === 'problem' ? 'problem' : 'done'); });
     }
     notifSeen = notifSeen || {};
     ms.forEach(function (m) { notifSeen[m.id] = 1; });
@@ -240,10 +240,10 @@
     list.slice(0, 300).forEach(function (t) {
       var key = t.week + '-' + t.day;
       if (key !== last) { html += '<div class="daysep">KW ' + esc(t.week.split('-W')[1]) + ' · ' + esc(Util.DAYS[t.day]) + ' ' + esc(Util.dayDate(t.week, t.day)) + '</div>'; last = key; }
-      html += '<div class="krrow' + (t.done ? ' ok' : '') + '"><span><b>KR ' + esc(t.kr) + '</b>' +
+      html += '<div class="krrow' + (t.closed ? ' closed' : t.done ? ' ok' : '') + '"><span><b>KR ' + esc(t.kr) + '</b>' +
         (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '') +
         (probs[t.kr] ? ' <span class="badge prob">Problem</span>' : '') +
-        '<small>' + (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + '</small></span><span class="st">' + (t.done ? 'fertig' : 'offen') + '</span></div>';
+        '<small>' + (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + '</small></span><span class="st">' + (t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit') + '</span></div>';
     });
     $('allList').innerHTML = list.length ? html : '<div class="empty">Keine KR gefunden.</div>';
   }
@@ -287,7 +287,7 @@
     list.sort(function (a, b) { return a.week < b.week ? -1 : a.week > b.week ? 1 : a.day - b.day; });
     var html = list.slice(0, 500).map(function (t) {
       return '<option value="' + esc(t.kr) + '">KR ' + esc(t.kr) + (t.pos ? ' · ' + esc(Halls.label(t.hall, t.pos)) : '') +
-        ' · ' + esc(Util.DAYS[t.day].slice(0, 2)) + (t.done ? ' · fertig' : '') + '</option>';
+        ' · ' + esc(Util.DAYS[t.day].slice(0, 2)) + (t.closed ? ' · abgeschlossen' : t.done ? ' · bereit' : '') + '</option>';
     }).join('');
     if (html !== lastKrHtml) { lastKrHtml = html; $('krlist').innerHTML = html; }   // nur bei Änderung, sonst flackert die Auswahl
   }
@@ -302,14 +302,17 @@
     var t = ts[0], np = openProblems(kr).length;
     box.innerHTML = '<b>KR ' + esc(kr) + '</b> · ' + (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + ' · ' +
       esc(Util.DAYS[t.day]) + (t.scope ? ' · ' + esc(t.scope) : '') + ' · <b style="color:' +
-      (t.done ? 'var(--green)' : 'var(--orange)') + '">' + (t.done ? 'fertig' : 'offen') + '</b>' +
+      (t.closed ? 'var(--dim)' : t.done ? 'var(--green)' : 'var(--orange)') + '">' + (t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit') + '</b>' +
       (np ? ' · <b style="color:var(--red)">' + np + ' Problem(e)</b>' : '');
   }
 
-  // Alle Positionen der KR fertig bzw. wieder offen; ohne Eintrag entsteht einer ohne Position
+  // Alle Positionen der KR bereit bzw. wieder nicht bereit; ohne Eintrag entsteht einer ohne Position
   function markKr(kr, isDone) {
     var mine = tasksOf(kr), useWeek = weekOf(mine), ops = [], places = [];
     var ids = mine.filter(function (t) { return t.week === useWeek; });
+    // „Abgeschlossen" setzt nur das Dashboard; am Handy ändert sich daran nichts mehr
+    if (ids.length && ids.every(function (t) { return t.closed; })) return { blocked: true, ops: [], where: '' };
+    ids = ids.filter(function (t) { return !t.closed; });
     if (!ids.length && isDone) {
       ops.push({ coll: 'tasks', id: Util.taskId(useWeek, kr, '0', '0'), val: {
         week: useWeek, kr: kr, day: Util.todayIdx(), hall: '', pos: '', done: true, doneAt: Date.now(), doneBy: qr.name } });
@@ -325,7 +328,7 @@
   // ---------- Menü ----------
   function allowed() {
     var p = perms(), v = [];
-    if (p.report || p.status) v.push(['beipack', 'Beipack fertig melden']);
+    if (p.report || p.status) v.push(['beipack', 'Beipack bereit melden']);
     if (p.order) v.push(['podest', 'Podest bestellen']);
     if (p.ueber) v.push(['ueber', 'Anfrage Überspielen']);
     if (p.podest) v.push(['orders', 'Bestellungen']);
@@ -370,14 +373,15 @@
   function setStatus(isDone) {
     var kr = needKr();
     if (!kr) return;
-    busy(true);
     var m = markKr(kr, isDone);
-    var text = 'KR ' + kr + m.where + (isDone ? ' bereit' : ' nicht fertig') + ' (' + who() + ')';
+    if (m.blocked) { toast('KR ' + kr + ' ist bereits abgeschlossen.', true); return; }
+    busy(true);
+    var text = 'KR ' + kr + m.where + (isDone ? ' bereit' : ' nicht bereit') + ' (' + who() + ')';
     Store.batchUpdate(m.ops).then(function () {
       return Store.addMsg({ type: isDone ? 'done' : 'info', by: qr.name, text: text, kr: kr, qid: qid || '' });
     }).then(function () {
-      done(text); toast((isDone ? 'Gemeldet: KR ' : 'Zurückgenommen: KR ') + kr);
-      if (isDone) Push.send('', 'Beipack fertig', text, 3, ['white_check_mark']);
+      done(text); toast((isDone ? 'Bereit gemeldet: KR ' : 'Zurückgenommen: KR ') + kr);
+      if (isDone) Push.send('', 'Beipack bereit', text, 3, ['white_check_mark']);
       $('kr').value = ''; $('probBox').hidden = true; krInfo(); $('kr').focus();
     }).catch(fail).then(function () { busy(false); });
   }

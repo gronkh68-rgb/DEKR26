@@ -52,3 +52,6 @@ So funktioniert es: Jedes Gerät meldet sich anonym an und bekommt einen Geräte
 - **Datenmenge:** Die Seiten laden die Datenbank einmal und bekommen danach nur noch Änderungen (Live-Stream). Mehrere Änderungen (z. B. Import) gehen in einer Anfrage raus. Als Admin angemeldet, räumt das Dashboard einmal pro Sitzung auf: Nachrichten > 14 Tage, erledigte Bestellungen/gelöste Probleme > 30 Tage und KR-Einträge älter als 8 Wochen werden gelöscht.
 - **Sicherung:** Admin → „Daten sichern" lädt alle Daten als JSON-Datei herunter.
 - **Sicherheit:** Content-Security-Policy in den Seiten (nur eigene Skripte, nur Verbindungen zu Firebase und ntfy), Suchmaschinen sind per `noindex`/`robots.txt` ausgeschlossen. Ein gelöschter QR-Code ist sofort ungültig.
+
+## Status einer KR
+**Nicht bereit** (orange) → **Bereit** (grün; wird am Handy oder im Dashboard gemeldet) → **Abgeschlossen** (grau; nur im Dashboard über „Abschließen" in der Positionsansicht). Abgeschlossene KR stehen nicht mehr auf der Karte (Häkchen „Abgeschlossene zeigen" blendet sie ein) und lassen sich am Handy nicht mehr ändern. „Wieder öffnen" macht sie wieder zu „bereit".
