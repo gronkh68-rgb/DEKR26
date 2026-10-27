@@ -59,7 +59,9 @@ window.DEKR_HALLS = [
     blocks: BLOCKS_H7,
     // Aus den Spots der Arbeitsliste (9, 12, 21, 24, 30, 42): nur Vielfache von 3 werden genutzt
     layout: { off: everyNth(49, 3) },
-    grid: { x: 215, y: 310, w: 1330, h: 790, rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 }
+    // Genutzte Buchstaben, verteilt auf die vier Arbeitsflächen von oben nach unten: [y, Höhe, Buchstaben]
+    grid: { x: 215, y: 310, w: 1330, h: 790, rows: 'BFKNPTYZ', cols: 49,
+      bands: [[308, 172, 'BF'], [520, 213, 'KN'], [775, 173, 'PTY'], [990, 113, 'Z']] }
   },
   { id: 'H2', name: 'Halle 6', short: '6', rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 } // Platzhalter-Raster bis zum Plan
 ];
@@ -72,10 +74,22 @@ window.Halls = (function () {
   function spec(h) {
     if (h.grid) {
       var g = h.grid, cw = g.w / g.cols, ch = g.h / g.rows.length;
-      return { x: g.x, y: g.y, cw: cw, ch: ch, pw: cw, ph: ch, rows: g.rows, cols: g.cols,
-        vb: h.vb, plan: h.plan, font: Math.min(cw, ch) * 0.42 };
+      var ys = [], hs = [];
+      if (g.bands) {
+        // Zeilen gleichmäßig innerhalb ihrer Arbeitsfläche verteilen
+        g.bands.forEach(function (b) {
+          var n = b[2].length, rh = (b[1] - 6) / n;
+          for (var i = 0; i < n; i++) { ys.push(b[0] + 3 + i * rh); hs.push(rh - 3); }
+        });
+      }
+      var ph = g.bands ? hs.reduce(function (a, v) { return a + v; }, 0) / hs.length : ch;
+      return { x: g.x, y: g.y, cw: cw, ch: ch, pw: cw, ph: ph, rows: g.rows, cols: g.cols,
+        rowY: function (r) { return ys.length ? ys[r] : g.y + r * ch; },
+        rowH: function (r) { return hs.length ? hs[r] : ch; },
+        vb: h.vb, plan: h.plan, font: Math.min(cw, ph) * 0.42 };
     }
     return { x: PAD, y: PAD, cw: CELL + GAP, ch: CELL + GAP, pw: CELL, ph: CELL, rows: h.rows, cols: h.cols,
+      rowY: function (r) { return PAD + r * (CELL + GAP); }, rowH: function () { return CELL; },
       vb: '0 0 ' + (PAD * 2 + h.cols * (CELL + GAP)) + ' ' + (PAD * 2 + h.rows.length * (CELL + GAP)),
       plan: null, font: 9 };
   }
@@ -90,7 +104,9 @@ window.Halls = (function () {
   function snap(h, p) {
     if (!h.blocks) return p;
     var cx = p.x + p.w / 2, cy = p.y + p.h / 2, best = null, bd = Infinity, pad = 3;
-    h.blocks.forEach(function (b) {
+    // Bevorzugt Flächen in derselben Höhe (Zeile bleibt in ihrem Band), sonst die nächstgelegene
+    var level = h.blocks.filter(function (b) { return cy >= b[1] && cy <= b[1] + b[3]; });
+    (level.length ? level : h.blocks).forEach(function (b) {
       var dx = Math.max(b[0] - cx, 0, cx - (b[0] + b[2])), dy = Math.max(b[1] - cy, 0, cy - (b[1] + b[3])), d = dx * dx + dy * dy;
       if (d < bd) { bd = d; best = b; }
     });
@@ -121,15 +137,15 @@ window.Halls = (function () {
       labels.push({ t: String(c + 1), x: xs[c] + s.pw / 2, y: s.y - 8, axis: 'c', i: c, off: !!off['c' + (c + 1)] });
     }
     for (r = 0; r < s.rows.length; r++) {
-      var rk = 'r' + s.rows[r], dy = or[rk] || 0, y = s.y + r * s.ch + dy;
+      var rk = 'r' + s.rows[r], dy = or[rk] || 0, y = s.rowY(r) + dy, rh = s.rowH(r);
       rowKeys.push(rk);
-      labels.push({ t: s.rows[r], x: s.x - 12, y: y + s.ph / 2 + 4, axis: 'r', i: r, off: !!off[rk] });
+      labels.push({ t: s.rows[r], x: s.x - 12, y: y + rh / 2 + 4, h: rh, axis: 'r', i: r, off: !!off[rk] });
       if (off[rk]) continue;
       for (c = 0; c < s.cols; c++) {
         var id = s.rows[r] + (c + 1);
         if (off['c' + (c + 1)] || (valid && !valid[id])) continue;
-        if (inAisle(h, xs[c] + s.pw / 2, y + s.ph / 2)) continue;
-        positions.push(snap(h, { id: id, x: xs[c] - (wOf[c] - s.pw) / 2, y: y, w: wOf[c], h: s.ph, f: h.grid ? Math.min(wOf[c], s.ph) * 0.42 : s.font }));
+        if (inAisle(h, xs[c] + s.pw / 2, y + rh / 2)) continue;
+        positions.push(snap(h, { id: id, x: xs[c] - (wOf[c] - s.pw) / 2, y: y, w: wOf[c], h: rh, f: h.grid ? Math.min(wOf[c], rh) * 0.42 : s.font }));
       }
     }
     return { vb: s.vb, plan: s.plan, font: s.font, pw: s.pw, ph: s.ph, positions: positions, labels: labels,
@@ -166,9 +182,12 @@ window.Halls = (function () {
       var r = s.rows.indexOf(m[1]), c = +m[2] - 1;
       if (r < 0 || c < 0 || c >= s.cols) return null;
       var wide = ov.off && Object.keys(ov.off).length ? s.pw + 2 * s.cw : s.pw;
-      var x = s.x + c * s.cw + ((ov.cols || {})['c' + (c + 1)] || 0), y = s.y + r * s.ch + ((ov.rows || {})['r' + m[1]] || 0);
-      return snap(h, { id: pos, x: x - (wide - s.pw) / 2, y: y, w: wide, h: s.ph, f: h.grid ? Math.min(wide, s.ph) * 0.42 : s.font });
+      var x = s.x + c * s.cw + ((ov.cols || {})['c' + (c + 1)] || 0), y = s.rowY(r) + ((ov.rows || {})['r' + m[1]] || 0), rh = s.rowH(r);
+      return snap(h, { id: pos, x: x - (wide - s.pw) / 2, y: y, w: wide, h: rh, f: h.grid ? Math.min(wide, rh) * 0.42 : s.font });
     },
+    // Gibt es den Buchstaben (die Zeile) in dieser Halle?
+    hasRow: function (id, letter) { return spec(this.get(id)).rows.indexOf(letter) >= 0; },
+    rowLetters: function (id) { return spec(this.get(id)).rows; },
     // Hallen, in denen die Position existiert
     find: function (pos) {
       var self = this;

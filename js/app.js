@@ -86,6 +86,10 @@
     if (raw && !pp) { toast('Position nicht erkannt, z.B. 7 42 Z'); return; }
     var pos = pp ? pp.pos : '';
     var hallId = (pp && pp.hall && Halls.byShort(pp.hall)) || hall0;
+    if (pp && !Halls.hasRow(hallId, pp.pos.charAt(0))) {
+      toast('Buchstabe ' + pp.pos.charAt(0) + ' gibt es in ' + Halls.get(hallId).name + ' nicht (vorhanden: ' + Halls.rowLetters(hallId).split('').join(' ') + ')');
+      return;
+    }
     Store.batch(planOps(kr, pos, day, hallId, null, hallId)).catch(function () { toast('Speichern fehlgeschlagen'); });
     $('pKr').value = ''; $('pPos').value = '';
   };
@@ -275,9 +279,10 @@
         return;
       }
       var col = l.axis === 'c';
-      var rx = col ? l.x - lay.pw / 2 + 1 : l.x - 15, ry = col ? l.y - 15 : l.y - 4 - lay.ph / 2 + 1;
+      var lh = l.h || lay.ph;
+      var rx = col ? l.x - lay.pw / 2 + 1 : l.x - 15, ry = col ? l.y - 15 : l.y - 4 - lh / 2 + 1;
       svg += '<g class="handle' + (l.off ? ' off' : '') + '" data-axis="' + l.axis + '" data-i="' + l.i + '"><rect x="' + rx + '" y="' + ry +
-        '" width="' + (col ? lay.pw - 2 : 30) + '" height="' + (col ? 20 : lay.ph - 2) + '" rx="3"/>' +
+        '" width="' + (col ? lay.pw - 2 : 30) + '" height="' + (col ? 20 : lh - 2) + '" rx="3"/>' +
         '<text x="' + l.x + '" y="' + l.y + '" style="font-size:13px">' + esc(l.t) + '</text></g>';
     });
     // Normalansicht: nur Positionen aus der Liste; im Admin-Modus das ganze Raster
