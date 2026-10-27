@@ -69,6 +69,7 @@
     var t = { week: week, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : wasDone };
     if (extra && extra.scope) t.scope = extra.scope;
     if (extra && extra.usa) t.usa = true;
+    if (extra && extra.from) t.from = extra.from;
     if (extra && extra.chg) { t.chg = extra.chg; t.chgK = extra.chgK; t.chgAt = Date.now(); }
     else if (prev && prev.chg) { t.chg = prev.chg; t.chgK = prev.chgK; t.chgAt = prev.chgAt; }
     var src = cur || prev;   // „abgeschlossen" bleibt bei erneutem Planen/Import erhalten
@@ -159,8 +160,9 @@
 
   var openProb = {};   // KR -> offenes Problem vorhanden
   function badges(t) {
+    var from = t.from ? ' <span class="badge">aus Halle ' + esc(t.from) + '</span>' : '';
     var fresh = t.chg && Date.now() - t.chgAt < 864e5;   // Vermerk 24 Stunden lang
-    return (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '') +
+    return from + (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '') +
       (fresh ? ' <span class="badge chg" title="' + esc(t.chg) + '">' + esc(t.chgK || 'geändert') + '</span>' : '') +
       (openProb[t.kr] ? ' <span class="badge prob">Problem</span>' : '');
   }
@@ -199,7 +201,7 @@
         var isSel = sel && (sel.id ? sel.id === t.id : sel.hall === t.hall && sel.pos === t.pos);
         html += '<button class="chip' + (t.closed ? ' closed' : t.done ? ' done' : '') + (isSel ? ' sel' : '') +
           '" data-id="' + esc(t.id) + '">' +
-          (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + '</button>';
+          (t.pos ? esc(Halls.label(t.hall, t.pos)) : t.from ? 'Lieferung Halle ' + esc(t.from) : 'ohne Position') + '</button>';
       });
       html += '</div></div>';
     });
@@ -342,7 +344,7 @@
     if (sel && (sel.id || sel.hall === Halls.all[hallIdx].id)) {
       var ts = sel.id ? (Store.get().tasks[sel.id] ? [Object.assign({ id: sel.id }, Store.get().tasks[sel.id])] : []) : byPos[sel.pos] || [];
       html += '<div class="orb" style="font-size:12px;color:var(--accent);margin-bottom:4px">' +
-        (sel.id ? 'Eintrag ohne Position' : 'Position ' + esc(Halls.label(sel.hall, sel.pos))) + '</div>';
+        (sel.id ? (Store.get().tasks[sel.id] && Store.get().tasks[sel.id].from ? 'Lieferung aus Halle ' + esc(Store.get().tasks[sel.id].from) : 'Eintrag ohne Position') : 'Position ' + esc(Halls.label(sel.hall, sel.pos))) + '</div>';
       var notes = ts.filter(function (t) { return t.chg && Date.now() - t.chgAt < 864e5; });
       if (!ts.length) html += '<div class="empty">Kein Beipack geplant.</div>';
       notes.forEach(function (t) { html += '<div class="note">KR ' + esc(t.kr) + ': ' + esc(t.chg) + '</div>'; });
@@ -873,15 +875,18 @@
     return cols;
   }
   // Ergebnis je Zeile: { skip: Grund } oder { kr, day, hall, pos, scope, usa }
+  var DELIVERED_HALL = '3';   // Halle 3 gehört nicht zu uns: KR werden nur geliefert
   function readRow(r, ci, dayDef) {
     var g = function (role) { return ci[role] >= 0 ? (r[ci[role]] || '') : ''; };
     var kr = Util.normKr(g('kr'));
     if (!kr) return { skip: 'leer' };
-    var hall = '';
+    var hall = '', from = '';
     if (ci.hall >= 0) {
       var major = g('hall').trim().split('.')[0];
-      hall = Halls.byShort(major);   // Hallen 3, 6 und 7; alle anderen werden übersprungen
-      if (!hall) return { skip: 'andere Halle' };
+      hall = Halls.byShort(major);   // Hallen 6 und 7 (eigene Hallen)
+      // Aus Halle 3 wird nur geliefert: Eintrag ohne Position, mit Hinweis auf die Herkunft
+      if (!hall && major === DELIVERED_HALL) from = major;
+      else if (!hall) return { skip: 'andere Halle' };
     }
     var scope = '';
     if (ci.scope >= 0) {
@@ -890,7 +895,8 @@
       if (!scope) return { skip: 'Lieferumfang' };
     }
     var pos = '';
-    if (ci.pos >= 0) pos = Util.normPos(g('pos'));
+    if (from) { /* Lieferung: keine Position */ }
+    else if (ci.pos >= 0) pos = Util.normPos(g('pos'));
     else if (ci.num >= 0 && ci.letter >= 0) {
       var letter = (g('letter').toUpperCase().match(/[A-Z]/) || [''])[0];
       var num = (g('num').match(/\d+/) || [''])[0];
@@ -899,7 +905,7 @@
     var usa = g('country').trim().toUpperCase() === 'US';
     var yr = (g('year').match(/\d{4}/) || [''])[0], kw = (g('kw').match(/\d{1,2}/) || [''])[0];
     var week = yr && kw ? yr + '-W' + (kw.length < 2 ? '0' : '') + kw : viewWeek;
-    return { week: week, kr: kr, day: ci.day >= 0 ? parseDay(g('day')) || dayDef : dayDef, hall: hall, pos: pos, scope: scope, usa: usa };
+    return { week: week, kr: kr, day: ci.day >= 0 ? parseDay(g('day')) || dayDef : dayDef, hall: hall, pos: pos, scope: scope, usa: usa, from: from };
   }
   function roleIdx() {
     var ci = {};
@@ -1004,7 +1010,7 @@
     var c = collect(), weeks = {};
     c.items.forEach(function (x) { weeks[x.week] = 1; });
     $('impInfo').textContent = c.items.length + ' KR (' + Object.keys(weeks).sort().map(kwText).join(', ') + ') · ' +
-      c.hall + ' andere Halle · ' + c.scope + ' ohne Maschine/komplett (übersprungen) · ' +
+      c.hall + ' andere Halle · ' + c.items.filter(function (x) { return x.from; }).length + ' aus Halle 3 (ohne Position) · ' + c.scope + ' ohne Maschine/komplett (übersprungen) · ' +
       c.items.filter(function (x) { return x.usa; }).length + ' USA' +
       (rows.multi ? ' · ' + rows.multi + ' mit mehreren Spots (erster wird genommen)' : '') +
       ' · nicht gewählte Spalten werden verworfen.';
@@ -1028,7 +1034,7 @@
     var d = diffItems(c.items), ops = [], firstWeek = '';
     c.items.forEach(function (x) {
       if (!firstWeek || x.week < firstWeek) firstWeek = x.week;
-      var extra = { scope: x.scope, usa: x.usa };
+      var extra = { scope: x.scope, usa: x.usa, from: x.from };
       if (x.how === 'verschoben' || x.how === 'geändert') { extra.chg = x.chg; extra.chgK = x.how; }
       ops = ops.concat(planOps(x.kr, x.pos, x.day, x.hallEff || Halls.all[0].id, extra, x.hallEff, x.week));
     });

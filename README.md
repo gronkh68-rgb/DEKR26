@@ -19,7 +19,7 @@ Ohne Konfiguration läuft der **LOKAL-DEMO-Modus** (Daten nur im eigenen Browser
 Achtung: Mit offenen Regeln kann jeder mit der URL schreiben. Keine sensiblen Daten eintragen.
 
 ## Hallenpläne
-`js/halls.js`: Halle 7.1 ist nachgezeichnet (SVG `PLAN_H7`), Positionen A–Z (oben→unten) × 1–49 (links→rechts) als Raster `grid` darüber. Lage des Rasters über `grid.x/y/w/h` justieren. Halle 6 und Halle 3 sind noch Platzhalter-Raster (ohne `grid`/`plan`).
+`js/halls.js`: Halle 7.1 ist nachgezeichnet (SVG `PLAN_H7`), Positionen A–Z (oben→unten) × 1–49 (links→rechts) als Raster `grid` darüber. Lage des Rasters über `grid.x/y/w/h` justieren. Halle 6 ist noch ein Platzhalter-Raster (ohne `grid`/`plan`). KR aus Halle 3 werden nur geliefert: Der Import legt sie ohne Position an (Hinweis „aus Halle 3").
 
 ## Lokal testen
 `python3 -m http.server` im Repo-Ordner, dann `http://localhost:8000`.

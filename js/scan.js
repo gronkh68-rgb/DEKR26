@@ -243,7 +243,7 @@
       html += '<div class="krrow' + (t.closed ? ' closed' : t.done ? ' ok' : '') + '"><span><b>KR ' + esc(t.kr) + '</b>' +
         (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '') +
         (probs[t.kr] ? ' <span class="badge prob">Problem</span>' : '') +
-        '<small>' + (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + '</small></span><span class="st">' + (t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit') + '</span></div>';
+        '<small>' + (t.pos ? esc(Halls.label(t.hall, t.pos)) : t.from ? 'Lieferung aus Halle ' + esc(t.from) : 'ohne Position') + '</small></span><span class="st">' + (t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit') + '</span></div>';
     });
     $('allList').innerHTML = list.length ? html : '<div class="empty">Keine KR gefunden.</div>';
   }
@@ -300,7 +300,7 @@
     box.hidden = false;
     if (!ts.length) { box.innerHTML = 'KR ' + esc(kr) + ' steht nicht in der Liste.'; return; }
     var t = ts[0], np = openProblems(kr).length;
-    box.innerHTML = '<b>KR ' + esc(kr) + '</b> · ' + (t.pos ? esc(Halls.label(t.hall, t.pos)) : 'ohne Position') + ' · ' +
+    box.innerHTML = '<b>KR ' + esc(kr) + '</b> · ' + (t.pos ? esc(Halls.label(t.hall, t.pos)) : t.from ? 'Lieferung aus Halle ' + esc(t.from) : 'ohne Position') + ' · ' +
       esc(Util.DAYS[t.day]) + (t.scope ? ' · ' + esc(t.scope) : '') + ' · <b style="color:' +
       (t.closed ? 'var(--dim)' : t.done ? 'var(--green)' : 'var(--orange)') + '">' + (t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit') + '</b>' +
       (np ? ' · <b style="color:var(--red)">' + np + ' Problem(e)</b>' : '');

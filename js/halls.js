@@ -63,8 +63,7 @@ window.DEKR_HALLS = [
     grid: { x: 215, y: 310, w: 1330, h: 790, rows: 'BFKNPTYZ', cols: 49,
       bands: [[308, 172, 'BF'], [520, 213, 'KN'], [775, 173, 'PTY'], [990, 113, 'Z']] }
   },
-  { id: 'H2', name: 'Halle 6', short: '6', rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 }, // Platzhalter-Raster bis zum Plan
-  { id: 'H3', name: 'Halle 3', short: '3', rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 }  // Platzhalter-Raster bis zum Plan
+  { id: 'H2', name: 'Halle 6', short: '6', rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 } // Platzhalter-Raster bis zum Plan
 ];
 
 window.Halls = (function () {
