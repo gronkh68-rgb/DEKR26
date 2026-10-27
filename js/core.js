@@ -277,11 +277,12 @@ window.Store = (function () {
   var state = norm(null);
   var subs = [];
   var es = null, esTimer = null, lockTimer = null;
-  var locked = false, offline = false, connected = false, label = '';
+  var locked = false, offline = false, connected = false, label = '', requested = false;
 
   function norm(s) {
     return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
-      orders: (s && s.orders) || {}, problems: (s && s.problems) || {}, podests: (s && s.podests) || {} };
+      orders: (s && s.orders) || {}, problems: (s && s.problems) || {}, podests: (s && s.podests) || {},
+      settings: (s && s.settings) || {} };
   }
   function emit() { subs.forEach(function (f) { f(state); }); }
   function loadLocal() {
@@ -324,7 +325,8 @@ window.Store = (function () {
   function setLocked(v) {
     if (locked === v) return;
     locked = v;
-    if (v) { registerDevice(); startLockPoll(); } else { clearInterval(lockTimer); startStream(); }
+    // Gesperrt: es wird nichts automatisch angemeldet. Das Gerät fragt erst auf Tippen (und mit Code) um Freigabe an.
+    if (v) { checkRequested(); } else { clearInterval(lockTimer); requested = false; startStream(); }
     emit();
   }
   // Neues Gerät meldet sich zur Freigabe an; danach wird regelmäßig geprüft, ob es freigegeben wurde
@@ -347,12 +349,34 @@ window.Store = (function () {
     }
     return Promise.resolve(info);
   }
-  function registerDevice() {
+  // Hat dieses Gerät schon um Freigabe gebeten? Dann wartet es nur noch (und prüft regelmäßig).
+  function checkRequested() {
     var uid = Auth.uid();
-    if (!uid) return;
-    deviceInfo().then(function (info) {
+    if (!uid) { emit(); return; }
+    api('/devices/' + uid).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      requested = !!d;
+      if (requested) startLockPoll();
+      emit();
+    }).catch(function () { emit(); });
+  }
+  // Freigabe anfragen (auf Tippen des Nutzers). Mit gesetztem Anmelde-Code verlangen die Regeln den passenden Code.
+  function requestAccess(code) {
+    var uid = Auth.uid();
+    if (!uid) return Promise.reject(new Error('net'));
+    return deviceInfo().then(function (info) {
+      if (code) info.code = String(code).trim().slice(0, 40);
       return api('/devices/' + uid, { method: 'PUT', body: JSON.stringify(info) });
-    }).catch(function () { /* wurde schon angemeldet */ });
+    }).then(function (r) {
+      if (r.status === 401 || r.status === 403) {
+        // Eintrag schon vorhanden (dann wartet das Gerät) oder Code falsch
+        return api('/devices/' + uid).then(function (g) { return g.ok ? g.json() : null; }).then(function (d) {
+          if (d) { requested = true; startLockPoll(); emit(); return; }
+          throw new Error('code');
+        });
+      }
+      if (!r.ok) throw new Error('net');
+      requested = true; startLockPoll(); emit();
+    });
   }
   function startLockPoll() {
     clearInterval(lockTimer);
@@ -451,6 +475,15 @@ window.Store = (function () {
     remote: remote,
     secure: remote && Auth.enabled,
     isLocked: function () { return locked; },
+    isRequested: function () { return requested; },
+    requestAccess: requestAccess,
+    setSetting: function (k, v) { return one('settings', k, v); },
+    // Admin: mehrere Geräteeinträge auf einmal löschen
+    clearDevices: function (uids) {
+      var body = {};
+      uids.forEach(function (u) { body['devices/' + u] = null; });
+      return api('/', { method: 'PATCH', body: JSON.stringify(body) }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); });
+    },
     isOffline: function () { return offline; },
     setDeviceLabel: function (n) { label = String(n || '').slice(0, 40); },
     subscribe: function (f) { subs.push(f); },

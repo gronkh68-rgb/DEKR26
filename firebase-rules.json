@@ -4,7 +4,7 @@
     "devices": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !data.exists() && newData.child('ok').val() !== true))"
+        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !data.exists() && newData.child('ok').val() !== true && (!root.child('settings').child('regcode').exists() || newData.child('code').val() === root.child('settings').child('regcode').val())))"
       }
     },
     "tasks": {
@@ -26,6 +26,9 @@
       ".write": "auth != null && auth.uid === 'ADMIN_UID'"
     },
     "podests": {
+      ".write": "auth != null && auth.uid === 'ADMIN_UID'"
+    },
+    "settings": {
       ".write": "auth != null && auth.uid === 'ADMIN_UID'"
     }
   }

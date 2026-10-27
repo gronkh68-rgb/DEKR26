@@ -1074,6 +1074,8 @@
     u.searchParams.set('n', q.name);
     if (q.func) u.searchParams.set('f', q.func);
     u.searchParams.set('p', Object.keys(permsOf(q)).join(','));
+    var k = (Store.get().settings || {}).regcode;   // Anmelde-Code: neue Handys melden sich damit automatisch an
+    if (k) u.searchParams.set('k', k);
     return u.href;
   }
   function presetOptions(sel) {
@@ -1260,8 +1262,33 @@
     $('admLogin').hidden = adm;
     $('admBody').hidden = !adm;
     $('admWho').textContent = adm ? 'Angemeldet als ' + Auth.email() : '';
-    if (adm) loadDevices();
+    if (adm) {
+      loadDevices();
+      var rc = (Store.get().settings || {}).regcode || '';
+      if (document.activeElement !== $('codeIn')) $('codeIn').value = rc;
+      $('codeInfo').textContent = rc ? 'Aktiver Code: ' + rc + ' (steckt in neu erzeugten QR-Links)' : 'Kein Code: Jedes Gerät, das die Seite öffnet, kann eine Anfrage senden.';
+    }
   }
+  // Anmelde-Code für neue Geräte (Regeln prüfen ihn serverseitig)
+  function saveCode(v) {
+    Store.setSetting('regcode', v || null).then(function () { renderAdmin(); toast(v ? 'Code gespeichert' : 'Code entfernt'); })
+      .catch(function () { toast('Speichern fehlgeschlagen (Regeln mit Code-Prüfung veröffentlicht?)'); });
+  }
+  $('codeSave').onclick = function () { saveCode($('codeIn').value.trim().replace(/[^A-Za-z0-9_-]/g, '')); };
+  $('codeRand').onclick = function () {
+    var v = '', chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+    for (var i = 0; i < 8; i++) v += chars.charAt(Math.floor(Math.random() * chars.length));
+    $('codeIn').value = v; saveCode(v);
+  };
+  $('codeOff').onclick = function () { $('codeIn').value = ''; saveCode(''); };
+  $('devClear').onclick = function () {
+    Store.devices().then(function (d) {
+      var ids = Object.keys(d).filter(function (id) { return d[id].ok !== true; });
+      if (!ids.length) { toast('Keine wartenden Geräte'); return null; }
+      if (!confirm(ids.length + ' wartende Geräte ablehnen?')) return null;
+      return Store.clearDevices(ids).then(loadDevices);
+    }).catch(function () { toast('Fehlgeschlagen (Admin angemeldet?)'); });
+  };
   $('admOpen').onclick = function () { $('admModal').hidden = false; renderAdmin(); };
   $('admClose').onclick = function () { $('admModal').hidden = true; };
   // Komplette Daten als Datei herunterladen (Sicherung)
@@ -1281,7 +1308,17 @@
     Store.subscribe(function () {
       $('lockModal').hidden = !Store.isLocked();
       $('lockCode').textContent = Auth.code();
+      $('lockReq').hidden = Store.isRequested();
+      $('lockWait').hidden = !Store.isRequested();
     });
+    // Freigabe anfragen erst auf Tippen (nicht automatisch), mit Zugangscode falls vorhanden
+    $('lockReq').onsubmit = function (e) {
+      e.preventDefault();
+      $('lockReqErr').textContent = '';
+      Store.requestAccess($('lockCodeIn').value).catch(function (err) {
+        $('lockReqErr').textContent = err && err.message === 'code' ? 'Zugangscode falsch oder fehlt.' : 'Keine Verbindung – bitte erneut versuchen.';
+      });
+    };
     // Das Gerät trägt sich mit dem gemerkten Namen zur Freigabe ein
     Store.setDeviceLabel('Dashboard ' + Util.getName());
   }

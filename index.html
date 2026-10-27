@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=c97b977">
+<link rel="stylesheet" href="css/style.css?v=e920045">
 </head>
 <body>
 <div class="app">
@@ -114,6 +114,13 @@
     <h2>Gerät wartet auf Freigabe</h2>
     <div class="empty">Dieses Gerät ist neu. Ein Admin muss es freigeben. Gerätecode: <b id="lockCode"></b></div>
     <div class="empty">Zur Freigabe sieht der Admin Gerätemodell, Betriebssystem, Browser, Bildschirmgröße, Sprache und Zeitzone. Standort und IP-Adresse werden nicht übermittelt.</div>
+    <form id="lockReq" class="plan">
+      <input id="lockCodeIn" placeholder="Zugangscode (falls vorhanden)" autocomplete="off">
+      <button class="btn-main">Freigabe anfragen</button>
+    </form>
+    <div class="empty" id="lockWait" hidden>✔ Anfrage gesendet. Das Gerät wartet auf die Freigabe durch den Admin.</div>
+    <div class="note" id="lockReqErr"></div>
+    <div class="empty" style="margin-top:8px">Admin? Hier anmelden:</div>
     <form id="lockLogin" class="plan">
       <input id="lockMail" type="email" placeholder="Admin-E-Mail" autocomplete="username" required>
       <input id="lockPw" type="password" placeholder="Passwort" autocomplete="current-password" required>
@@ -133,7 +140,11 @@
     <div class="note" id="admErr"></div>
     <div id="admBody" hidden>
       <div class="qr-add"><span class="empty" id="admWho" style="flex:1"></span><button class="btn-sm" id="admBackup">Daten sichern</button> <button class="btn-sm" id="admLogout">Abmelden</button></div>
-      <div class="col-title orb" style="margin:10px 0 6px">Geräte</div>
+      <div class="col-title orb" style="margin:10px 0 6px">Anmelde-Code für neue Geräte</div>
+      <div class="empty">Mit gesetztem Code können sich nur Geräte anmelden, die ihn kennen. Die QR-Codes enthalten ihn automatisch.</div>
+      <div class="qr-add"><input id="codeIn" placeholder="kein Code (jeder kann anfragen)" maxlength="30" autocomplete="off"><button class="btn-sm" id="codeSave">Speichern</button><button class="btn-sm" id="codeRand">Zufällig</button><button class="btn-sm btn-warn" id="codeOff">Entfernen</button></div>
+      <div class="note" id="codeInfo"></div>
+      <div class="col-title orb" style="margin:10px 0 6px">Geräte <button class="btn-sm btn-warn" id="devClear" style="margin-left:8px">Alle wartenden ablehnen</button></div>
       <div id="devList"></div>
     </div>
   </div>
@@ -174,10 +185,10 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=c97b977"></script>
-<script src="js/halls.js?v=c97b977"></script>
-<script src="js/core.js?v=c97b977"></script>
-<script src="js/qrcode.js?v=c97b977"></script>
-<script src="js/app.js?v=c97b977"></script>
+<script src="js/config.js?v=e920045"></script>
+<script src="js/halls.js?v=e920045"></script>
+<script src="js/core.js?v=e920045"></script>
+<script src="js/qrcode.js?v=e920045"></script>
+<script src="js/app.js?v=e920045"></script>
 </body>
 </html>

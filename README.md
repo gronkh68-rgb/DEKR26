@@ -55,3 +55,7 @@ So funktioniert es: Jedes Gerät meldet sich anonym an und bekommt einen Geräte
 
 ## Status einer KR
 **Nicht bereit** (orange) → **Bereit** (grün; wird am Handy oder im Dashboard gemeldet) → **Abgeschlossen** (grau; nur im Dashboard über „Abschließen" in der Positionsansicht). Abgeschlossene KR stehen nicht mehr auf der Karte (Häkchen „Abgeschlossene zeigen" blendet sie ein) und lassen sich am Handy nicht mehr ändern. „Wieder öffnen" macht sie wieder zu „bereit".
+
+## Bots abwehren: Anfrage nur auf Tippen, optional mit Anmelde-Code
+Neue Geräte melden sich nicht mehr von selbst an. Auf der Sperrseite steht der Knopf **„Freigabe anfragen"**. Zusätzlich lässt sich im Admin-Fenster ein **Anmelde-Code** setzen (Abschnitt „Anmelde-Code für neue Geräte"). Ist einer gesetzt, nehmen die Datenbank-Regeln nur Anfragen mit dem richtigen Code an (serverseitig, nicht umgehbar). Die QR-Links enthalten den Code (`&k=…`), so melden sich Handys per QR-Code automatisch an; andere Geräte tippen ihn ein.
+**Dafür müssen die neuen Regeln aus `firebase-rules.json` veröffentlicht sein** (wie bei der Einrichtung `ADMIN_UID` ersetzen).

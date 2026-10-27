@@ -17,6 +17,14 @@
   // Rückfall nur ohne gemeinsame Datenbank (Demo): sonst muss ein gelöschter QR-Code ungültig werden
   var urlQr = urlName && !Store.remote ? { name: urlName, func: (params.get('f') || '').trim(), perms: toPerms(params.get('p')) } : null;
   var qr = urlQr, view = '', pdSel = {};
+  var urlKey = (params.get('k') || '').trim(), autoAsked = false;
+  $('lockReq').onsubmit = function (e) {
+    e.preventDefault();
+    $('lockReqErr').textContent = '';
+    Store.requestAccess($('lockCodeIn').value || urlKey).catch(function (err) {
+      $('lockReqErr').textContent = err && err.message === 'code' ? 'Zugangscode falsch oder fehlt.' : 'Keine Verbindung – bitte erneut versuchen.';
+    });
+  };
 
   function toPerms(s) {
     var o = {};
@@ -608,7 +616,11 @@
       $('lockCode2').textContent = Auth.code();
       $('whoName').textContent = urlName;
       $('who').hidden = true;
-      $('note').textContent = 'Dieses Gerät wartet auf Freigabe durch den Admin. Gerätecode: ' + Auth.code();
+      $('note').textContent = 'Dieses Gerät braucht eine Freigabe durch den Admin. Gerätecode: ' + Auth.code();
+      $('lockReq').hidden = Store.isRequested();
+      $('lockWait').hidden = !Store.isRequested();
+      // Mit Code im Link (aus dem QR-Code) wird die Anfrage automatisch gestellt, sonst erst auf Tippen
+      if (urlKey && !Store.isRequested() && !autoAsked) { autoAsked = true; Store.requestAccess(urlKey).catch(function () { $('lockReqErr').textContent = 'Zugangscode falsch oder abgelaufen.'; }); }
       $('menu').innerHTML = ''; $('inbox').innerHTML = '';
       VIEWS.forEach(function (k) { $('v-' + k).hidden = true; });
       return;
