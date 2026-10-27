@@ -74,7 +74,7 @@ a.tag:hover { color: var(--text); border-color: var(--accent); }
 .map-head h2 { font-size: 18px; }
 .map-head .stat { color: var(--dim); font-size: 13px; margin-left: 12px; }
 .map-box { flex: 1; min-height: 0; overflow: auto; background: #0f1216; border: 1px solid var(--line); border-radius: 6px; }
-svg.map { display: block; width: 100%; min-width: 640px; }
+svg.map { display: block; width: 100%; }
 .cell { fill: #1a1f27; stroke: #262d38; stroke-width: 1; cursor: pointer; }
 .cell.open { fill: rgba(232,150,58,.35); stroke: var(--orange); }
 .cell.done { fill: rgba(63,184,104,.55); stroke: var(--green); }
@@ -160,7 +160,7 @@ svg.map.plan .cell.sel { stroke: var(--accent); stroke-width: 3; }
 .editbar[hidden] { display: none; }
 .editbar label { display: flex; align-items: center; gap: 6px; }
 .editbar input { padding: 0; }
-svg.map.zoom { min-width: 2300px; }
+
 .handle rect { fill: rgba(91,156,245,.25); stroke: var(--accent); cursor: grab; }
 .handle text { fill: #fff; text-anchor: middle; pointer-events: none; font-weight: 600; }
 .handle:hover rect { fill: rgba(91,156,245,.5); }
@@ -321,3 +321,8 @@ textarea.full { width: 100%; font-size: 16px; padding: 10px; min-height: 90px; }
 .card.closed { border-left-color: var(--dim); opacity: .7; }
 .krrow.closed { border-left-color: var(--dim); opacity: .7; }
 .krrow.closed .st { color: var(--dim); }
+
+/* Kartengröße */
+.mapctl { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--dim); margin: -2px 0 6px; }
+.mapctl .val { min-width: 42px; text-align: center; color: var(--text); }
+.mapctl .sep { width: 10px; }

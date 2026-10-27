@@ -285,12 +285,14 @@
     $('hallSwitch').textContent = '⇄ ' + Halls.all[(hallIdx + 1) % Halls.all.length].name;
     $('hallSwitch').hidden = Halls.all.length < 2;
 
-    var svg = '<svg class="map' + (lay.plan ? ' plan' : '') + (editing ? ' zoom' : '') + '" viewBox="' + lay.vb + '">';
+    // Kartengröße: Zoom in Prozent der Breite (im Admin-Modus mindestens 200 %), Schrift unabhängig davon
+    var effZoom = editing ? Math.max(mapZoom, 200) : mapZoom;
+    var svg = '<svg class="map' + (lay.plan ? ' plan' : '') + '" style="width:' + effZoom + '%" viewBox="' + lay.vb + '">';
     if (lay.plan) svg += lay.plan;
     lay.labels.forEach(function (l) {
       if (!editing) {
         if (l.off) return;
-        svg += '<text class="axis" style="font-size:' + Math.max(lay.font, 10) + 'px" x="' + l.x + '" y="' + l.y + '">' + esc(l.t) + '</text>';
+        svg += '<text class="axis" style="font-size:' + Math.max(lay.font, 10) * mapFont + 'px" x="' + l.x + '" y="' + l.y + '">' + esc(l.t) + '</text>';
         return;
       }
       var col = l.axis === 'c';
@@ -319,7 +321,7 @@
       if (sel && sel.hall === hall.id && sel.pos === p.id) cls += ' sel';
       svg += '<g data-pos="' + esc(p.id) + '"><rect class="' + cls + '" x="' + p.x + '" y="' + p.y +
         '" width="' + p.w + '" height="' + p.h + '" rx="2"><title>' + esc(Halls.label(hall.id, p.id)) + '</title></rect>';
-      if (ts) svg += '<text class="cell-t" style="font-size:' + p.f + 'px" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2 + p.f / 3) + '">' + esc(Halls.label('', p.id)) + '</text>';
+      if (ts) svg += '<text class="cell-t" style="font-size:' + (p.f * mapFont) + 'px" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2 + p.f * mapFont / 3) + '">' + esc(Halls.label('', p.id)) + '</text>';
       svg += '</g>';
     });
     $('map').innerHTML = svg + '</svg>';
@@ -684,6 +686,32 @@
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
   });
+
+  // Kartengröße (Zoom und Schrift) im Browser gemerkt
+  function loadNum(key, def, min, max) {
+    try { var v = parseFloat(localStorage.getItem(key)); if (v >= min && v <= max) return v; } catch (e) { /* ignorieren */ }
+    return def;
+  }
+  var mapZoom = loadNum('dekr26_mapzoom', 100, 50, 400), mapFont = loadNum('dekr26_mapfont', 1, 0.6, 2.4);
+  function setMapSize(zoom, font) {
+    mapZoom = Math.max(50, Math.min(400, Math.round(zoom)));
+    mapFont = Math.max(0.6, Math.min(2.4, Math.round(font * 100) / 100));
+    try { localStorage.setItem('dekr26_mapzoom', mapZoom); localStorage.setItem('dekr26_mapfont', mapFont); } catch (e) { /* ignorieren */ }
+    $('zVal').textContent = mapZoom + '%';
+    render(Store.get());
+  }
+  $('zOut').onclick = function () { setMapSize(mapZoom - 20, mapFont); };
+  $('zIn').onclick = function () { setMapSize(mapZoom + 20, mapFont); };
+  $('zFit').onclick = function () { setMapSize(100, 1); };
+  $('fOut').onclick = function () { setMapSize(mapZoom, mapFont / 1.2); };
+  $('fIn').onclick = function () { setMapSize(mapZoom, mapFont * 1.2); };
+  $('zVal').textContent = mapZoom + '%';
+  // Strg + Mausrad über der Karte zoomt
+  $('map').addEventListener('wheel', function (e) {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    setMapSize(mapZoom + (e.deltaY < 0 ? 20 : -20), mapFont);
+  }, { passive: false });
 
   // Abgeschlossene auf der Karte zeigen/verbergen
   $('showClosed').checked = showClosed;

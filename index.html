@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=500d75e">
+<link rel="stylesheet" href="css/style.css?v=f9839ae">
 </head>
 <body>
 <div class="app">
@@ -48,6 +48,17 @@
           <button id="editToggle">Admin-Modus</button>
           <button class="btn-main" id="hallSwitch"></button>
         </div>
+      </div>
+      <div class="mapctl" id="mapCtl">
+        Größe
+        <button class="btn-sm" id="zOut" title="Karte verkleinern">−</button>
+        <span class="val" id="zVal">100%</span>
+        <button class="btn-sm" id="zIn" title="Karte vergrößern">+</button>
+        <button class="btn-sm" id="zFit" title="An die Breite anpassen">Einpassen</button>
+        <span class="sep"></span>
+        Schrift
+        <button class="btn-sm" id="fOut" title="Schrift kleiner">A−</button>
+        <button class="btn-sm" id="fIn" title="Schrift größer">A+</button>
       </div>
       <div class="card editbar" id="editBar" hidden>
         <span>Nummer/Buchstabe <b>ziehen</b> = verschieben, <b>anklicken</b> = Spalte/Zeile aus- oder einblenden.</span>
@@ -163,10 +174,10 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="js/config.js?v=500d75e"></script>
-<script src="js/halls.js?v=500d75e"></script>
-<script src="js/core.js?v=500d75e"></script>
-<script src="js/qrcode.js?v=500d75e"></script>
-<script src="js/app.js?v=500d75e"></script>
+<script src="js/config.js?v=f9839ae"></script>
+<script src="js/halls.js?v=f9839ae"></script>
+<script src="js/core.js?v=f9839ae"></script>
+<script src="js/qrcode.js?v=f9839ae"></script>
+<script src="js/app.js?v=f9839ae"></script>
 </body>
 </html>
