@@ -97,3 +97,44 @@ svg.map.plan .cell:hover { fill: rgba(0,240,255,.5); stroke: #00f0ff; filter: dr
 #cpTheme { margin-left: 6px; font-size: 10px; padding: 4px 8px; }
 .tab { letter-spacing: .02em; padding-left: 6px; padding-right: 6px; white-space: nowrap; font-size: 11px; }
 .tabs .tab, .tab { font-size: 10px; letter-spacing: 0; padding-left: 4px; padding-right: 4px; text-overflow: clip; }
+
+/* Gimmicks */
+html:not([data-theme="cp"]) #cpBoot, html:not([data-theme="cp"]) #cpAlert, html:not([data-theme="cp"]) #cpBar, html:not([data-theme="cp"]) #cpHud { display: none !important; }
+/* 1 Boot */
+html.cp-boot body > *:not(#cpBoot) { visibility: hidden; }
+#cpBoot { position: fixed; inset: 0; z-index: 200; background: #05060b; color: var(--accent); font-family: 'Share Tech Mono', monospace; font-size: 15px; padding: 12vh 8vw; line-height: 1.9; letter-spacing: .08em; transition: opacity .45s; }
+#cpBoot.out { opacity: 0; pointer-events: none; }
+#cpBoot div:last-child::after { content: '█'; margin-left: 6px; animation: cpBlink .7s steps(1) infinite; }
+@keyframes cpBlink { 50% { opacity: 0; } }
+/* 4 Alarm */
+#cpAlert { background: repeating-linear-gradient(-45deg, #ff2a55 0 14px, #8a0f2a 14px 28px); color: #fff; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 12px; letter-spacing: .25em; text-align: center; padding: 4px; text-shadow: 0 1px 3px #000; animation: cpAlert 1s ease-in-out infinite alternate; }
+#cpAlert[hidden] { display: none; }
+@keyframes cpAlert { from { opacity: .75; } to { opacity: 1; } }
+body.cp-alert .top { border-bottom-color: var(--red); animation: cpAlertTop 1s ease-in-out infinite alternate; }
+@keyframes cpAlertTop { from { box-shadow: 0 0 0 rgba(255,42,85,0); } to { box-shadow: 0 6px 22px rgba(255,42,85,.55); } }
+/* 5 Sonar */
+.cp-ping { fill: none; stroke: #2dffb3; stroke-width: 3; pointer-events: none; transform-box: fill-box; transform-origin: center; animation: cpPing 1.6s ease-out both; opacity: 0; }
+@keyframes cpPing { 0% { transform: scale(1); opacity: .95; } 100% { transform: scale(7); opacity: 0; stroke-width: .5; } }
+/* 6 Statusleiste */
+body.cp-sb .app { height: calc(100vh - 24px); }
+#cpBar { position: fixed; left: 0; right: 0; bottom: 0; height: 24px; z-index: 30; display: flex; gap: 22px; align-items: center; padding: 0 14px; background: #07080d; border-top: 1px solid rgba(0,240,255,.4); color: var(--dim); font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: .12em; white-space: nowrap; overflow: hidden; }
+#cpBar .sp { flex: 1; } #cpBar .good { color: var(--green); } #cpBar .bad { color: var(--red); }
+/* 7 Glitch */
+.cp-glitch { animation: cpGl .45s steps(2, end) 1; }
+@keyframes cpGl { 0% { transform: translate(0); filter: none; } 20% { transform: translate(-4px, 1px); filter: drop-shadow(3px 0 #ff2a55) drop-shadow(-3px 0 #00f0ff); }
+  40% { transform: translate(4px, -1px) skewX(2deg); filter: drop-shadow(-3px 0 #ff2a55) drop-shadow(3px 0 #00f0ff); opacity: .7; } 60% { transform: translate(-2px, 0); opacity: 1; } 100% { transform: translate(0); filter: none; } }
+/* 8/9 HUD */
+#cpHud { position: absolute; pointer-events: none; overflow: hidden; z-index: 5; }
+#cpHud .scan { position: absolute; left: 0; right: 0; top: 0; height: 36px; background: linear-gradient(180deg, transparent, rgba(0,240,255,.14) 70%, rgba(0,240,255,.5)); border-bottom: 1px solid rgba(0,240,255,.6); animation: cpScan 6s linear infinite; }
+@keyframes cpScan { from { transform: translateY(-40px); } to { transform: translateY(calc(100vh)); } }
+#cpHud b { position: absolute; width: 16px; height: 16px; border: 0 solid var(--accent); }
+#cpHud .c1 { left: 3px; top: 3px; border-width: 2px 0 0 2px; } #cpHud .c2 { right: 3px; top: 3px; border-width: 2px 2px 0 0; }
+#cpHud .c3 { left: 3px; bottom: 3px; border-width: 0 0 2px 2px; } #cpHud .c4 { right: 3px; bottom: 3px; border-width: 0 2px 2px 0; }
+.modal-box { border: 1px solid rgba(0,240,255,.45); border-radius: 0; background-color: var(--bg);
+  background-image: linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent));
+  background-size: 18px 2px, 2px 18px, 18px 2px, 2px 18px, 18px 2px, 2px 18px, 18px 2px, 2px 18px;
+  background-position: 0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%; background-repeat: no-repeat; }
+/* 10 Hazard-Stripes */
+.msg.problem, .item.prob { padding-top: 10px; background-image: repeating-linear-gradient(-45deg, #fcee09 0 6px, #111 6px 12px); background-size: 100% 4px; background-repeat: no-repeat; background-position: top; }
+.msg.problem.pulse { background-image: repeating-linear-gradient(-45deg, #fcee09 0 6px, #111 6px 12px), none; }
+.item.prob { border-left: 3px solid var(--red); }
