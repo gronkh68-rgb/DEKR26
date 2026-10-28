@@ -67,3 +67,10 @@ liest nur den Text der größten Tabelle (oder die markierte Auswahl) und schick
 Import mit Vorschau öffnet. Gespeichert wird erst mit „Importieren". Das Dashboard nimmt nur Nachrichten vom öffnenden Tab an und
 nur von `https://*.krones-group.com` (weitere Adressen: `mippOrigins: [...]` in `js/config.js`). Blockiert MIPP das Skript, kopiert
 das Lesezeichen den Text in die Zwischenablage (dann im Import mit Strg+V einfügen).
+
+## Als App installieren (PWA)
+
+- Android/Chrome/Edge: Seite öffnen, „App installieren“ antippen (oder Browsermenü → „App installieren“).
+- iPhone: in Safari „Teilen“ → „Zum Home-Bildschirm“ (Push nur in der installierten App, ab iOS 16.4).
+- Die Meldeseite (`manifest.json`) startet immer mit dem zuletzt geöffneten QR-Link dieses Geräts; das Dashboard hat ein eigenes
+  Manifest (`manifest-dash.json`). Symbole liegen in `icons/`. Updates kommen wie bei der Webseite, ohne Neuinstallation.

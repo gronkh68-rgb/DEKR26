@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.firebasedatabase.app https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://ntfy.sh; worker-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
 <meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest-dash.json">
+<meta name="theme-color" content="#05060b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DEUKRO26">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<script src="js/pwa.js"></script>
 <title>DEUKRO26 · Beipack-Abholung</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,6 +31,7 @@
     <input id="me" class="me" placeholder="Dein Name" maxlength="30" title="Mit diesem Namen werden Bestätigungen und Änderungen im Dashboard gezeichnet">
     <button class="btn-sm" id="soundBtn" title="Ton bei neuen Meldungen"></button>
     <span class="tag" id="mode"></span>
+    <button class="btn-sm" id="installBtn" hidden>App installieren</button>
     <button class="btn-sm" id="qrOpen">QR-Codes</button>
     <button class="btn-sm" id="admOpen" hidden>Admin</button>
     <span class="orb" id="clock" style="color:var(--accent)"></span>

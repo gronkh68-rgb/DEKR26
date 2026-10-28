@@ -7,3 +7,5 @@ self.addEventListener('notificationclick', function (e) {
     return cs.length ? cs[0].focus() : self.clients.openWindow('./scan.html');
   }));
 });
+// Ohne Zwischenspeicher: Anfragen gehen unverändert ins Netz (nötig, damit Browser die App als installierbar erkennen)
+self.addEventListener('fetch', function () {});
