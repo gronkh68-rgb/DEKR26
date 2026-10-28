@@ -27,7 +27,7 @@ Achtung: Mit offenen Regeln kann jeder mit der URL schreiben. Keine sensiblen Da
 ## Push-Nachrichten aufs Handy (ntfy)
 Eine statische Seite kann nicht selbst Push senden. Kostenlos geht es über **ntfy.sh**. In `js/config.js` steht bei `ntfyTopic` die Basis des Themas (lang und zufällig wählen, wie ein Passwort).
 
-Es gibt drei Arten von Themen, die in der App **ntfy** (Android/iPhone) abonniert werden. Die Seiten zeigen dafür keine Links; die Themennamen entstehen so:
+Es gibt drei Arten von Themen, die in der App **ntfy** (Android/iPhone) abonniert werden. Die Themen und Links stehen nur im Ton-Fenster (Knopf „Ton“) unter „Push aufs Handy (ntfy)“, eingeklappt; die Themennamen entstehen so:
 - `<Basis>`: Beipack fertig, Probleme, Anfragen Überspielen (für Dashboard-Leute)
 - `<Basis>-podest`: neue Podest-Bestellungen (für Podest-Empfänger)
 - `<Basis>-q<QR-ID>`: Rückmeldungen an ein Handy (angenommen, bestätigt, gelöst, Nachricht vom Dashboard)

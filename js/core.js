@@ -188,6 +188,23 @@ window.Sound = (function () {
     t.forEach(function (n) { beep(n[0], n[1], n[2], n[3], n[4], st); });
   }
 
+  // Push über ntfy (optional): die Themen dieses Geräts zum Abonnieren in der ntfy-App. Die Seite liefert sie über window.DEKR_NTFY.
+  function ntfyBlock() {
+    var P = window.Push, list = (window.DEKR_NTFY && window.DEKR_NTFY()) || [];
+    if (!P || !P.enabled || !list.length) return '';
+    var esc = function (x) { return String(x).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); };
+    return '<details class="chk" style="display:block"><summary>Push aufs Handy (ntfy)</summary>' +
+      '<div class="empty" style="margin:6px 0">Kostenlose App <b>ntfy</b> installieren und die Themen unten abonnieren. So kommen Meldungen auch bei geschlossener Seite. ' +
+      'Wer ein Thema kennt, kann mitlesen – nicht weitergeben.</div>' +
+      list.map(function (x) {
+        var t = P.topic(x.sub);
+        return '<div class="item"><b>' + esc(x.label) + '</b><span style="word-break:break-all">' + esc(t) + '</span><span class="acts">' +
+          '<button type="button" class="btn-sm" data-ncopy="' + esc(t) + '">Kopieren</button> ' +
+          '<a class="btn-sm" style="text-decoration:none;padding:4px 8px" href="ntfy://ntfy.sh/' + encodeURIComponent(t) + '">In ntfy-App öffnen</a> ' +
+          '<a class="btn-sm" style="text-decoration:none;padding:4px 8px" target="_blank" rel="noopener" href="' + P.url(x.sub) + '">Im Browser</a></span></div>';
+      }).join('') + '</details>';
+  }
+
   // Einstellungsfenster (wird bei Bedarf erzeugt)
   function panel() {
     var box = document.getElementById('soundPanel');
@@ -207,7 +224,7 @@ window.Sound = (function () {
       Object.keys(KIND_NAMES).map(function (k) {
         return '<div class="chk"><label style="display:flex;gap:8px;align-items:center;flex:1"><input type="checkbox" data-k="' + k + '"' + (cfg.kinds[k] === 0 ? '' : ' checked') + '> ' + KIND_NAMES[k] +
           '</label><button type="button" class="btn-sm" data-test="' + k + '">Test</button></div>';
-      }).join('') + '</div>';
+      }).join('') + ntfyBlock() + '</div>';
     box.innerHTML = h;
     box.hidden = false;
     box.querySelector('#spClose').onclick = function () { box.hidden = true; };
@@ -221,6 +238,10 @@ window.Sound = (function () {
       if (e.target === box) { box.hidden = true; return; }
       var t = e.target.closest('button[data-test]');
       if (t) play(t.dataset.test, true);
+      var c = e.target.closest('button[data-ncopy]');
+      if (c) {
+        try { navigator.clipboard.writeText(c.dataset.ncopy).then(function () { c.textContent = 'Kopiert'; }); } catch (err) { c.textContent = 'Markieren und kopieren'; }
+      }
     };
   }
 

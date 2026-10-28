@@ -138,3 +138,5 @@ body.cp-sb .app { height: calc(100vh - 24px); }
 .msg.problem, .item.prob { padding-top: 10px; background-image: repeating-linear-gradient(-45deg, #fcee09 0 6px, #111 6px 12px); background-size: 100% 4px; background-repeat: no-repeat; background-position: top; }
 .msg.problem.pulse { background-image: repeating-linear-gradient(-45deg, #fcee09 0 6px, #111 6px 12px), none; }
 .item.prob { border-left: 3px solid var(--red); }
+a.btn-sm { border-radius: 0; border-color: #3a3d18; color: var(--accent); font-family: 'Rajdhani', sans-serif; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+a.btn-sm:hover { border-color: var(--accent); box-shadow: inset 0 0 12px rgba(252,238,9,.3); }

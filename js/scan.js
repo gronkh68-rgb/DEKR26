@@ -260,6 +260,13 @@
   }
   // Ton an/aus und Bildschirm anlassen (Wake Lock)
   function soundLabel() { $('soundBtn').textContent = Sound.label(); }
+  window.DEKR_NTFY = function () {
+    var l = [], p = perms();
+    if (qid) l.push({ label: 'Rückmeldungen und Nachrichten an dieses Handy', sub: 'q' + qid });
+    if (p.dash) l.push({ label: 'Beipack fertig, Probleme, Überspielen', sub: '' });
+    if (p.podest) l.push({ label: 'Neue Podest-Bestellungen', sub: 'podest' });
+    return l;
+  };
   $('soundBtn').onclick = function () { Sound.panel(); };
   document.addEventListener('dekr-sound', soundLabel);
   soundLabel();

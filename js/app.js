@@ -1340,6 +1340,9 @@
 
   // Ton an/aus (im Browser gemerkt)
   function soundLabel() { $('soundBtn').textContent = Sound.label(); }
+  window.DEKR_NTFY = function () {
+    return [{ label: 'Beipack fertig, Probleme, Überspielen', sub: '' }, { label: 'Neue Podest-Bestellungen', sub: 'podest' }];
+  };
   $('soundBtn').onclick = function () { Sound.panel(); };
   document.addEventListener('dekr-sound', soundLabel);
   soundLabel();

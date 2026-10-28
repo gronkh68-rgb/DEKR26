@@ -329,3 +329,5 @@ textarea.full { width: 100%; font-size: 16px; padding: 10px; min-height: 90px; }
 
 .halltabs { display: inline-flex; gap: 6px; }
 .halltabs[hidden] { display: none; }
+a.btn-sm { display: inline-block; color: var(--accent); border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
+a.btn-sm:hover { border-color: var(--accent); }
