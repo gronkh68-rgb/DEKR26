@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.firebasedatabase.app https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://ntfy.sh; worker-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+<meta name="robots" content="noindex, nofollow">
+<title>DEUKRO26 · MIPP-Lesezeichen</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/cyber.css" id="cpCss">
+<script src="js/theme.js"></script>
+</head>
+<body>
+<div class="mobile" style="max-width:760px;margin:0 auto;padding:16px">
+  <h1>MIPP-Lesezeichen</h1>
+  <div class="card" style="padding:14px;display:grid;gap:10px">
+    <div><b>Was es macht:</b> Du öffnest die Auslieferliste in MIPP (mit deinem normalen Login) und klickst das Lesezeichen. Es <b>liest nur</b>, was auf der Seite steht, und schickt den Text an das Dashboard. Dort öffnet sich der Import mit der Vorschau. Gespeichert wird erst, wenn du dort auf „Importieren" klickst. Es werden keine Zugangsdaten gelesen oder gesendet, und es wird nichts in MIPP verändert.</div>
+    <div><b>1. Lesezeichen anlegen</b> – diesen Knopf mit der Maus in die Lesezeichenleiste ziehen:</div>
+    <div><a id="bm" class="btn-main" style="display:inline-block;padding:10px 16px;text-decoration:none;cursor:grab" href="#">KR aus MIPP holen</a></div>
+    <div class="empty">Geht Ziehen nicht (z. B. gesperrte Leiste): Neues Lesezeichen anlegen, als Adresse den Code unten einfügen.</div>
+    <div class="qr-add"><button type="button" class="btn-sm" id="copyBm">Code kopieren</button><span class="empty" id="copyInfo"></span></div>
+    <textarea id="bmCode" rows="4" readonly style="font-size:11px"></textarea>
+    <div><b>2. Benutzen:</b> Dashboard in einem Tab offen lassen oder neu öffnen. In MIPP die Auslieferliste öffnen, Lesezeichen klicken. Es öffnet sich ein neuer Tab mit dem Import.</div>
+    <div class="empty">Wenn MIPP Lesezeichen-Skripte blockiert oder der neue Tab nichts empfängt, kopiert das Lesezeichen den Text stattdessen in die Zwischenablage. Dann im Import mit Strg+V einfügen. Notfalls wie bisher die Tabelle markieren, kopieren und einfügen.</div>
+    <div><a href="index.html">← Zum Dashboard</a></div>
+  </div>
+</div>
+<script src="js/mipp.js"></script>
+</body>
+</html>

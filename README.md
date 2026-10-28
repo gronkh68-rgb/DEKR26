@@ -59,3 +59,11 @@ So funktioniert es: Jedes Gerät meldet sich anonym an und bekommt einen Geräte
 ## Bots abwehren: Anfrage nur auf Tippen, optional mit Anmelde-Code
 Neue Geräte melden sich nicht mehr von selbst an. Auf der Sperrseite steht der Knopf **„Freigabe anfragen"**. Zusätzlich lässt sich im Admin-Fenster ein **Anmelde-Code** setzen (Abschnitt „Anmelde-Code für neue Geräte"). Ist einer gesetzt, nehmen die Datenbank-Regeln nur Anfragen mit dem richtigen Code an (serverseitig, nicht umgehbar). Die QR-Links enthalten den Code (`&k=…`), so melden sich Handys per QR-Code automatisch an; andere Geräte tippen ihn ein.
 **Dafür müssen die neuen Regeln aus `firebase-rules.json` veröffentlicht sein** (wie bei der Einrichtung `ADMIN_UID` ersetzen).
+
+## KR aus MIPP holen (Lesezeichen)
+
+Auf `mipp.html` (Link im Import-Fenster) gibt es ein Lesezeichen „KR aus MIPP holen". Es läuft im Browser auf der MIPP-Seite,
+liest nur den Text der größten Tabelle (oder die markierte Auswahl) und schickt ihn per `postMessage` an das Dashboard, das den
+Import mit Vorschau öffnet. Gespeichert wird erst mit „Importieren". Das Dashboard nimmt nur Nachrichten vom öffnenden Tab an und
+nur von `https://*.krones-group.com` (weitere Adressen: `mippOrigins: [...]` in `js/config.js`). Blockiert MIPP das Skript, kopiert
+das Lesezeichen den Text in die Zwischenablage (dann im Import mit Strg+V einfügen).

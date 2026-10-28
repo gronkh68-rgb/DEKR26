@@ -1372,6 +1372,25 @@
     Object.keys(state.tasks).forEach(function (id) { if (state.tasks[id].week < cutoff) ops.push({ coll: 'tasks', id: id, val: null }); });
     if (ops.length) Store.batch(ops).catch(function () { /* nächstes Mal */ });
   }
+  // MIPP-Lesezeichen: nimmt den gelesenen Listentext entgegen und öffnet damit den Import (gespeichert wird erst mit „Importieren")
+  function mippOriginOk(origin) {
+    var extra = (window.DEKR_CONFIG && window.DEKR_CONFIG.mippOrigins) || [];
+    if (extra.indexOf(origin) >= 0) return true;
+    try { var u = new URL(origin); return u.protocol === 'https:' && /(^|\.)krones-group\.com$/.test(u.hostname); } catch (e) { return false; }
+  }
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!window.opener || e.source !== window.opener || !mippOriginOk(e.origin)) return;
+    if (!d || d.t !== 'dekr-mipp' || typeof d.text !== 'string' || d.text.length > 3000000) return;
+    $('impText').value = d.text; imp.cols = [];
+    $('impModal').hidden = false;
+    renderImp();
+    toast('Liste aus MIPP übernommen – bitte prüfen und importieren');
+  });
+  if (window.opener && /[?&]mipp=/.test(location.search)) {
+    try { window.opener.postMessage({ t: 'dekr-ready' }, '*'); } catch (e) { /* ignorieren */ }
+  }
+
   Store.subscribe(pruneOld);
 
   Store.subscribe(render);
