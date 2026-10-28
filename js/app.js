@@ -834,11 +834,13 @@
     return rows;
   }
   function parseTable(text) {
-    if (!/\t/.test(text)) {
+    var lines = text.split(/\r?\n/).filter(function (l) { return l.trim(); });
+    // Eine echte Tabelle hat in (fast) jeder Zeile Tabs; einzelne Tab-Zeilen in der Zellen-pro-Zeile-Liste zählen nicht
+    var tabLines = lines.filter(function (l) { return /\S\t\S/.test(l); }).length;
+    if (tabLines * 5 < lines.length) {
       var rec = parseRecords(text);
       if (rec) return rec;
     }
-    var lines = text.split(/\r?\n/).filter(function (l) { return l.trim(); });
     var sep = /\t/.test(text) ? /\t/ : /;/.test(text) ? /;/ : /\s{2,}/;
     return lines.map(function (l) { return l.split(sep).map(function (c) { return c.trim(); }); });
   }
