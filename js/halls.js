@@ -91,6 +91,13 @@ var PLAN_H6 = [
 ].join('');
 
 // Jede n-te Spalte behalten (z.B. 3, 6, 9, ...), alle anderen ausblenden
+// Spalten ab `start` in Schritten von `step` behalten (z.B. 6, 9, 12, ...), alle anderen ausblenden
+function everyFrom(cols, start, step) {
+  var off = {};
+  for (var i = 1; i <= cols; i++) if (i < start || (i - start) % step) off['c' + i] = 1;
+  return off;
+}
+
 function everyNth(cols, n) {
   var off = {};
   for (var i = 1; i <= cols; i++) if (i % n) off['c' + i] = 1;
@@ -116,9 +123,11 @@ window.DEKR_HALLS = [
     plan: PLAN_H6,
     aisles: AISLES_H6,
     blocks: BLOCKS_H6,
-    // Annahme: Buchstaben A bis Z von oben nach unten, Nummern 1 bis 49 von links nach rechts (Feinabstimmung im Admin-Modus)
-    grid: { x: 125, y: 323, w: 1588, h: 562, rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49,
-      bands: [[323, 242, 'ABCDEFGHIJKL'], [588, 297, 'MNOPQRSTUVWXYZ']] }
+    // Nummern steigen von rechts nach links, ab 6 in 3er-Schritten; Buchstaben von unten nach oben D F I K N P S
+    // (Zeilen von oben nach unten: S P N K I F D). Positionen aus der Liste, die nicht in den Schritten liegen, werden trotzdem gezeigt.
+    layout: { off: everyFrom(49, 6, 3) },
+    grid: { x: 125, y: 323, w: 1588, h: 562, rows: 'SPNKIFD', cols: 49, rev: true,
+      bands: [[323, 242, 'SPN'], [588, 297, 'KIFD']] }
   }
 ];
 
@@ -139,7 +148,7 @@ window.Halls = (function () {
         });
       }
       var ph = g.bands ? hs.reduce(function (a, v) { return a + v; }, 0) / hs.length : ch;
-      return { x: g.x, y: g.y, cw: cw, ch: ch, pw: cw, ph: ph, rows: g.rows, cols: g.cols,
+      return { x: g.x, y: g.y, cw: cw, ch: ch, pw: cw, ph: ph, rows: g.rows, cols: g.cols, rev: !!g.rev,
         rowY: function (r) { return ys.length ? ys[r] : g.y + r * ch; },
         rowH: function (r) { return hs.length ? hs[r] : ch; },
         vb: h.vb, plan: h.plan, font: Math.min(cw, ph) * 0.42 };
@@ -179,12 +188,14 @@ window.Halls = (function () {
     if (h.valid) { valid = {}; h.valid.forEach(function (id) { valid[id] = 1; }); }
 
     for (c = 0; c < s.cols; c++) {
-      xs.push(s.x + c * s.cw + (oc['c' + (c + 1)] || 0));
+      // s.rev: Nummer 1 steht rechts, die Nummern steigen nach links
+      xs.push(s.x + (s.rev ? s.cols - 1 - c : c) * s.cw + (oc['c' + (c + 1)] || 0));
       if (!off['c' + (c + 1)]) vis.push(c);
     }
-    // Ausgeblendete Nachbarspalten machen die sichtbare Zelle breiter
-    vis.forEach(function (col, i) {
-      var gap = i + 1 < vis.length ? xs[vis[i + 1]] - xs[col] : s.cw;
+    // Ausgeblendete Nachbarspalten machen die sichtbare Zelle breiter (Nachbar = nächste sichtbare Spalte in x-Richtung)
+    var byX = vis.slice().sort(function (a, b) { return xs[a] - xs[b]; });
+    byX.forEach(function (col, i) {
+      var gap = i + 1 < byX.length ? xs[byX[i + 1]] - xs[col] : s.cw;
       wOf[col] = Math.max(2, Math.min(s.pw + gap - s.cw, s.pw + 3 * s.cw));
     });
 
@@ -238,7 +249,7 @@ window.Halls = (function () {
       var r = s.rows.indexOf(m[1]), c = +m[2] - 1;
       if (r < 0 || c < 0 || c >= s.cols) return null;
       var wide = ov.off && Object.keys(ov.off).length ? s.pw + 2 * s.cw : s.pw;
-      var x = s.x + c * s.cw + ((ov.cols || {})['c' + (c + 1)] || 0), y = s.rowY(r) + ((ov.rows || {})['r' + m[1]] || 0), rh = s.rowH(r);
+      var x = s.x + (s.rev ? s.cols - 1 - c : c) * s.cw + ((ov.cols || {})['c' + (c + 1)] || 0), y = s.rowY(r) + ((ov.rows || {})['r' + m[1]] || 0), rh = s.rowH(r);
       return snap(h, { id: pos, x: x - (wide - s.pw) / 2, y: y, w: wide, h: rh, f: h.grid ? Math.min(wide, rh) * 0.42 : s.font });
     },
     // Gibt es den Buchstaben (die Zeile) in dieser Halle?
