@@ -383,3 +383,7 @@ a.btn-sm:hover { border-color: var(--accent); }
   body.print-card::after { display: none; }
 }
 .qr-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; }
+/* Fuß und Kopf der hellen Karte halten Abstand zu den abgeschrägten Ecken */
+.pcard.light { padding-bottom: 22px; }
+.pcard.light .pc-foot { padding-left: 34px; padding-right: 8px; margin-bottom: 4px; }
+.pcard.light .pc-top { padding-right: 20px; }
