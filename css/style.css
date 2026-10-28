@@ -350,17 +350,20 @@ a.btn-sm:hover { border-color: var(--accent); }
 .pcard .pc-c { position: absolute; width: 14px; height: 14px; border: 0 solid #ff2a55; }
 .pcard .c1 { left: -2px; bottom: -2px; border-width: 0 0 3px 3px; } .pcard .c2 { right: -2px; bottom: -2px; border-width: 0 3px 3px 0; }
 .pcard .c3 { left: -2px; top: 34px; border-width: 3px 0 0 3px; } .pcard .c4 { right: -2px; top: 34px; border-width: 3px 3px 0 0; }
-.pcard.light { background: #fff; color: #111; }
+.pcard.light { background: #fff; color: #111; border: 2px solid #111; }
+.pcard.light .pc-top { background: transparent; color: #111; border-bottom: 3px solid #111; }
 .pcard.light .pc-name { text-shadow: none; }
-.pcard.light .pc-func, .pcard.light .pc-do li { color: #006c78; border-color: #006c78; }
+.pcard.light .pc-func { color: #333; }
+.pcard.light .pc-do li { color: #222; border-color: #666; }
 .pcard.light .pc-scan { color: #111; }
-.pcard.light .pc-foot { color: #555; border-top-color: #bbb; }
-.pcard.light .pc-qr { border-color: #111; }
+.pcard.light .pc-foot { color: #555; border-top-color: #aaa; }
+.pcard.light .pc-qr { border: 2px solid #111; }
+.pcard.light .pc-c { border-color: #111; }
 @media print {
   body.print-card .app, body.print-card .toast, body.print-card .modal:not(#cardModal), body.print-card .lockcover, body.print-card #cpBar, body.print-card #cpBoot, body.print-card #cpAlert { display: none !important; }
   body.print-card #cardModal { position: static; display: block; background: #fff; padding: 0; }
-  body.print-card #cardModal .modal-box { display: block; border: 0; background: #fff; max-width: none; padding: 0; margin: 0; background-image: none; }
-  body.print-card .pcard { width: 105mm; max-width: 100%; box-sizing: border-box; margin: 6mm auto 0; border-width: 4px; break-inside: avoid; }
+  body.print-card #cardModal .modal-box { display: block; border: 0; background: #fff; max-width: none !important; padding: 0; margin: 0; background-image: none; }
+  body.print-card .pcard { width: 105mm; max-width: 100%; box-sizing: border-box; margin: 6mm auto 0; border-width: 3px; break-inside: avoid; }
   body.print-card .pcard .pc-qr { width: 70%; }
   body.print-card .pcard .pc-name { font-size: 34px; }
   body.print-card { background: #fff !important; background-image: none !important; }
