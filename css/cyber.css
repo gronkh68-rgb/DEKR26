@@ -95,6 +95,5 @@ svg.map.plan .cell:hover { fill: rgba(0,240,255,.5); stroke: #00f0ff; filter: dr
 .top h1 { animation: cpFlick 7s infinite; }
 @keyframes cpFlick { 0%, 94%, 100% { opacity: 1; } 95% { opacity: .55; } 96% { opacity: 1; } 97% { opacity: .7; } }
 #cpTheme { margin-left: 6px; font-size: 10px; padding: 4px 8px; }
-@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } .rip { display: none; } }
 .tab { letter-spacing: .02em; padding-left: 6px; padding-right: 6px; white-space: nowrap; font-size: 11px; }
 .tabs .tab, .tab { font-size: 10px; letter-spacing: 0; padding-left: 4px; padding-right: 4px; text-overflow: clip; }
