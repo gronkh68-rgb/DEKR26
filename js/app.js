@@ -783,7 +783,7 @@
   // ---------- Import (Kopieren und Einfügen) ----------
   // Nur die gewählten Spalten werden verarbeitet; alles andere wird verworfen und nie gespeichert.
   // Gespeichert werden: KR, Tag, Halle, Position, Lieferumfang (Maschine/komplett) und ein USA-Hinweis (Land = US).
-  var ROLES = [['', 'ignorieren'], ['kr', 'KR'], ['year', 'Jahr'], ['kw', 'KW'], ['day', 'Tag'], ['hall', 'Halle'], ['num', 'Nummer'],
+  var ROLES = [['', 'ignorieren'], ['kr', 'KR'], ['year', 'Jahr'], ['kw', 'KW'], ['day', 'Tag'], ['date', 'Datum'], ['hall', 'Halle'], ['num', 'Nummer'],
     ['letter', 'Buchstabe'], ['pos', 'Position (A14)'], ['scope', 'Lieferumfang'], ['country', 'Land (US = USA)']];
   var imp = { rows: [], cols: [] };
   var MAP_KEY = 'dekr26_impmap';
@@ -813,7 +813,7 @@
         /^(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)$/i.test(L[j + 3])) starts.push(j);
     }
     if (!starts.length) return null;
-    var rows = [['KR', 'Jahr', 'KW', 'Tag', 'Halle', 'Nummer', 'Buchstabe', 'Lieferumfang', 'Land']];
+    var rows = [['KR', 'Jahr', 'KW', 'Tag', 'Datum', 'Halle', 'Nummer', 'Buchstabe', 'Lieferumfang', 'Land']];
     rows.multi = 0;
     starts.forEach(function (s, i) {
       var rec = L.slice(s, i + 1 < starts.length ? starts[i + 1] : L.length);
@@ -827,7 +827,8 @@
       if (k > 1) rows.multi++;
       var c = indexWhere(rec, /^[A-Z]{2}$/, krI + 1);
       var sc = indexWhere(rec, /^(komplett|maschine|schrumpftunnel)/i, c >= 0 ? c + 2 : krI + 1);
-      rows.push([rec[krI], rec[1], rec[2], rec[3], R[0] || '', k ? R[k] : '', k ? R[2 * k] : '', sc >= 0 ? rec[sc] : '',
+      var dt = /^\d{1,2}\.\d{1,2}\.(\d{4}|\d{2})$/.test(rec[4] || '') ? 4 : -1;   // Datum steht direkt hinter dem Wochentag
+      rows.push([rec[krI], rec[1], rec[2], rec[3], dt >= 0 ? rec[dt] : '', R[0] || '', k ? R[k] : '', k ? R[2 * k] : '', sc >= 0 ? rec[sc] : '',
         c >= 0 ? rec[c] : '']);
     });
     return rows;
@@ -845,6 +846,7 @@
     h = String(h || '').toLowerCase().trim();
     if (/^kr(\W|$)|kr-?nr/.test(h)) return 'kr';
     if (h === 'tag') return 'day';
+    if (/^datum|^date$/.test(h)) return 'date';
     if (/^jahr/.test(h)) return 'year';
     if (h === 'kw') return 'kw';
     if (/^spot|^halle/.test(h)) return 'hall';
@@ -905,7 +907,17 @@
     var usa = g('country').trim().toUpperCase() === 'US';
     var yr = (g('year').match(/\d{4}/) || [''])[0], kw = (g('kw').match(/\d{1,2}/) || [''])[0];
     var week = yr && kw ? yr + '-W' + (kw.length < 2 ? '0' : '') + kw : viewWeek;
-    return { week: week, kr: kr, day: ci.day >= 0 ? parseDay(g('day')) || dayDef : dayDef, hall: hall, pos: pos, scope: scope, usa: usa, from: from };
+    var day = ci.day >= 0 ? parseDay(g('day')) || dayDef : dayDef;
+    // Ein Datum hat Vorrang: es legt Kalenderwoche und Wochentag eindeutig fest (mehrere Wochen haben jeweils einen Montag)
+    var dm = ci.date >= 0 ? g('date').match(/(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})/) : null;
+    if (dm) {
+      var dy = +dm[3] < 100 ? +dm[3] + 2000 : +dm[3], dd = new Date(dy, +dm[2] - 1, +dm[1]);
+      if (dd.getFullYear() === dy && dd.getMonth() === +dm[2] - 1 && dd.getDate() === +dm[1]) {
+        week = Util.isoWeek(dd);
+        if (dd.getDay() >= 1 && dd.getDay() <= 5) day = dd.getDay();
+      }
+    }
+    return { week: week, kr: kr, day: day, hall: hall, pos: pos, scope: scope, usa: usa, from: from };
   }
   function roleIdx() {
     var ci = {};
@@ -933,6 +945,8 @@
     return Halls.label(hall, pos);
   }
   function kwText(w) { return 'KW ' + w.split('-W')[1]; }
+  // z.B. "Mo 26.10. (KW 44)" – das Datum macht gleiche Wochentage verschiedener Wochen unterscheidbar
+  function dayText(w, d) { return Util.DAYS[d].slice(0, 2) + ' ' + Util.dayDate(w, d) + ' (' + kwText(w) + ')'; }
   // Vergleicht die Liste mit dem gespeicherten Stand: neu, verschoben, geändert, entfallen
   function diffItems(items) {
     var tasks = Store.get().tasks, byKr = {}, weeks = {}, inList = {};
@@ -946,8 +960,7 @@
       var ex = byKr[x.kr];
       if (!ex) { x.how = 'neu'; res.neu.push(x); return; }
       var e = ex[0], moved = [], ch = [];
-      if (e.week !== x.week) moved.push(kwText(e.week) + ' → ' + kwText(x.week));
-      if (e.day !== x.day) moved.push(Util.DAYS[e.day].slice(0, 2) + ' → ' + Util.DAYS[x.day].slice(0, 2));
+      if (e.week !== x.week || e.day !== x.day) moved.push(dayText(e.week, e.day) + ' → ' + dayText(x.week, x.day));
       if ((e.pos || '') !== (x.pos || '') || (e.pos && (e.hall || '') !== x.hallEff)) {
         ch.push('Position ' + posText(e.hall, e.pos) + ' → ' + posText(x.hallEff, x.pos));
       }
@@ -977,7 +990,7 @@
       html += '<ul class="diff-list">' +
         d.moved.map(function (x) { return li('b-mov', x.kr, 'verschoben: ' + x.chg); }).join('') +
         d.chg.map(function (x) { return li('b-chg', x.kr, 'geändert: ' + x.chg); }).join('') +
-        d.gone.map(function (t) { return li('b-gone', t.kr, 'steht nicht mehr in der Liste (' + kwText(t.week) + ', ' + Util.DAYS[t.day].slice(0, 2) + ')'); }).join('') +
+        d.gone.map(function (t) { return li('b-gone', t.kr, 'steht nicht mehr in der Liste (' + dayText(t.week, t.day) + ')'); }).join('') +
         '</ul>';
     }
     $('impDiff').innerHTML = html;
@@ -1009,7 +1022,7 @@
     if (!ok) { $('impInfo').textContent = 'Bitte über der KR-Spalte „KR" wählen.'; $('impDiff').innerHTML = ''; return; }
     var c = collect(), weeks = {};
     c.items.forEach(function (x) { weeks[x.week] = 1; });
-    $('impInfo').textContent = c.items.length + ' KR (' + Object.keys(weeks).sort().map(kwText).join(', ') + ') · ' +
+    $('impInfo').textContent = c.items.length + ' KR (' + Object.keys(weeks).sort().map(function (w) { return kwText(w) + ' ' + Util.dayDate(w, 1) + '–' + Util.dayDate(w, 5); }).join(', ') + ') · ' +
       c.hall + ' andere Halle · ' + c.items.filter(function (x) { return x.from; }).length + ' aus Halle 3 (ohne Position) · ' + c.scope + ' ohne Maschine/komplett (übersprungen) · ' +
       c.items.filter(function (x) { return x.usa; }).length + ' USA' +
       (rows.multi ? ' · ' + rows.multi + ' mit mehreren Spots (erster wird genommen)' : '') +
