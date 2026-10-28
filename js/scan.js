@@ -8,7 +8,7 @@
   var recent = [];
   try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { recent = []; }
   var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash', 'ueber'];
-  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash'];
+  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash', 'chat'];
 
   // Name, Funktion und Rechte kommen vom QR-Code (?q=ID, im Dashboard gepflegt).
   // n/f/p im Link sind nur Rückfall, falls die Daten nicht aus der Datenbank kommen.
@@ -148,7 +148,7 @@
   function renderInbox(state) {
     var rd = readSet();
     var ms = Object.keys(state.msgs).map(function (id) { return Object.assign({ id: id }, state.msgs[id]); })
-      .filter(function (m) { return m.type === 'dm' && (m.to === 'all' || (qid && m.to === qid)) && Date.now() - m.t < 1728e5 && !rd[m.id]; })
+      .filter(function (m) { return m.type === 'dm' && (m.to === 'all' || (qid && m.to === qid)) && !(qid && m.fq === qid) && Date.now() - m.t < 1728e5 && !rd[m.id]; })
       .sort(function (a, b) { return b.t - a.t; });
     if (inboxSeen) {
       ms.forEach(function (m) { if (!inboxSeen[m.id]) { toast('Nachricht von ' + m.by); notify('Nachricht von ' + m.by, m.text.replace(/^An [^:]*: /, ''), m.id); } });
@@ -169,6 +169,57 @@
     var rf = {}; rf['reads/' + (qid || 'x')] = { by: qr.name, t: Date.now() };
     Store.updateMsg(b.dataset.dm, rf).catch(function () { /* Lesebestätigung ist optional */ });
     renderInbox(Store.get());
+  };
+
+  // ---------- Messenger (für alle QR-Codes immer aktiv) ----------
+  // Empfänger: Dashboard, alle QR-Besitzer oder ein bestimmter QR-Code. Nachrichten an Codes sind type 'dm' (fq = Absender-Code).
+  function isMine(m) { return qid ? m.fq === qid : !!qr && m.by === qr.name && !m.to; }   // ohne QR-ID (Demo) nach Namen
+  function chatTitle(m) { return (m.text || '').replace(/^An [^:]*: /, ''); }
+  function renderChat(state) {
+    if (view !== 'chat') return;
+    var cur = $('chTo').value;
+    var qs = Object.keys(state.qrs).filter(function (id) { return id !== qid; })
+      .map(function (id) { return { id: id, name: state.qrs[id].name, t: state.qrs[id].t }; }).sort(function (a, b) { return a.t - b.t; });
+    var opts = '<option value="">An das Dashboard</option>' + (qs.length ? '<option value="all">An alle QR-Besitzer</option>' : '') +
+      qs.map(function (q) { return '<option value="' + esc(q.id) + '">An ' + esc(q.name) + '</option>'; }).join('');
+    if ($('chTo').dataset.o !== opts) {
+      $('chTo').innerHTML = opts; $('chTo').dataset.o = opts;
+      if ([].some.call($('chTo').options, function (o) { return o.value === cur; })) $('chTo').value = cur;
+    }
+    var mine = qr ? qr.name : '';
+    var ms = Object.keys(state.msgs).map(function (id) { return Object.assign({ id: id }, state.msgs[id]); }).filter(function (m) {
+      if (Date.now() - m.t > 1728e5) return false;
+      if (isMine(m)) return m.type === 'dm' || m.type === 'msg';
+      return m.type === 'dm' && (m.to === 'all' || (qid && m.to === qid));
+    }).sort(function (a, b) { return b.t - a.t; }).slice(0, 40);
+    $('chList').innerHTML = ms.length ? ms.map(function (m) {
+      var out = isMine(m);
+      return '<div class="item' + (out ? ' ok' : ' dm') + '"><b>' + (out ? 'Du' + (m.type === 'msg' ? ' → Dashboard' : '') + (m.type === 'dm' && m.text.indexOf('An ') === 0 ? ' → ' + esc(m.text.slice(3, m.text.indexOf(':'))) : '') : esc(m.by)) + '</b><span>' + esc(chatTitle(m)) + '</span>' +
+        '<span class="meta">' + Util.time(m.t) + (m.reads ? ' · ✔ gelesen von ' + Object.keys(m.reads).map(function (k) { return esc(m.reads[k].by); }).join(', ') : '') + '</span></div>';
+    }).join('') : '<div class="empty">Noch keine Nachrichten.</div>';
+  }
+  $('chGo').onclick = function () {
+    var text = $('chText').value.trim(), to = $('chTo').value;
+    if (!text || !qr) return;
+    var msg;
+    if (to) {
+      var qs = Store.get().qrs, who = to === 'all' ? 'alle QR-Besitzer' : (qs[to] ? qs[to].name : '?');
+      msg = { type: 'dm', by: qr.name, to: to, fq: qid, text: 'An ' + who + ': ' + text };
+    } else {
+      msg = { type: 'msg', by: qr.name, fq: qid, text: text };
+    }
+    $('chGo').disabled = true;
+    Store.addMsg(msg).then(function () {
+      $('chText').value = '';
+      toast('Gesendet');
+      if (to) {
+        var all = Store.get().qrs, targets = to === 'all' ? Object.keys(all).filter(function (id) { return id !== qid; }) : [to];
+        targets.forEach(function (id) { Push.toQr(id, 'Nachricht von ' + qr.name, text); });
+      } else {
+        Push.send('', 'Nachricht von ' + qr.name, text, 3, ['speech_balloon']);
+      }
+      renderChat(Store.get());
+    }).catch(fail).then(function () { $('chGo').disabled = false; });
   };
 
   // ---------- Mobiles Dashboard ----------
@@ -342,6 +393,7 @@
     if (p.podest) v.push(['orders', 'Bestellungen']);
     if (p.solve) v.push(['problems', 'Probleme']);
     if (p.dash) v.push(['dash', 'Dashboard']);
+    v.push(['chat', 'Messenger']);   // für alle QR-Codes immer aktiv
     return v;
   }
   function renderMenu() {
@@ -367,7 +419,7 @@
     var b = e.target.closest('button[data-view]');
     if (!b) return;
     view = b.dataset.view;
-    renderMenu(); renderLists();
+    renderMenu(); renderLists(); renderChat(Store.get());
   };
 
   // ---------- Beipack ----------
@@ -651,6 +703,7 @@
     renderMyUeber(state);
     watchOrders(state);
     renderInbox(state);
+    renderChat(state);
     renderDash(state);
     watchDone(state);
     checkAcks(state);
