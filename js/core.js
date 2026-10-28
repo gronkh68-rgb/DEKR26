@@ -298,7 +298,7 @@ window.Store = (function () {
   var state = norm(null);
   var subs = [];
   var es = null, esTimer = null, lockTimer = null;
-  var locked = false, offline = false, connected = false, label = '', requested = false;
+  var locked = false, offline = false, connected = false, label = '', requested = false, lastBeat = Date.now();
 
   function norm(s) {
     return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
@@ -475,10 +475,12 @@ window.Store = (function () {
         var handler = function (merge) {
           return function (ev) {
             var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+            lastBeat = Date.now();
             if (!connected) { connected = true; offline = false; }
             applyAt(m.path, m.data, merge);
           };
         };
+        es.addEventListener('keep-alive', function () { lastBeat = Date.now(); });
         es.addEventListener('put', handler(false));
         es.addEventListener('patch', handler(true));
         es.addEventListener('auth_revoked', function () { esTimer = setTimeout(startStream, 500); });
@@ -511,6 +513,21 @@ window.Store = (function () {
     start: function () {
       refresh().then(startStream).catch(function () { startStream(); });
       if (remote) {
+        // Handy/App im Hintergrund: Der Live-Stream wird dort vom System angehalten. Beim Zurückkehren (z.B. nach einer ntfy-Meldung)
+        // sofort alles nachladen und neu verbinden; zusätzlich merkt ein Wächter einen stillen Abbruch.
+        var lastWake = 0;
+        var wake = function () {
+          if (locked || Date.now() - lastWake < 3000) return;
+          lastWake = Date.now();
+          refresh().catch(function () {}).then(startStream);
+        };
+        document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') wake(); });
+        window.addEventListener('focus', wake);
+        window.addEventListener('pageshow', wake);
+        window.addEventListener('online', wake);
+        setInterval(function () {
+          if (document.visibilityState === 'visible' && !locked && Date.now() - lastBeat > 75000) { lastBeat = Date.now(); wake(); }
+        }, 20000);
         // Nur wenn der Live-Stream nicht läuft, wird gelegentlich komplett nachgeladen
         setInterval(function () { if (!locked && !connected) refresh().catch(function () {}); }, 30000);
       } else {

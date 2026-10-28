@@ -331,3 +331,39 @@ textarea.full { width: 100%; font-size: 16px; padding: 10px; min-height: 90px; }
 .halltabs[hidden] { display: none; }
 a.btn-sm { display: inline-block; color: var(--accent); border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
 a.btn-sm:hover { border-color: var(--accent); }
+
+/* Karte zum Einzeldruck (feste Farben, unabhängig vom Seiten-Design) */
+.pcard { position: relative; width: 100%; max-width: 330px; margin: 0 auto; padding: 18px 18px 14px; background: #05060b; color: #e8f9ff; border: 2px solid #fcee09;
+  text-align: center; font-family: 'Rajdhani', 'Inter', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.pcard .pc-top { display: flex; justify-content: space-between; align-items: center; margin: -18px -18px 14px; padding: 8px 18px; background: #fcee09; color: #000;
+  font-family: 'Orbitron', 'Inter', sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.pcard .pc-top b { font-size: 18px; font-weight: 900; }
+.pcard .pc-top span { font-size: 9px; font-weight: 700; }
+.pcard .pc-name { font-family: 'Orbitron', 'Inter', sans-serif; font-weight: 900; font-size: 28px; line-height: 1.1; text-transform: uppercase; word-break: break-word; text-shadow: 2px 0 #ff2a55, -2px 0 #00f0ff; }
+.pcard .pc-func { margin: 4px 0 12px; color: #00f0ff; font-size: 16px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.pcard .pc-qr { background: #fff; padding: 10px; margin: 0 auto; width: 78%; border: 3px solid #fcee09; }
+.pcard .pc-qr svg { display: block; width: 100%; height: auto; margin: 0; padding: 0; background: #fff; border-radius: 0; }
+.pcard .pc-scan { margin: 12px 0 6px; color: #fcee09; font-size: 12px; font-weight: 700; letter-spacing: .16em; }
+.pcard .pc-do { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.pcard .pc-do li { border: 1px solid #00f0ff; color: #00f0ff; padding: 1px 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.pcard .pc-foot { color: #7a8a96; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; border-top: 1px dashed #3a3d18; padding-top: 6px; }
+.pcard .pc-c { position: absolute; width: 14px; height: 14px; border: 0 solid #ff2a55; }
+.pcard .c1 { left: -2px; bottom: -2px; border-width: 0 0 3px 3px; } .pcard .c2 { right: -2px; bottom: -2px; border-width: 0 3px 3px 0; }
+.pcard .c3 { left: -2px; top: 34px; border-width: 3px 0 0 3px; } .pcard .c4 { right: -2px; top: 34px; border-width: 3px 3px 0 0; }
+.pcard.light { background: #fff; color: #111; }
+.pcard.light .pc-name { text-shadow: none; }
+.pcard.light .pc-func, .pcard.light .pc-do li { color: #006c78; border-color: #006c78; }
+.pcard.light .pc-scan { color: #111; }
+.pcard.light .pc-foot { color: #555; border-top-color: #bbb; }
+.pcard.light .pc-qr { border-color: #111; }
+@media print {
+  body.print-card .app, body.print-card .toast, body.print-card .modal:not(#cardModal), body.print-card .lockcover, body.print-card #cpBar, body.print-card #cpBoot, body.print-card #cpAlert { display: none !important; }
+  body.print-card #cardModal { position: static; display: block; background: #fff; padding: 0; }
+  body.print-card #cardModal .modal-box { display: block; border: 0; background: #fff; max-width: none; padding: 0; margin: 0; background-image: none; }
+  body.print-card .pcard { width: 105mm; max-width: 100%; box-sizing: border-box; margin: 6mm auto 0; border-width: 4px; break-inside: avoid; }
+  body.print-card .pcard .pc-qr { width: 70%; }
+  body.print-card .pcard .pc-name { font-size: 34px; }
+  body.print-card { background: #fff !important; background-image: none !important; }
+  body.print-card::after { display: none; }
+}
+.qr-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; }

@@ -1117,10 +1117,50 @@
         }).join('') + '</div>' +
         qr.createSvgTag(4, 2) +
         '<div class="no-print qr-links"><a href="' + esc(scanUrl(q)) + '" target="_blank" rel="noopener">Seite am PC testen ↗</a> ' +
+        '<button class="btn-sm" data-card="' + esc(q.id) + '">Karte drucken</button> ' +
         '<button class="btn-sm btn-warn" data-del="' + esc(q.id) + '">Löschen</button></div></div>';
     }).join('');
     renderPodestEdit(state);
   }
+  // Einzelne Karte mit Gestaltung drucken (Name, Funktion, QR-Code, Rechte)
+  var CARD_DO = { report: 'Beipack melden', status: 'Bereit setzen', order: 'Podest bestellen', podest: 'Bestellungen bearbeiten',
+    solve: 'Probleme lösen', dash: 'Mobiles Dashboard', ueber: 'Anfrage Überspielen' };
+  function cardHtml(q) {
+    var qr = qrcode(0, 'M'), pm = permsOf(q);
+    qr.addData(scanUrl(q));
+    qr.make();
+    var dos = Object.keys(CARD_DO).filter(function (k) { return pm[k]; }).map(function (k) { return '<li>' + esc(CARD_DO[k]) + '</li>'; }).join('');
+    return '<div class="pcard' + ($('cardDark').checked ? '' : ' light') + '">' +
+      '<div class="pc-top"><b>DEUKRO26</b><span>BEIPACK-ABHOLUNG</span></div>' +
+      '<div class="pc-name">' + esc(q.name) + '</div>' +
+      (q.func ? '<div class="pc-func">' + esc(q.func) + '</div>' : '<div class="pc-func">&nbsp;</div>') +
+      '<div class="pc-qr">' + qr.createSvgTag(4, 2) + '</div>' +
+      '<div class="pc-scan">&#9654; MIT DER HANDY-KAMERA SCANNEN</div>' +
+      (dos ? '<ul class="pc-do">' + dos + '</ul>' : '') +
+      '<div class="pc-foot">' + esc(location.host) + '</div>' +
+      '<i class="pc-c c1"></i><i class="pc-c c2"></i><i class="pc-c c3"></i><i class="pc-c c4"></i></div>';
+  }
+  var cardId = '';
+  function showCard(id) {
+    var q = Store.get().qrs[id];
+    if (!q) return;
+    cardId = id;
+    $('cardBox').innerHTML = cardHtml(Object.assign({ id: id }, q));
+    $('cardModal').hidden = false;
+  }
+  $('qrGrid').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-card]');
+    if (b) showCard(b.dataset.card);
+  });
+  $('cardDark').onchange = function () { if (cardId) showCard(cardId); };
+  $('cardClose').onclick = function () { $('cardModal').hidden = true; };
+  $('cardPrint').onclick = function () {
+    document.body.classList.add('print-card');
+    var done = function () { document.body.classList.remove('print-card'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+    setTimeout(done, 60000);
+  };
   $('qrOpen').onclick = function () { $('qrModal').hidden = false; renderQr(Store.get()); };
   $('qrClose').onclick = function () { $('qrModal').hidden = true; };
   $('qrPrint').onclick = function () {
