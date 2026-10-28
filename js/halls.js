@@ -45,34 +45,49 @@ var PLAN_H7 = [
 
 // Halle 6 (nachgezeichnet nach Flucht- und Rettungsplan Halle 6.1, Montage EG). Koordinaten = Pixel der Planvorlage.
 var AISLES_H6 = [
-  [190, 318, 15, 230], [205, 545, 445, 45], [598, 390, 52, 555], [598, 390, 1127, 22], [650, 565, 1075, 23],
-  [968, 410, 24, 155], [1715, 390, 20, 360], [190, 865, 415, 23], [190, 888, 1290, 57]
+  [190, 318, 12, 185],                      // schmaler Weg links oben
+  [205, 503, 60, 40], [265, 543, 335, 47],  // Weg zum Notausgang links
+  [596, 389, 52, 495],                      // langer Weg links (senkrecht)
+  [596, 389, 1139, 20],                     // oberer Weg
+  [648, 566, 1087, 20],                     // mittlerer Weg
+  [969, 408, 24, 158],                      // senkrecht zwischen oberem und mittlerem Weg
+  [1713, 389, 22, 360],                     // rechts senkrecht
+  [1625, 568, 12, 140], [1637, 730, 98, 20], // zum Standort
+  [192, 864, 456, 53], [124, 880, 70, 37],  // unten links (Treppe)
+  [648, 887, 770, 61],                      // unten Mitte
+  [575, 917, 25, 60]                        // Ausgang unten
 ];
 
 // Arbeitsflächen [x, y, Breite, Höhe] (zwischen den grünen Fluchtwegen)
 var BLOCKS_H6 = [
-  [205, 322, 393, 223], [125, 590, 473, 275], [650, 322, 1065, 68], [650, 412, 318, 153], [992, 412, 723, 153],
-  [650, 588, 950, 300]
+  [205, 323, 391, 220],     // oben links
+  [125, 592, 465, 270],     // links unten
+  [650, 323, 1063, 66],     // Streifen oben
+  [650, 410, 319, 155],     // oben Mitte links
+  [993, 410, 720, 155],     // oben Mitte rechts
+  [648, 590, 972, 115],     // Mitte oben
+  [648, 705, 768, 180]      // Mitte unten
 ];
 
 var PLAN_H6 = [
-  '<rect class="p-floor" x="120" y="318" width="1530" height="667"/>',
+  '<polygon class="p-floor" points="120,318 1735,318 1735,818 1642,818 1642,985 120,985"/>',
   '<g class="p-aisle">' + AISLES_H6.map(function (a) {
     return '<rect x="' + a[0] + '" y="' + a[1] + '" width="' + a[2] + '" height="' + a[3] + '"/>';
-  }).join('') + '<polygon points="1480,888 1640,715 1640,790 1560,888"/></g>',
+  }).join('') + '<polygon points="1416,888 1580,707 1637,707 1637,770 1442,948 1416,948"/></g>',
   '<g class="p-block">' + BLOCKS_H6.map(function (a) {
     return '<rect x="' + a[0] + '" y="' + a[1] + '" width="' + a[2] + '" height="' + a[3] + '"/>';
   }).join('') + '</g>',
-  // Räume (Sozial, Sanitär, Eingänge)
+  // Räume (Sozial, Sanitär), Anbau
   '<g class="p-office">',
-  '<rect x="125" y="318" width="65" height="230"/>',
-  '<rect x="125" y="500" width="115" height="95"/>',
-  '<rect x="120" y="945" width="320" height="40"/>',
-  '<rect x="1480" y="945" width="170" height="40"/>',
-  '<rect x="1620" y="590" width="95" height="155"/>',
-  '<rect x="1650" y="330" width="195" height="490"/>',
+  '<rect x="125" y="318" width="65" height="180"/>',
+  '<rect x="125" y="522" width="140" height="78"/>',
+  '<rect x="122" y="917" width="453" height="60"/>',
+  '<rect x="600" y="948" width="816" height="29"/>',
+  '<rect x="1476" y="911" width="166" height="74"/>',
+  '<rect x="1637" y="590" width="76" height="140"/>',
+  '<rect x="1735" y="322" width="115" height="500"/>',
   '</g>',
-  '<text class="p-t" x="1748" y="590" text-anchor="middle">Anbau</text>'
+  '<text class="p-t" x="1792" y="590" text-anchor="middle">Anbau</text>'
 ].join('');
 
 // Jede n-te Spalte behalten (z.B. 3, 6, 9, ...), alle anderen ausblenden
@@ -97,13 +112,13 @@ window.DEKR_HALLS = [
   },
   {
     id: 'H2', name: 'Halle 6', short: '6',
-    vb: '100 296 1770 720',
+    vb: '100 296 1770 700',
     plan: PLAN_H6,
     aisles: AISLES_H6,
     blocks: BLOCKS_H6,
     // Annahme: Buchstaben A bis Z von oben nach unten, Nummern 1 bis 49 von links nach rechts (Feinabstimmung im Admin-Modus)
-    grid: { x: 125, y: 322, w: 1525, h: 566, rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49,
-      bands: [[322, 243, 'ABCDEFGHIJKL'], [588, 300, 'MNOPQRSTUVWXYZ']] }
+    grid: { x: 125, y: 323, w: 1588, h: 562, rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49,
+      bands: [[323, 242, 'ABCDEFGHIJKL'], [588, 297, 'MNOPQRSTUVWXYZ']] }
   }
 ];
 
