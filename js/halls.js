@@ -43,6 +43,38 @@ var PLAN_H7 = [
   '<text class="p-t" x="1634" y="820" text-anchor="middle">Lager</text>'
 ].join('');
 
+// Halle 6 (nachgezeichnet nach Flucht- und Rettungsplan Halle 6.1, Montage EG). Koordinaten = Pixel der Planvorlage.
+var AISLES_H6 = [
+  [190, 318, 15, 230], [205, 545, 445, 45], [598, 390, 52, 555], [598, 390, 1127, 22], [650, 565, 1075, 23],
+  [968, 410, 24, 155], [1715, 390, 20, 360], [190, 865, 415, 23], [190, 888, 1290, 57]
+];
+
+// Arbeitsflächen [x, y, Breite, Höhe] (zwischen den grünen Fluchtwegen)
+var BLOCKS_H6 = [
+  [205, 322, 393, 223], [125, 590, 473, 275], [650, 322, 1065, 68], [650, 412, 318, 153], [992, 412, 723, 153],
+  [650, 588, 950, 300]
+];
+
+var PLAN_H6 = [
+  '<rect class="p-floor" x="120" y="318" width="1530" height="667"/>',
+  '<g class="p-aisle">' + AISLES_H6.map(function (a) {
+    return '<rect x="' + a[0] + '" y="' + a[1] + '" width="' + a[2] + '" height="' + a[3] + '"/>';
+  }).join('') + '<polygon points="1480,888 1640,715 1640,790 1560,888"/></g>',
+  '<g class="p-block">' + BLOCKS_H6.map(function (a) {
+    return '<rect x="' + a[0] + '" y="' + a[1] + '" width="' + a[2] + '" height="' + a[3] + '"/>';
+  }).join('') + '</g>',
+  // Räume (Sozial, Sanitär, Eingänge)
+  '<g class="p-office">',
+  '<rect x="125" y="318" width="65" height="230"/>',
+  '<rect x="125" y="500" width="115" height="95"/>',
+  '<rect x="120" y="945" width="320" height="40"/>',
+  '<rect x="1480" y="945" width="170" height="40"/>',
+  '<rect x="1620" y="590" width="95" height="155"/>',
+  '<rect x="1650" y="330" width="195" height="490"/>',
+  '</g>',
+  '<text class="p-t" x="1748" y="590" text-anchor="middle">Anbau</text>'
+].join('');
+
 // Jede n-te Spalte behalten (z.B. 3, 6, 9, ...), alle anderen ausblenden
 function everyNth(cols, n) {
   var off = {};
@@ -63,7 +95,16 @@ window.DEKR_HALLS = [
     grid: { x: 215, y: 310, w: 1330, h: 790, rows: 'BFKNPTYZ', cols: 49,
       bands: [[308, 172, 'BF'], [520, 213, 'KN'], [775, 173, 'PTY'], [990, 113, 'Z']] }
   },
-  { id: 'H2', name: 'Halle 6', short: '6', rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49 } // Platzhalter-Raster bis zum Plan
+  {
+    id: 'H2', name: 'Halle 6', short: '6',
+    vb: '100 296 1770 720',
+    plan: PLAN_H6,
+    aisles: AISLES_H6,
+    blocks: BLOCKS_H6,
+    // Annahme: Buchstaben A bis Z von oben nach unten, Nummern 1 bis 49 von links nach rechts (Feinabstimmung im Admin-Modus)
+    grid: { x: 125, y: 322, w: 1525, h: 566, rows: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', cols: 49,
+      bands: [[322, 243, 'ABCDEFGHIJKL'], [588, 300, 'MNOPQRSTUVWXYZ']] }
+  }
 ];
 
 window.Halls = (function () {
