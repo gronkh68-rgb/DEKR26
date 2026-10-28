@@ -226,13 +226,19 @@
     ov.id = 'cpHud';
     ov.innerHTML = '<i class="scan"></i><b class="c1"></b><b class="c2"></b><b class="c3"></b><b class="c4"></b>';
     par.appendChild(ov);
+    var last = '';
     function fit() {
+      var v = map.offsetLeft + ',' + map.offsetTop + ',' + map.offsetWidth + ',' + map.offsetHeight;
+      if (v === last) return;
+      last = v;
       ov.style.left = map.offsetLeft + 'px'; ov.style.top = map.offsetTop + 'px';
       ov.style.width = map.offsetWidth + 'px'; ov.style.height = map.offsetHeight + 'px';
     }
     fit();
+    // Größe und Lage prüfen: Layout kann sich ohne Größenänderung verschieben (Alarm-Band, Schriften, Zoom)
     if (window.ResizeObserver) { var ro = new ResizeObserver(fit); ro.observe(map); ro.observe(par); }
     window.addEventListener('resize', fit);
+    setInterval(fit, 300);
   }
 
   document.addEventListener('DOMContentLoaded', function () {
