@@ -1131,13 +1131,16 @@
     qr.make();
     var dos = Object.keys(CARD_DO).filter(function (k) { return pm[k]; }).map(function (k) { return '<li>' + esc(CARD_DO[k]) + '</li>'; }).join('');
     return '<div class="pcard' + ($('cardDark').checked ? '' : ' light') + '">' +
+      '<svg class="pc-frame" viewBox="0 0 100 140" preserveAspectRatio="none" aria-hidden="true"><polygon points="1,1 88,1 99,12 99,139 12,139 1,128" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>' +
       '<div class="pc-top"><b>DEUKRO26</b><span>BEIPACK-ABHOLUNG</span></div>' +
+      '<div class="pc-hz"></div>' +
       '<div class="pc-name">' + esc(q.name) + '</div>' +
       (q.func ? '<div class="pc-func">' + esc(q.func) + '</div>' : '<div class="pc-func">&nbsp;</div>') +
       '<div class="pc-qr">' + qr.createSvgTag(4, 2) + '</div>' +
       '<div class="pc-scan">&#9654; MIT DER HANDY-KAMERA SCANNEN</div>' +
       (dos ? '<ul class="pc-do">' + dos + '</ul>' : '') +
-      '<div class="pc-foot">' + esc(location.host) + '</div>' +
+      '<div class="pc-bar"></div>' +
+      '<div class="pc-foot"><span>ID-' + esc(String(q.id || '').slice(-6).toUpperCase()) + '</span><span>' + esc(location.host) + '</span></div>' +
       '<i class="pc-c c1"></i><i class="pc-c c2"></i><i class="pc-c c3"></i><i class="pc-c c4"></i></div>';
   }
   var cardId = '';

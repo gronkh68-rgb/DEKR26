@@ -350,15 +350,28 @@ a.btn-sm:hover { border-color: var(--accent); }
 .pcard .pc-c { position: absolute; width: 14px; height: 14px; border: 0 solid #ff2a55; }
 .pcard .c1 { left: -2px; bottom: -2px; border-width: 0 0 3px 3px; } .pcard .c2 { right: -2px; bottom: -2px; border-width: 0 3px 3px 0; }
 .pcard .c3 { left: -2px; top: 34px; border-width: 3px 0 0 3px; } .pcard .c4 { right: -2px; top: 34px; border-width: 3px 3px 0 0; }
-.pcard.light { background: #fff; color: #111; border: 2px solid #111; }
-.pcard.light .pc-top { background: transparent; color: #111; border-bottom: 3px solid #111; }
-.pcard.light .pc-name { text-shadow: none; }
-.pcard.light .pc-func { color: #333; }
-.pcard.light .pc-do li { color: #222; border-color: #666; }
+.pc-frame, .pc-hz, .pc-bar { display: none; }
+.pcard .pc-foot { display: flex; justify-content: space-between; }
+/* Helle Karte: nur dünne Linien und kleine Farbakzente, keine gefüllten Flächen (spart Tinte) */
+.pcard.light { background: #fff; color: #111; border: 0; padding: 22px 20px 14px; --acc: #d4b800; --cy: #00899a; --rd: #e0204a; }
+.pcard.light .pc-frame { display: block; position: absolute; inset: 0; width: 100%; height: 100%; color: #111; pointer-events: none; }
+.pcard.light .pc-top { background: transparent; color: #111; margin: 0 0 8px; padding: 0 0 6px; border-bottom: 1px solid #111; }
+.pcard.light .pc-top b { font-size: 19px; }
+.pcard.light .pc-top b::before { content: '//'; color: var(--acc); margin-right: 5px; }
+.pcard.light .pc-hz { display: block; height: 6px; margin: 0 0 14px; background: repeating-linear-gradient(-45deg, var(--acc) 0 2px, transparent 2px 7px); }
+.pcard.light .pc-name { text-shadow: 1.5px 0 var(--rd), -1.5px 0 var(--cy); }
+.pcard.light .pc-func { color: var(--cy); }
+.pcard.light .pc-func::before { content: '[ '; color: #111; } .pcard.light .pc-func::after { content: ' ]'; color: #111; }
+.pcard.light .pc-qr { background: #fff; border: 0; padding: 12px; position: relative;
+  background-image: linear-gradient(#111,#111), linear-gradient(#111,#111), linear-gradient(#111,#111), linear-gradient(#111,#111), linear-gradient(#111,#111), linear-gradient(#111,#111), linear-gradient(#111,#111), linear-gradient(#111,#111);
+  background-size: 22px 3px, 3px 22px, 22px 3px, 3px 22px, 22px 3px, 3px 22px, 22px 3px, 3px 22px;
+  background-position: 0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%; background-repeat: no-repeat; }
 .pcard.light .pc-scan { color: #111; }
-.pcard.light .pc-foot { color: #555; border-top-color: #aaa; }
-.pcard.light .pc-qr { border: 2px solid #111; }
-.pcard.light .pc-c { border-color: #111; }
+.pcard.light .pc-scan::first-letter { color: var(--rd); }
+.pcard.light .pc-do li { color: var(--cy); border: 1px solid var(--cy); clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px); padding: 2px 9px; }
+.pcard.light .pc-bar { display: block; height: 14px; margin: 4px 0 6px; background: repeating-linear-gradient(90deg, #111 0 2px, transparent 2px 4px, #111 4px 5px, transparent 5px 9px, #111 9px 12px, transparent 12px 14px); }
+.pcard.light .pc-foot { color: #555; border-top: 0; padding-top: 0; }
+.pcard.light .pc-c { display: none; }
 @media print {
   body.print-card .app, body.print-card .toast, body.print-card .modal:not(#cardModal), body.print-card .lockcover, body.print-card #cpBar, body.print-card #cpBoot, body.print-card #cpAlert { display: none !important; }
   body.print-card #cardModal { position: static; display: block; background: #fff; padding: 0; }
