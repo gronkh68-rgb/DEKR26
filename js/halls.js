@@ -123,11 +123,12 @@ window.DEKR_HALLS = [
     plan: PLAN_H6,
     aisles: AISLES_H6,
     blocks: BLOCKS_H6,
-    // Nummern steigen von rechts nach links, ab 6 in 3er-Schritten; Buchstaben von unten nach oben D F I K N P S
-    // (Zeilen von oben nach unten: S P N K I F D). Positionen aus der Liste, die nicht in den Schritten liegen, werden trotzdem gezeigt.
-    layout: { off: everyFrom(49, 6, 3) },
+    // Nummern steigen von rechts nach links, ab 6 in 3er-Schritten. Links vom langen Weg gibt es nur 39 (direkt am Weg) und 42,
+    // 36 liegt im Weg. Positionen aus der Liste, die nicht in den Schritten liegen, werden trotzdem gezeigt.
+    // Zeilen von oben nach unten: S | P N | K I | F D (Buchstaben von unten nach oben D F I K N P S), je Gruppe eine Arbeitsfläche.
+    layout: { off: Object.assign(everyFrom(49, 6, 3), { c36: 1, c45: 1, c48: 1 }), cols: { c39: 81, c42: 81 } },
     grid: { x: 125, y: 323, w: 1588, h: 562, rows: 'SPNKIFD', cols: 49, rev: true,
-      bands: [[323, 242, 'SPN'], [588, 297, 'KIFD']] }
+      bands: [[323, 66, 'S'], [410, 133, 'PN'], [590, 115, 'KI'], [705, 157, 'FD']] }
   }
 ];
 
