@@ -12,13 +12,15 @@
     document.documentElement.setAttribute('data-theme', t);
     if (document.body) { bioEyes(t === 'bio'); arcFx(t === 'arc'); }
   }
-  // Anomalie-Design (Arcane Staffel 2): schwebende Splitter, ein drehender Wirbel und ein Licht, das dem Mauszeiger folgt
-  var fxBox = null, rift = null, fxMove = null, fxQueued = false;
+  // Anomalie-Design (Arcane Staffel 2): schillernde Seifenblasen, die schwebende Kugel und ein Licht, das dem Mauszeiger folgt
+  var fxBox = null, rift = null, foam = null, foam2 = null, fxMove = null, fxQueued = false;
   function arcFx(on) {
     if (!on) {
       if (fxBox && fxBox.parentNode) fxBox.parentNode.removeChild(fxBox);
       if (rift && rift.parentNode) rift.parentNode.removeChild(rift);
-      fxBox = null; rift = null;
+      if (foam && foam.parentNode) foam.parentNode.removeChild(foam);
+      if (foam2 && foam2.parentNode) foam2.parentNode.removeChild(foam2);
+      fxBox = null; rift = null; foam = null; foam2 = null;
       if (fxMove) { window.removeEventListener('pointermove', fxMove); fxMove = null; }
       return;
     }
@@ -26,14 +28,19 @@
     fxBox = document.createElement('div');
     fxBox.id = 'arcFx';
     fxBox.setAttribute('aria-hidden', 'true');
-    var cols = ['#c04bff', '#ff4fd8', '#4deeff', '#f0d9ff'], shapes = ['polygon(50% 0,100% 100%,0 80%)', 'polygon(20% 0,100% 30%,70% 100%,0 70%)', 'polygon(0 20%,60% 0,100% 60%,40% 100%)'];
     var h = '';
-    for (var i = 0; i < 16; i++) {
-      var s = 8 + Math.round(Math.random() * 26);
-      h += '<i style="left:' + Math.round(Math.random() * 100) + '%;width:' + s + 'px;height:' + Math.round(s * (.8 + Math.random() * .8)) + 'px;background:' + cols[i % cols.length] +
-        ';clip-path:' + shapes[i % shapes.length] + ';animation-duration:' + (12 + Math.round(Math.random() * 16)) + 's;animation-delay:-' + Math.round(Math.random() * 26) + 's"></i>';
+    for (var i = 0; i < 18; i++) {
+      var s = 10 + Math.round(Math.random() * 40);
+      h += '<i style="left:' + Math.round(Math.random() * 100) + '%;width:' + s + 'px;height:' + s + 'px;animation-duration:' + (14 + Math.round(Math.random() * 18)) +
+        's;animation-delay:-' + Math.round(Math.random() * 30) + 's"></i>';
     }
     fxBox.innerHTML = h;
+    foam = document.createElement('b');
+    foam.id = 'arcFoam';
+    document.body.appendChild(foam);
+    foam2 = document.createElement('b');
+    foam2.id = 'arcFoam2';
+    document.body.appendChild(foam2);
     rift = document.createElement('b');
     rift.id = 'arcRift';
     document.body.appendChild(rift);

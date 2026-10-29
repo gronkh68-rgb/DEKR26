@@ -1,115 +1,101 @@
-/* Arcane Staffel 2 – die Anomalie: schwarzer Riss mit violettem und magentafarbenem Leuchten, gesplittertes Glas, scharfe Kanten, Zeitverzerrung */
+/* Anomalie (Arcane Staffel 2): heller, milchig-mintfarbener Raum, dunkle pflaumenfarbene Netzstruktur mit ovalen Löchern,
+   schillernde Ränder wie Seifenhaut (Rosa, Gelb, Türkis, Violett). Basis: Referenzbilder der Anomalie. */
+@property --ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 :root {
-  --bg: #07030f; --panel: #12071f; --panel2: #1b0b2e; --line: #4a1a78;
-  --accent: #c04bff; --green: #7dffc4; --orange: #ff9a52; --red: #ff2d6f;
-  --text: #f0e6ff; --dim: #9a84bd; --gold: #f2d4ff; --shimmer: #ff4fd8;
+  --bg: #eef9f4; --panel: #ffffff; --panel2: #f3fbf8; --line: #cdb9d4;
+  --accent: #6b2e5e; --green: #0ea58f; --orange: #ee8240; --red: #e0305f;
+  --text: #2b1631; --dim: #7d6a88; --plum: #4a2a40; --shimmer: #ff7aa8;
+  --irid: conic-gradient(from var(--ang), #ff7aa8, #ffd36a, #6de3d5, #b79bff, #ff7aa8);
 }
+html { background: #eef9f4; }
 body {
-  background-color: #07030f; color: var(--text); font-family: 'Inter', system-ui, sans-serif;
-  background-image: radial-gradient(ellipse at 88% -8%, rgba(192,75,255,.30), transparent 52%), radial-gradient(ellipse at 0% 110%, rgba(255,79,216,.18), transparent 55%), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420' fill='none' stroke='%23ff4fd8' stroke-linecap='round' stroke-linejoin='round'><g stroke-opacity='.16' stroke-width='1.3'><path d='M210 210 L168 150 L176 92 L132 40 L140 0'/><path d='M168 150 L96 138 L60 86 L0 70'/><path d='M210 210 L290 182 L330 120 L420 104'/><path d='M290 182 L322 232 L398 250 L420 300'/><path d='M210 210 L240 296 L212 352 L250 420'/><path d='M240 296 L170 318 L120 380 L100 420'/><path d='M210 210 L130 246 L60 232 L0 262'/><path d='M130 246 L110 300 L40 330 L20 420'/></g><g stroke-opacity='.08' stroke-width='.8'><path d='M176 92 L230 70 L260 20'/><path d='M330 120 L360 60 L400 30'/><path d='M96 138 L110 190 L40 210'/><path d='M322 232 L350 290 L330 350'/></g></svg>");
+  color: var(--text); font-family: 'Inter', system-ui, sans-serif;
+  background-color: #eef9f4;
+  background-image: radial-gradient(ellipse at 50% 35%, #ffffff 0, #f4fcf8 45%, #dff3ec 100%);
   background-attachment: fixed;
 }
-/* Der Riss: ein langsam drehender Wirbel oben rechts, Licht am Mauszeiger */
-body::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background: radial-gradient(circle 300px at var(--mx, 70%) var(--my, 30%), rgba(255,79,216,.14), transparent 70%), radial-gradient(circle 560px at calc(100% - var(--mx, 70%)) calc(100% - var(--my, 30%)), rgba(192,75,255,.10), transparent 70%);
-  animation: anoBreath 5s ease-in-out infinite alternate; }
-@keyframes anoBreath { from { opacity: .6; } to { opacity: 1; } }
-body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 99; background: radial-gradient(ellipse at center, transparent 68%, rgba(0,0,0,.38)); }
+/* Netz aus dunkler Membran in zwei Ecken, weich ausgeblendet */
+#arcFoam2, #arcFoam { position: fixed; pointer-events: none; z-index: 0; width: 600px; height: 600px; opacity: .55; background: url("anomaly-foam.svg") center / cover no-repeat; }
+#arcFoam2 { right: -300px; bottom: -300px; -webkit-mask: radial-gradient(circle at 36% 36%, #000 0, #000 22%, transparent 66%); mask: radial-gradient(circle at 36% 36%, #000 0, #000 22%, transparent 66%); }
+#arcFoam { left: -300px; top: -300px; -webkit-mask: radial-gradient(circle at 64% 64%, #000 0, #000 22%, transparent 66%); mask: radial-gradient(circle at 64% 64%, #000 0, #000 22%, transparent 66%); }
+body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 99; background: radial-gradient(circle 420px at var(--mx, 70%) var(--my, 30%), rgba(255,122,168,.10), transparent 70%); }
 .app, .mobile { position: relative; z-index: 1; }
-h1, h2, h3, .orb, .col-title, .tab, .daychip { font-family: 'Rajdhani', 'Inter', sans-serif; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
-/* Titel mit Zeitverzerrung (Versatz in Magenta und Cyan, kurzes Zucken) */
-.top h1, .mobile h1, .map-head h2 { color: var(--gold); text-shadow: 2px 0 rgba(255,45,111,.7), -2px 0 rgba(77,238,255,.6); animation: anoGlitch 7s steps(1) infinite; }
-@keyframes anoGlitch { 0%, 93%, 100% { transform: none; } 94% { transform: translate(-3px, 0) skewX(-6deg); } 95% { transform: translate(3px, 1px); } 96% { transform: none; } 97% { transform: translate(-2px, -1px) skewX(4deg); } 98% { transform: none; } }
-/* Kopfzeile: schwarzer Balken mit leuchtender Bruchlinie und Anomalie-Kern */
-.top { background: linear-gradient(90deg, #0d0418, #1a0830 60%, #0d0418); border-bottom: 2px solid #c04bff; box-shadow: 0 0 22px rgba(192,75,255,.35), 0 2px 0 rgba(255,79,216,.5); position: relative; }
-.top::after { content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: linear-gradient(90deg, transparent, #ff4fd8 30%, #fff 50%, #c04bff 70%, transparent); background-size: 200% 100%; animation: anoCrack 4s linear infinite; }
-@keyframes anoCrack { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-.top h1::before { content: ''; display: inline-block; width: 26px; height: 26px; margin-right: 12px; vertical-align: -8px; border-radius: 50%;
-  background: radial-gradient(circle, #fff 0 12%, transparent 34%), conic-gradient(from 0deg, #4deeff, #8a4bff, #ff4fd8, #f2ff8a, #4deeff);
-  box-shadow: 0 0 16px #8a4bff, 0 0 30px rgba(77,238,255,.5); animation: anoSpin 5s linear infinite, anoHue 8s linear infinite; }
-@keyframes anoSpin { to { transform: rotate(360deg); } }
-.tag { border-radius: 0; border: 1px solid #c04bff; color: #e6bdff; background: rgba(192,75,255,.08); clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 3px 16px; }
-.tag.demo { border-color: var(--red); color: var(--red); }
-/* Panels: gesplitterte Kanten, zwei große und zwei kleine Brüche */
-.card, .item, .msg, .modal-box, .box, .menu-btn, .chat-row { border-radius: 0; border: 1px solid #4a1a78;
-  background-color: #12071f; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420' fill='none' stroke='%23ff4fd8' stroke-linecap='round' stroke-linejoin='round'><g stroke-opacity='.16' stroke-width='1.3'><path d='M210 210 L168 150 L176 92 L132 40 L140 0'/><path d='M168 150 L96 138 L60 86 L0 70'/><path d='M210 210 L290 182 L330 120 L420 104'/><path d='M290 182 L322 232 L398 250 L420 300'/><path d='M210 210 L240 296 L212 352 L250 420'/><path d='M240 296 L170 318 L120 380 L100 420'/><path d='M210 210 L130 246 L60 232 L0 262'/><path d='M130 246 L110 300 L40 330 L20 420'/></g><g stroke-opacity='.08' stroke-width='.8'><path d='M176 92 L230 70 L260 20'/><path d='M330 120 L360 60 L400 30'/><path d='M96 138 L110 190 L40 210'/><path d='M322 232 L350 290 L330 350'/></g></svg>"), linear-gradient(155deg, #240c3c 0%, #0d0518 72%); background-size: 420px 420px, 100% 100%;
-  box-shadow: inset 0 0 0 1px rgba(255,79,216,.10), inset 0 0 30px rgba(192,75,255,.08);
-  clip-path: polygon(0 9px, 22px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 26px) 100%, 0 100%); }
-.card:hover { border-color: #ff4fd8; box-shadow: inset 0 0 0 1px rgba(255,79,216,.5), 0 0 18px rgba(255,79,216,.45); }
-.card.ok { border-left: 4px solid var(--green); } .card.open { border-left: 4px solid var(--orange); } .card.closed { border-left: 4px solid var(--dim); }
-.col-title { color: var(--gold); border-bottom: 1px solid #4a1a78; padding-bottom: 4px; }
-.col-title span::before { content: '◢ '; color: var(--shimmer); }
-.day.today .day-h { background: linear-gradient(90deg, #6a12b8, #c04bff 50%, #ff4fd8); color: #fff; padding: 3px 16px; clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%); text-shadow: 1px 0 rgba(0,0,0,.4); }
-.day.today .day-h .cnt { color: #fff; }
-.kr-n { font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: .09em; }
-/* Knöpfe: Splitterform mit Riss-Glanz */
-button, input, select, textarea { border-radius: 0; background: #14082a; border: 1px solid #4a1a78; color: var(--text); }
-input:focus, select:focus, textarea:focus { border-color: var(--shimmer); box-shadow: 0 0 14px rgba(255,79,216,.5); }
-button { position: relative; overflow: hidden; font-family: 'Rajdhani', 'Inter', sans-serif; font-weight: 700; letter-spacing: .07em;
-  clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%); padding-left: 16px; padding-right: 16px; transition: color .12s, background .12s, filter .12s, transform .1s; }
-button::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.28) 50%, transparent 58%); transform: translateX(-130%); }
-button:hover:not(:disabled)::before { transform: translateX(130%); transition: transform .5s; }
-button:hover:not(:disabled) { border-color: var(--shimmer); color: #fff; background: linear-gradient(90deg, #2a0a4a, #4b0f7a, #2a0a4a); filter: drop-shadow(0 0 8px rgba(255,79,216,.85)); animation: anoJit .22s steps(2) 1; }
-@keyframes anoJit { 0% { transform: translate(0); } 33% { transform: translate(-2px, 1px) skewX(-4deg); } 66% { transform: translate(2px, -1px) skewX(4deg); } 100% { transform: none; } }
-button:active:not(:disabled) { transform: scale(.95); filter: brightness(1.6); }
-.btn-main, .tab.sel { background: linear-gradient(90deg, #7a14d8, #c04bff 55%, #ff4fd8); color: #fff; border-color: #ff9ae8; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
-.btn-main:hover:not(:disabled), .tab.sel:hover { background: linear-gradient(90deg, #9a2cf0, #d870ff 55%, #ff7fe6); color: #fff; }
-.btn-ok { background: linear-gradient(90deg, #108a62, #7dffc4 55%, #108a62); color: #02150d; border-color: #7dffc4; }
-.btn-ok:hover:not(:disabled) { background: linear-gradient(90deg, #17b085, #b4ffe0 55%, #17b085); color: #02150d; }
-.btn-warn { border-color: var(--red); color: #ff8ab0; }
-.menu-btn.sel { background: linear-gradient(90deg, #7a14d8, #c04bff 55%, #ff4fd8); color: #fff; }
-.rip { position: absolute; border-radius: 50%; pointer-events: none; width: 10px; height: 10px; margin: -5px 0 0 -5px; background: radial-gradient(circle, #fff, rgba(255,79,216,.9) 35%, rgba(192,75,255,.5) 58%, transparent 72%); animation: ripAno .6s ease-out forwards; }
-@keyframes ripAno { to { transform: scale(20); opacity: 0; } }
-.chip { border-radius: 0; border-color: #c04bff; color: #e6bdff; clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); padding-left: 12px; padding-right: 12px; }
-.chip.done { border-color: var(--green); color: var(--green); background: rgba(125,255,196,.08); }
-.badge { border-radius: 0; border-color: #c04bff; color: #e6bdff; } .badge.usa, .badge.prob { border-color: var(--red); color: #ff8ab0; } .badge.kis { border-color: var(--shimmer); color: #ff9ae8; }
-/* Karte: schwarzer Raum, Bruchlinien */
-.map-box { border-radius: 0; background: #05020b; border: 2px solid #c04bff; box-shadow: inset 0 0 60px rgba(192,75,255,.16), 0 0 26px rgba(255,79,216,.28);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420' fill='none' stroke='%23ff4fd8' stroke-linecap='round' stroke-linejoin='round'><g stroke-opacity='.16' stroke-width='1.3'><path d='M210 210 L168 150 L176 92 L132 40 L140 0'/><path d='M168 150 L96 138 L60 86 L0 70'/><path d='M210 210 L290 182 L330 120 L420 104'/><path d='M290 182 L322 232 L398 250 L420 300'/><path d='M210 210 L240 296 L212 352 L250 420'/><path d='M240 296 L170 318 L120 380 L100 420'/><path d='M210 210 L130 246 L60 232 L0 262'/><path d='M130 246 L110 300 L40 330 L20 420'/></g><g stroke-opacity='.08' stroke-width='.8'><path d='M176 92 L230 70 L260 20'/><path d='M330 120 L360 60 L400 30'/><path d='M96 138 L110 190 L40 210'/><path d='M322 232 L350 290 L330 350'/></g></svg>"); background-size: 420px 420px; }
-.p-floor { fill: #06020c; } .p-aisle { fill: rgba(192,75,255,.10); stroke: rgba(255,79,216,.5); stroke-width: 1.5; stroke-dasharray: 2 6; }
-.p-block { fill: #0e0620; stroke: #4a1a78; stroke-width: 2; } .p-office { fill: #170a2a; stroke: #6a1fa0; stroke-width: 2; } .p-t { fill: #9a84bd; }
-svg.map.plan .cell { fill: rgba(192,75,255,.05); stroke: rgba(192,75,255,.16); }
-svg.map.plan .cell.open { fill: rgba(255,154,82,.42); stroke: #ff9a52; filter: drop-shadow(0 0 5px rgba(255,154,82,.8)); }
-svg.map.plan .cell.done { fill: rgba(125,255,196,.42); stroke: #7dffc4; filter: drop-shadow(0 0 8px rgba(125,255,196,.95)); }
-svg.map.plan .cell.sel { stroke: #fff; } svg.map .cell.prob { fill: rgba(255,45,111,.58); stroke: #ff2d6f; filter: drop-shadow(0 0 10px rgba(255,45,111,1)); }
-svg.map.plan .cell.wave { fill: rgba(125,255,196,.55); stroke: #7dffc4; filter: drop-shadow(0 0 12px rgba(192,75,255,1)); }
-.cp-ring { stroke: #c04bff; filter: drop-shadow(0 0 6px #ff4fd8); } .cp-ring.red { stroke: #ff2d6f; filter: drop-shadow(0 0 6px #ff2d6f); }
-.cell-t { fill: #fff; font-family: 'Rajdhani', sans-serif; font-weight: 700; }
-/* Nachrichten, Chat, Hinweise */
-.msg { border-left: 4px solid #c04bff; } .msg.done { border-left-color: var(--green); } .msg.problem { border-left-color: var(--red); }
-.msg.pulse { background-color: rgba(125,255,196,.14); box-shadow: 0 0 18px rgba(125,255,196,.4); animation: none; } .msg.problem.pulse { background-color: rgba(255,45,111,.18); box-shadow: 0 0 18px rgba(255,45,111,.5); }
-.chat-b { border-radius: 0; } .chat-b.own { background: #2a0b4a; border-right: 3px solid #ff4fd8; clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px); }
-.chat-b.other { background: #14082a; border-left: 3px solid #c04bff; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%); }
-.chat-av { border-radius: 0; clip-path: polygon(20% 0, 100% 0, 80% 100%, 0 100%); background: linear-gradient(135deg, #ff4fd8, #6a12b8); color: #fff; } .chat-badge { border-radius: 0; background: var(--green); }
-.chat-day { border-radius: 0; color: var(--shimmer); } .chat-m .tk.seen { color: #ff9ae8; text-shadow: 0 0 6px #ff4fd8; }
-.toast { border-radius: 0; background: #12071f; border: 1px solid #ff4fd8; color: #ffd0f4; box-shadow: 0 0 22px rgba(255,79,216,.45); }
-::-webkit-scrollbar { width: 9px; height: 9px; } ::-webkit-scrollbar-thumb { background: #4a1a78; } ::-webkit-scrollbar-track { background: #08030f; }
-/* Alarm: die Anomalie kippt ins Rot, der Rand zittert */
-body.cp-alert { --accent: #ff2d4a; --line: #5a1020; --gold: #ffc2cc; --shimmer: #ff2d4a; }
-body.cp-alert .top { border-bottom-color: #ff2d4a; box-shadow: 0 0 28px rgba(255,45,74,.55), 0 2px 0 #ff2d4a; animation: anoShake .35s steps(2) infinite; }
-@keyframes anoShake { 0% { transform: translate(0); } 50% { transform: translate(1px, -1px); } 100% { transform: translate(-1px, 1px); } }
-body.cp-alert .map-box { border-color: #ff2d4a; box-shadow: inset 0 0 60px rgba(255,45,74,.25), 0 0 28px rgba(255,45,74,.4); }
-body.cp-alert::before { background: radial-gradient(circle 520px at var(--mx, 70%) var(--my, 30%), rgba(255,45,74,.25), transparent 70%); }
-/* Schwebende Splitter und der Wirbel */
-#arcFx { position: fixed; inset: 0; pointer-events: none; z-index: 96; overflow: hidden; }
-#arcFx i { position: absolute; bottom: -50px; display: block; opacity: 0; animation: anoRise linear infinite; }
-@keyframes anoRise { 0% { transform: translateY(0) rotate(0deg) scale(.6); opacity: 0; } 10% { opacity: .6; } 85% { opacity: .35; } 100% { transform: translateY(-110vh) rotate(300deg) scale(1.1); opacity: 0; } }
-/* Die Anomalie: eine große, kugelförmige, schillernde Masse (ähnlich dem Hexcore), die Farben wechseln ständig */
-#arcRift { position: fixed; z-index: 0; pointer-events: none; right: -150px; top: -150px; width: 520px; height: 520px; border-radius: 50%; bottom: auto; opacity: .8; animation: anoHue 10s linear infinite; }
-#arcRift::before { content: ''; position: absolute; inset: 0; border-radius: 50%; animation: anoSpin 26s linear infinite;
-  background: conic-gradient(from 0deg, #4deeff, #8a4bff, #ff4fd8, #f2ff8a, #4deeff 55%, #8a4bff, #ff4fd8, #4deeff);
-  -webkit-mask: radial-gradient(circle, rgba(0,0,0,.85) 0, #000 28%, rgba(0,0,0,.5) 52%, transparent 70%); mask: radial-gradient(circle, rgba(0,0,0,.85) 0, #000 28%, rgba(0,0,0,.5) 52%, transparent 70%); filter: blur(10px); }
-#arcRift::after { content: ''; position: absolute; inset: 14%; border-radius: 50%; animation: anoSpin 40s linear infinite reverse; opacity: .8;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200' fill='none' stroke='%23ffffff' stroke-opacity='.55' stroke-width='1.2'><path d='M100 0 L200 60 L180 160 L100 200 L20 160 L0 60 Z M100 0 L100 200 M0 60 L200 60 M20 160 L180 160 M0 60 L100 100 L200 60 M20 160 L100 100 L180 160 M100 0 L100 100'/></svg>");
-  background-size: 100% 100%; -webkit-mask: radial-gradient(circle, #000 20%, transparent 68%); mask: radial-gradient(circle, #000 20%, transparent 68%); }
+h1, h2, h3, .orb, .col-title, .daychip { font-family: 'Cinzel', 'Inter', serif; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--plum); }
+.top h1, .mobile h1 { color: var(--plum); text-shadow: 0 1px 0 #fff, 2px 0 rgba(255,122,168,.5), -2px 0 rgba(109,227,213,.5); font-size: 18px; }
+/* Kopfzeile: Milchglas mit schillernder Kante */
+.top { background: rgba(255,255,255,.72); backdrop-filter: blur(8px); border-bottom: 3px solid transparent; border-image: var(--irid) 1; box-shadow: 0 6px 24px rgba(74,42,64,.14); animation: anoAng 9s linear infinite; }
+@keyframes anoAng { to { --ang: 360deg; } }
+.top h1::before { content: ''; display: inline-block; width: 28px; height: 28px; margin-right: 12px; vertical-align: -8px; border-radius: 50%;
+  background: radial-gradient(circle at 36% 32%, #fff 0 10%, transparent 26%), radial-gradient(circle at 50% 50%, #f4fffb 0 38%, #4a2a40 40% 100%); border: 2px solid transparent; box-shadow: 0 0 0 2px rgba(255,122,168,.7), 0 0 14px rgba(109,227,213,.8); animation: anoHue 8s linear infinite; }
 @keyframes anoHue { to { filter: hue-rotate(360deg); } }
-/* Störungen: kurze Bildrisse (Waffen und Technik fallen in der Nähe der Anomalie aus) */
-#arcFx::before, #arcFx::after { content: ''; position: absolute; left: 0; right: 0; height: 7px; opacity: 0; mix-blend-mode: screen; }
-#arcFx::before { background: linear-gradient(90deg, transparent, rgba(77,238,255,.55), rgba(255,79,216,.55), transparent); animation: anoTear 7s steps(1) infinite; }
-#arcFx::after { height: 3px; background: linear-gradient(90deg, rgba(255,79,216,.6), transparent 60%, rgba(77,238,255,.6)); animation: anoTear 9s steps(1) infinite 2.6s; }
-@keyframes anoTear { 0%, 88%, 100% { opacity: 0; top: 20%; } 89% { opacity: 1; top: 31%; } 90% { opacity: 1; top: 62%; transform: translateX(14px); } 91% { opacity: 1; top: 47%; transform: translateX(-20px); } 92% { opacity: 0; } 95% { opacity: 1; top: 78%; } 96% { opacity: 0; } }
-@media (max-width: 700px) { #arcFx i:nth-child(n+8) { display: none; } #arcRift { width: 340px; height: 340px; right: -150px; top: -150px; } }
-.tab { letter-spacing: .04em; font-size: 12px; padding-left: 8px; padding-right: 8px; white-space: nowrap; }
-.tabs { gap: 3px; }
-.top h1 { color: #fff; }
-.tab { font-size: 11px; letter-spacing: .02em; padding-left: 6px; padding-right: 6px; }
+.tag { border-radius: 999px; border: 1px solid #cdb9d4; color: var(--plum); background: rgba(255,255,255,.7); }
+.tag.demo { border-color: var(--red); color: var(--red); }
+/* Karten: abgerundete Blasen mit schillerndem Rand (Rand läuft beim Hover um) */
+.card, .item, .msg, .modal-box, .box, .menu-btn, .chat-row {
+  border: 2px solid transparent; border-radius: 26px 38px 28px 42px / 38px 26px 42px 28px;
+  background: linear-gradient(rgba(255,255,255,.82), rgba(247,252,250,.78)) padding-box, var(--irid) border-box; backdrop-filter: blur(6px);
+  box-shadow: 0 6px 22px rgba(74,42,64,.10); transition: box-shadow .25s; }
+.card:hover, .item:hover, .chat-row:hover { box-shadow: 0 8px 28px rgba(255,122,168,.35), 0 0 0 1px rgba(109,227,213,.5); animation: anoAng 4s linear infinite; }
+.card.ok { box-shadow: 0 6px 22px rgba(14,165,143,.22); } .card.open { box-shadow: 0 6px 22px rgba(238,130,64,.18); } .card.closed { opacity: .7; }
+.col-title { border-bottom: 2px solid transparent; border-image: var(--irid) 1; padding-bottom: 4px; }
+.day.today .day-h { background: linear-gradient(90deg, #4a2a40, #7a3d68); color: #fff; border-radius: 999px; padding: 3px 14px; box-shadow: 0 0 0 2px rgba(255,122,168,.6); }
+.day.today .day-h .cnt { color: #fff; } .day-h { color: var(--plum); }
+.kr-n { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--plum); }
+/* Knöpfe: glänzende Pflaumen-Blasen */
+button, input, select, textarea { border-radius: 999px; color: var(--text); background: rgba(255,255,255,.9); border: 1px solid #cdb9d4; }
+textarea { border-radius: 20px; }
+input:focus, select:focus, textarea:focus { border-color: #ff7aa8; box-shadow: 0 0 0 3px rgba(255,122,168,.25), 0 0 16px rgba(109,227,213,.45); }
+button { position: relative; overflow: hidden; cursor: pointer; font-weight: 600; transition: transform .12s, box-shadow .2s, background .2s, color .2s; }
+button::after { content: ''; position: absolute; left: 12%; right: 12%; top: 6%; height: 38%; border-radius: 50%; background: linear-gradient(rgba(255,255,255,.55), transparent); pointer-events: none; }
+button:hover:not(:disabled) { transform: translateY(-1px) scale(1.03); box-shadow: 0 6px 16px rgba(255,122,168,.45), 0 0 0 2px rgba(109,227,213,.6); border-color: #ff7aa8; }
+button:active:not(:disabled) { transform: scale(.96); }
+.btn-main, .tab.sel, .menu-btn.sel { background: linear-gradient(160deg, #6a3a58, #3c2036); color: #fff; border: 2px solid transparent; background-clip: padding-box; box-shadow: 0 0 0 2px #ff7aa8, 0 4px 14px rgba(74,42,64,.4); }
+.btn-main:hover:not(:disabled), .tab.sel:hover { box-shadow: 0 0 0 2px #6de3d5, 0 6px 18px rgba(255,122,168,.55); color: #fff; }
+.btn-ok { background: linear-gradient(160deg, #3fd1b8, #0ea58f); color: #04302a; border-color: #0ea58f; }
+.btn-warn { border-color: var(--red); color: var(--red); background: rgba(255,255,255,.9); }
+.tab { border-radius: 999px; font-family: 'Inter', sans-serif; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--plum); }
+.rip { position: absolute; border-radius: 50%; pointer-events: none; width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px solid rgba(255,122,168,.9); background: radial-gradient(circle, rgba(255,255,255,.9), rgba(109,227,213,.5) 50%, transparent 70%); animation: ripBub .7s ease-out forwards; }
+@keyframes ripBub { to { transform: scale(20); opacity: 0; } }
+.chip { border-radius: 999px; border: 1px solid #cdb9d4; color: var(--plum); background: rgba(255,255,255,.85); } .chip.done { border-color: var(--green); color: #0b7f6e; background: rgba(14,165,143,.12); } .chip.sel { box-shadow: 0 0 0 2px #ff7aa8; }
+.badge { border-radius: 999px; border-color: #b79bff; color: #5b3d9a; background: rgba(183,155,255,.14); } .badge.usa, .badge.prob { border-color: var(--red); color: var(--red); background: rgba(224,48,95,.1); } .badge.kis { border-color: #ee8240; color: #a8501c; background: rgba(238,130,64,.12); }
+/* Karte: helle Fläche, Löcher/Zellen als Ovale */
+.map-box { border: 2px solid transparent; border-radius: 30px 44px 32px 46px / 44px 30px 46px 32px; background: linear-gradient(rgba(255,255,255,.9), rgba(240,250,246,.9)) padding-box, var(--irid) border-box; box-shadow: 0 8px 30px rgba(74,42,64,.16); }
+.p-floor { fill: #ffffff; } .p-aisle { fill: rgba(109,227,213,.20); stroke: rgba(255,122,168,.55); stroke-width: 1.6; stroke-dasharray: 3 6; }
+.p-block { fill: rgba(74,42,64,.07); stroke: rgba(74,42,64,.38); stroke-width: 2; rx: 14px; } .p-office { fill: rgba(74,42,64,.16); stroke: rgba(74,42,64,.55); stroke-width: 2; rx: 18px; } .p-t { fill: #7d6a88; }
+svg.map .cell { rx: 12px; }
+svg.map.plan .cell { fill: rgba(74,42,64,.04); stroke: rgba(74,42,64,.14); }
+svg.map.plan .cell.open { fill: rgba(238,130,64,.55); stroke: #ee8240; filter: drop-shadow(0 2px 4px rgba(238,130,64,.5)); }
+svg.map.plan .cell.done { fill: rgba(14,165,143,.55); stroke: #0ea58f; filter: drop-shadow(0 0 6px rgba(109,227,213,.9)); }
+svg.map.plan .cell.sel { stroke: #4a2a40; stroke-width: 3; }
+svg.map .cell.prob { fill: rgba(224,48,95,.7); stroke: #e0305f; filter: drop-shadow(0 0 8px rgba(224,48,95,.8)); }
+svg.map.plan .cell.wave { fill: rgba(14,165,143,.65); stroke: #0ea58f; filter: drop-shadow(0 0 10px rgba(109,227,213,1)); }
+.cp-ring { stroke: #6de3d5; stroke-width: 3; filter: drop-shadow(0 0 4px #ff7aa8); animation-name: ringWave, anoHue; animation-duration: 2.4s, 6s; animation-iteration-count: infinite, infinite; animation-timing-function: ease-out, linear; }
+.cp-ring.red { stroke: #e0305f; filter: drop-shadow(0 0 4px #e0305f); }
+.cell-t { fill: #2b1631; font-weight: 700; paint-order: stroke; stroke: rgba(255,255,255,.85); stroke-width: 3px; }
+/* Nachrichten, Chat */
+.msg { border-left: 2px solid transparent; } .msg.done { box-shadow: 0 4px 16px rgba(14,165,143,.25); } .msg.problem { box-shadow: 0 4px 16px rgba(224,48,95,.3); }
+.msg.pulse { box-shadow: 0 0 22px rgba(14,165,143,.55); animation: none; } .msg.problem.pulse { box-shadow: 0 0 22px rgba(224,48,95,.6); }
+.chat-b { border-radius: 20px; } .chat-b.own { background: linear-gradient(160deg, #6a3a58, #3c2036); color: #fff; border-radius: 20px 20px 4px 20px; } .chat-b.other { background: #fff; border: 1px solid #cdb9d4; color: var(--text); border-radius: 20px 20px 20px 4px; }
+.chat-m { color: inherit; opacity: .7; } .chat-m .tk, .chat-m .tk.seen { color: #6de3d5; } .chat-by { color: #a8501c; }
+.chat-av { background: linear-gradient(160deg, #6a3a58, #3c2036); color: #fff; box-shadow: 0 0 0 2px #ff7aa8; } .chat-badge { background: var(--green); color: #fff; }
+.chat-day { background: rgba(74,42,64,.1); color: var(--plum); } .chat-head { border-bottom-color: #cdb9d4; }
+.toast { border-radius: 999px; background: #fff; border: 2px solid #ff7aa8; color: var(--plum); box-shadow: 0 8px 26px rgba(74,42,64,.28); }
+.lockcover .modal-box, .modal { color: var(--text); }
+.empty, .note { color: var(--dim); }
+::-webkit-scrollbar { width: 9px; height: 9px; } ::-webkit-scrollbar-thumb { background: #cdb9d4; border-radius: 6px; } ::-webkit-scrollbar-track { background: transparent; }
+/* Alarm: die Anomalie kippt ins Rot */
+body.cp-alert { --accent: #e0305f; --shimmer: #e0305f; --plum: #6a1a30; background-image: radial-gradient(ellipse at 50% 35%, #fff 0, #fff3f5 45%, #ffdce4 100%); }
+body.cp-alert .top, body.cp-alert .map-box { box-shadow: 0 6px 30px rgba(224,48,95,.45); }
+/* Die Kugel (die Anomalie selbst) und aufsteigende Seifenblasen */
+#arcRift { position: fixed; z-index: 0; pointer-events: none; right: -150px; bottom: -150px; width: 560px; height: 560px; background: url("anomaly-sphere.svg") center / contain no-repeat; opacity: .9; animation: anoFloat 14s ease-in-out infinite alternate; filter: drop-shadow(0 20px 40px rgba(74,42,64,.35)); }
+@keyframes anoFloat { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-24px, -30px) rotate(10deg); } }
+#arcFx { position: fixed; inset: 0; pointer-events: none; z-index: 96; overflow: hidden; }
+#arcFx i { position: absolute; bottom: -60px; display: block; border-radius: 50%; opacity: 0; animation: bubRise linear infinite; border: 1px solid rgba(255,255,255,.9);
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0 8%, transparent 22%), conic-gradient(from 0deg, rgba(255,122,168,.35), rgba(255,211,106,.3), rgba(109,227,213,.4), rgba(183,155,255,.35), rgba(255,122,168,.35)); box-shadow: inset 0 0 8px rgba(255,255,255,.7); }
+@keyframes bubRise { 0% { transform: translate(0, 0) scale(.7); opacity: 0; } 10% { opacity: .85; } 50% { transform: translate(18px, -50vh) scale(1); } 85% { opacity: .6; } 100% { transform: translate(-14px, -108vh) scale(1.05); opacity: 0; } }
+@media (max-width: 700px) { #arcFx i:nth-child(n+8) { display: none; } #arcRift { width: 340px; height: 340px; right: -120px; bottom: -110px; } #arcFoam2, #arcFoam { width: 520px; height: 520px; opacity: .7; } #arcFoam2 { right: -280px; bottom: -280px; } #arcFoam { left: -290px; top: -290px; } }
+/* Spalten als Milchglas, damit Text nie auf dem dunklen Netz liegt */
+.cols > .col { background: rgba(255,255,255,.82); backdrop-filter: blur(6px); border-radius: 30px 40px 32px 44px / 40px 30px 44px 32px; padding: 10px 12px; box-shadow: 0 4px 22px rgba(74,42,64,.10); }
+.mobile { background: rgba(255,255,255,.55); backdrop-filter: blur(5px); border-radius: 28px; margin: 8px; padding: 12px 14px; }
+#arcRift { width: 440px; height: 440px; right: -130px; bottom: -130px; opacity: .8; }
+body.cp-alert::before { box-shadow: inset 0 0 90px rgba(224,48,95,.35); }
