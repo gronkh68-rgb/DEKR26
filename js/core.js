@@ -308,7 +308,7 @@ window.Store = (function () {
   function norm(s) {
     return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
       orders: (s && s.orders) || {}, problems: (s && s.problems) || {}, podests: (s && s.podests) || {},
-      kisten: (s && s.kisten) || {}, settings: (s && s.settings) || {} };
+      settings: (s && s.settings) || {} };
   }
   function emit() { subs.forEach(function (f) { f(state); }); }
   function loadLocal() {
@@ -506,24 +506,23 @@ window.Store = (function () {
     isRequested: function () { return requested; },
     requestAccess: requestAccess,
     setSetting: function (k, v) { return one('settings', k, v); },
-    // Kisten pro Tag (K2/K5): Zähler je Woche und Tag, Änderung als Server-Zähler (mehrere Handys gleichzeitig möglich).
-    // week z.B. "2026-W44", day 1-5, field 'k2' | 'k5', delta +1/-1. Nie unter 0.
-    addKisten: function (week, day, field, delta) {
-      var id = week + '_' + day;
+    // Kisten je KR (K2/K5): Zähler am Eintrag der KR. field 'k2' | 'k5', delta +1/-1, nie unter 0.
+    // Die Änderung geht als Server-Zähler raus, so können mehrere Handys gleichzeitig zählen.
+    addTaskKisten: function (taskId, field, delta) {
       if (!remote) { loadLocal(); raw = state; }
-      if (!isObj(raw.kisten)) raw.kisten = {};
-      var cur = isObj(raw.kisten[id]) ? raw.kisten[id] : {}, before = +cur[field] || 0, next = Math.max(0, before + delta);
+      var t = isObj(raw.tasks) ? raw.tasks[taskId] : null;
+      if (!isObj(t)) return Promise.reject(new Error('KR nicht gefunden'));
+      var before = +t[field] || 0, next = Math.max(0, before + delta);
       if (next === before) return Promise.resolve();
-      raw.kisten[id] = Object.assign({}, cur, { t: Date.now() });
-      raw.kisten[id][field] = next;
+      t[field] = next;
       state = norm(raw); emit();
       if (!remote) {
         try { localStorage.setItem(LS, JSON.stringify(norm(raw))); } catch (e) { return Promise.reject(e); }
         return Promise.resolve();
       }
-      var body = { t: Date.now() };
+      var body = {};
       body[field] = { '.sv': { increment: next - before } };
-      return api('/kisten/' + id, { method: 'PATCH', body: JSON.stringify(body) }).then(function (r) {
+      return api('/tasks/' + taskId, { method: 'PATCH', body: JSON.stringify(body) }).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
       }).catch(function (e) { refresh().catch(function () {}); throw e; });
     },

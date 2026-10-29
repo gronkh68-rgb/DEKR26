@@ -410,3 +410,11 @@ body.cp-alert::before { content: ''; position: fixed; inset: 0; z-index: 98; poi
 .kcount button { font-size: 30px !important; padding: 12px 0; line-height: 1; }
 .kcount .kn { text-align: center; font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .day-h .kis { color: var(--accent); margin-right: 6px; font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+.kitem { border: 1px solid var(--line); padding: 8px 10px; margin: 0 0 10px; }
+.kitem .khead { display: flex; justify-content: space-between; align-items: baseline; }
+.kitem .khead small { color: var(--dim); }
+.kitem .kcount { margin: 4px 0; grid-template-columns: 44px 1fr 1fr 1fr; }
+.kitem .kcount b { font-size: 18px; }
+.kitem .kcount .kn { font-size: 28px; }
+.kitem .kcount button { padding: 8px 0; }
+.badge.kis { border-color: var(--accent); color: var(--accent); }

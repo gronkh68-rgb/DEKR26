@@ -72,7 +72,9 @@
     if (extra && extra.from) t.from = extra.from;
     if (extra && extra.chg) { t.chg = extra.chg; t.chgK = extra.chgK; t.chgAt = Date.now(); }
     else if (prev && prev.chg) { t.chg = prev.chg; t.chgK = prev.chgK; t.chgAt = prev.chgAt; }
-    var src = cur || prev;   // „abgeschlossen" bleibt bei erneutem Planen/Import erhalten
+    var src = cur || prev;   // „abgeschlossen" und Kisten bleiben bei erneutem Planen/Import erhalten
+    if (src && src.k2) t.k2 = src.k2;
+    if (src && src.k5) t.k5 = src.k5;
     if (src && src.closed) { t.done = true; t.closed = true; t.closedAt = src.closedAt; t.closedBy = src.closedBy; }
     ops.push({ coll: 'tasks', id: id, val: t });
     return ops;
@@ -165,6 +167,7 @@
     var fresh = t.chg && Date.now() - t.chgAt < 864e5;   // Vermerk 24 Stunden lang
     return from + (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '') +
       (fresh ? ' <span class="badge chg" title="' + esc(t.chg) + '">' + esc(t.chgK || 'geändert') + '</span>' : '') +
+      (t.k2 || t.k5 ? ' <span class="badge kis" title="Kisten">' + (t.k2 ? 'K2 ×' + t.k2 : '') + (t.k2 && t.k5 ? ' · ' : '') + (t.k5 ? 'K5 ×' + t.k5 : '') + '</span>' : '') +
       (openProb[t.kr] ? ' <span class="badge prob">Problem</span>' : '');
   }
 
@@ -237,9 +240,10 @@
   }
 
   // Kisten pro Tag (am Handy eingetragen): kleine Anzeige am Tageskopf
-  function kistenTag(week, d) {
-    var e = (Store.get().kisten || {})[week + '_' + d] || {};
-    return (e.k2 || e.k5) ? '<small class="kis" title="Kisten K2 / K5">K2 ' + (e.k2 || 0) + ' · K5 ' + (e.k5 || 0) + '</small> ' : '';
+  function kistenTag(dt) {
+    var k2 = 0, k5 = 0;
+    dt.forEach(function (t) { k2 += +t.k2 || 0; k5 += +t.k5 || 0; });
+    return (k2 || k5) ? '<small class="kis" title="Kisten gesamt an diesem Tag">K2 ' + k2 + ' · K5 ' + k5 + '</small> ' : '';
   }
   function renderWeek(tasks) {
     $('dayBar').hidden = allMode;
@@ -265,7 +269,7 @@
       var open = isOpen(d);
       html += '<div class="day' + (isToday ? ' today' : '') + '">' +
         '<div class="day-h orb" data-day="' + d + '"><span>' + (open ? '▾ ' : '▸ ') + Util.DAYS[d] + ' ' + Util.dayDate(viewWeek, d) + (isToday ? ' · heute' : '') +
-        '</span><span class="cnt">' + kistenTag(viewWeek, d) + done + '/' + dt.length + '</span></div>';
+        '</span><span class="cnt">' + kistenTag(dt) + done + '/' + dt.length + '</span></div>';
       if (!open) { html += '</div>'; continue; }
       if (!order.length) html += '<div class="empty">– keine KR –</div>';
       html += krCards(dt);
@@ -1100,7 +1104,7 @@
   // ---------- QR-Codes ----------
   // Der Code enthält nur die ID (?q=...). Name, Funktion und Rechte lassen sich daher jederzeit ändern,
   // ohne dass ausgedruckte Codes ungültig werden.
-  var PERM_LABELS = [['report', 'Beipack melden (bereit/Problem)'], ['order', 'Podest bestellen'], ['kisten', 'Kisten pro Tag eintragen (K2/K5)'],
+  var PERM_LABELS = [['report', 'Beipack melden (bereit/Problem)'], ['order', 'Podest bestellen'], ['kisten', 'Kisten je KR eintragen (K2/K5)'],
     ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Bereit/Nicht bereit setzen'],
     ['dash', 'Mobiles Dashboard'], ['ueber', 'Anfrage Überspielen']];
   var PRESETS = [
@@ -1455,7 +1459,6 @@
       if (p.status !== 'offen' && now - (p.solvedAt || p.t) > 30 * day) ops.push({ coll: 'problems', id: id, val: null });
     });
     Object.keys(state.tasks).forEach(function (id) { if (state.tasks[id].week < cutoff) ops.push({ coll: 'tasks', id: id, val: null }); });
-    Object.keys(state.kisten || {}).forEach(function (id) { if (id.split('_')[0] < cutoff) ops.push({ coll: 'kisten', id: id, val: null }); });
     if (ops.length) Store.batch(ops).catch(function () { /* nächstes Mal */ });
   }
   // MIPP-Lesezeichen: nimmt den gelesenen Listentext entgegen und öffnet damit den Import (gespeichert wird erst mit „Importieren")

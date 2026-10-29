@@ -171,22 +171,31 @@
     renderInbox(Store.get());
   };
 
-  // ---------- Kisten pro Tag (K2 / K5) ----------
+  // ---------- Kisten je KR (K2 / K5) ----------
   var kWeek = Util.isoWeek(), kDay = Math.min(5, Math.max(1, Util.todayIdx() || 1));
+  function dayTasks(state, week, day) {
+    return Object.keys(state.tasks).map(function (id) { return Object.assign({ id: id }, state.tasks[id]); })
+      .filter(function (t) { return t.week === week && t.day === day; })
+      .sort(function (a, b) { return a.kr < b.kr ? -1 : a.kr > b.kr ? 1 : 0; });
+  }
   function renderKisten(state) {
-    var kis = state.kisten || {}, now = Util.isoWeek();
+    var now = Util.isoWeek();
     $('kWeek').textContent = 'KW ' + kWeek.split('-W')[1] + (kWeek === now ? ' · diese Woche' : '') + ' · ' + Util.dayDate(kWeek, 1) + '–' + Util.dayDate(kWeek, 5);
     $('kDays').innerHTML = [1, 2, 3, 4, 5].map(function (d) {
-      var e = kis[kWeek + '_' + d] || {}, sum = (e.k2 || e.k5) ? 'K2 ' + (e.k2 || 0) + ' · K5 ' + (e.k5 || 0) : '–';
+      var ts = dayTasks(state, kWeek, d), k2 = 0, k5 = 0;
+      ts.forEach(function (t) { k2 += +t.k2 || 0; k5 += +t.k5 || 0; });
       return '<button type="button" class="menu-btn' + (d === kDay ? ' sel' : '') + '" data-kday="' + d + '"><b>' + esc(Util.DAYS[d]) + ' ' + esc(Util.dayDate(kWeek, d)) +
-        (kWeek === now && d === Util.todayIdx() ? ' · heute' : '') + '</b><small>' + sum + '</small></button>';
+        (kWeek === now && d === Util.todayIdx() ? ' · heute' : '') + '</b><small>' + ts.length + ' KR · K2 ' + k2 + ' · K5 ' + k5 + '</small></button>';
     }).join('');
-    var e = kis[kWeek + '_' + kDay] || {};
-    $('kCtl').innerHTML = '<div class="col-title orb" style="margin-bottom:6px">' + esc(Util.DAYS[kDay]) + ' ' + esc(Util.dayDate(kWeek, kDay)) + '</div>' +
-      ['k2', 'k5'].map(function (f) {
-        return '<div class="kcount"><b>' + f.toUpperCase() + '</b><button type="button" class="big-gray" data-kf="' + f + '" data-kd="-1">−</button>' +
-          '<span class="kn">' + (e[f] || 0) + '</span><button type="button" class="btn-ok big" data-kf="' + f + '" data-kd="1">+</button></div>';
-      }).join('');
+    var list = dayTasks(state, kWeek, kDay);
+    $('kList').innerHTML = list.length ? list.map(function (t) {
+      return '<div class="kitem"><div class="khead"><b>KR ' + esc(t.kr) + '</b><small>' +
+        (t.pos ? esc(Halls.label(t.hall, t.pos)) : t.from ? 'Lieferung aus Halle ' + esc(t.from) : 'ohne Position') + '</small></div>' +
+        ['k2', 'k5'].map(function (f) {
+          return '<div class="kcount"><b>' + f.toUpperCase() + '</b><button type="button" class="big-gray" data-tid="' + esc(t.id) + '" data-kf="' + f + '" data-kd="-1">−</button>' +
+            '<span class="kn">' + (t[f] || 0) + '</span><button type="button" class="btn-ok big" data-tid="' + esc(t.id) + '" data-kf="' + f + '" data-kd="1">+</button></div>';
+        }).join('') + '</div>';
+    }).join('') : '<div class="empty">Für diesen Tag gibt es keine KR.</div>';
   }
   $('v-kisten').addEventListener('click', function (e) {
     var w = e.target.closest('button[data-d]'), d = e.target.closest('button[data-kday]'), c = e.target.closest('button[data-kf]');
@@ -194,7 +203,7 @@
     if (d) { kDay = +d.dataset.kday; renderKisten(Store.get()); return; }
     if (c) {
       c.disabled = true;
-      Store.addKisten(kWeek, kDay, c.dataset.kf, +c.dataset.kd).catch(fail).then(function () { c.disabled = false; });
+      Store.addTaskKisten(c.dataset.tid, c.dataset.kf, +c.dataset.kd).catch(fail).then(function () { c.disabled = false; });
     }
   });
 
