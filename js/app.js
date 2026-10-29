@@ -221,8 +221,9 @@
       $('me').value = a.name; $('mName').value = a.name; Util.setName(a.name);   // Meldungen laufen unter dem Account-Namen
     }
     $('me').readOnly = !!a; $('mName').readOnly = !!a;
-    Account.DPERMS.forEach(function (d) { document.body.classList.toggle('deny-' + d[0], !Account.can(state, d[0])); });
+    Account.GATES.forEach(function (g) { document.body.classList.toggle('deny-' + g, !Account.can(state, g)); });
     document.body.classList.toggle('deny-admin', !admin);
+    $('viewOnly').hidden = admin || !(a || Account.session()) || Account.can(state, 'd_plan');   // nur ansehen: Hinweis oben
     setupChatMe(a);
     if (a && prefsFor !== a.id) {
       prefsFor = a.id;
@@ -1236,8 +1237,8 @@
     ['elektriker', 'Elektriker', 'Elektriker', { report: 1, status: 1 }],
     ['ueber', 'Anfrage Überspielen', '', { report: 1, ueber: 1 }],
     ['mobil', 'Mobiles Dashboard (Push)', 'Dashboard mobil', { dash: 1 }],
-    ['leitstand', 'Leitstand (Dashboard komplett)', 'Leitstand', { dash: 1, d_status: 1, d_close: 1, d_plan: 1, d_orders: 1, d_problems: 1, d_send: 1 }],
-    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1, kisten: 1, d_status: 1, d_close: 1, d_plan: 1, d_orders: 1, d_problems: 1, d_send: 1 }]
+    ['leitstand', 'Leitstand (Dashboard bearbeiten)', 'Leitstand', { dash: 1, dashEdit: 1 }],
+    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1, kisten: 1, dashEdit: 1 }]
   ];
   function permsOf(q) { return q.perms && Object.keys(q.perms).length ? q.perms : { report: 1, order: 1 }; }
   // n/f/p sind nur ein Rückfall, falls das Handy die QR-Daten nicht aus der Datenbank laden kann
@@ -1579,6 +1580,23 @@
     setTimeout(function () { URL.revokeObjectURL(link.href); }, 2000);
   };
   $('admLogout').onclick = function () { Auth.logout(); location.reload(); };
+  // Alles auf Anfang: Accounts, Codes, Gäste, Geräte-Anmeldungen (Platz PC/Handy) und Chats löschen. Aufgaben und Einstellungen bleiben.
+  $('admReset').onclick = function () {
+    if (!confirm('ALLE Accounts, Codes, Gäste, Geräte-Anmeldungen und Chats löschen? Alle müssen sich danach neu anmelden.')) return;
+    if (!confirm('Wirklich alles zurücksetzen? Das lässt sich nicht rückgängig machen.')) return;
+    var st = Store.get(), ops = [];
+    Object.keys(st.qrs).forEach(function (id) { ops.push({ coll: 'qrs', id: id, val: null }); });
+    Object.keys(st.logins || {}).forEach(function (h) { ops.push({ coll: 'logins', id: h, val: null }); });
+    Object.keys(st.msgs).forEach(function (id) { if (st.msgs[id].type === 'chat') ops.push({ coll: 'msgs', id: id, val: null }); });
+    (Store.remote ? Store.devices() : Promise.resolve({})).then(function (d) {
+      Object.keys(d || {}).forEach(function (u) { ops.push({ coll: 'devices', id: u, val: null }); });
+      return Store.batch(ops);
+    }).then(function () {
+      Account.logout();
+      toast('Alles zurückgesetzt');
+      setTimeout(function () { location.reload(); }, 900);
+    }).catch(function () { toast('Zurücksetzen fehlgeschlagen'); });
+  };
   if (Store.secure) {
     $('admOpen').hidden = false;
     $('lockCode').textContent = Auth.code();

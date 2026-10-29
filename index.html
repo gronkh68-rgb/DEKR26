@@ -27,7 +27,7 @@
     <h1>DEUKRO26 · Beipack-Abholung</h1>
     <span class="weeknav"><button class="btn-sm" id="weekPrev" title="Vorherige Woche">‹</button><span class="tag" id="week"></span><button class="btn-sm" id="weekNext" title="Nächste Woche">›</button></span>
     <span class="sp"></span>
-    <button class="btn-sm" id="profileBtn" title="Profil: Name, Code, Abmelden" hidden></button>
+    <button class="btn-sm" id="profileBtn" title="Profil: Name, Code, Abmelden" hidden></button> <span class="tag" id="viewOnly" hidden title="Dieser Account darf das Dashboard nur ansehen">Nur ansehen</span>
     <input id="me" class="me" placeholder="Dein Name" maxlength="30" title="Mit diesem Namen werden Bestätigungen und Änderungen im Dashboard gezeichnet">
     <button class="btn-sm" id="soundBtn" title="Ton bei neuen Meldungen"></button>
     <span class="tag" id="mode"></span>
@@ -157,7 +157,7 @@
     </form>
     <div class="note" id="admErr"></div>
     <div id="admBody" hidden>
-      <div class="qr-add"><span class="empty" id="admWho" style="flex:1"></span><button class="btn-sm" id="admBackup">Daten sichern</button> <button class="btn-sm" id="admLogout">Abmelden</button></div>
+      <div class="qr-add"><span class="empty" id="admWho" style="flex:1"></span><button class="btn-sm" id="admBackup">Daten sichern</button> <button class="btn-sm btn-warn" id="admReset" title="Alle Accounts, Codes, Geräte-Anmeldungen und Chats löschen">Alle Accounts zurücksetzen</button> <button class="btn-sm" id="admLogout">Abmelden</button></div>
       <div class="col-title orb" style="margin:10px 0 6px">Anmelde-Code für neue Geräte</div>
       <div class="empty">Mit gesetztem Code können sich nur Geräte anmelden, die ihn kennen. Die QR-Codes enthalten ihn automatisch.</div>
       <div class="qr-add"><input id="codeIn" placeholder="kein Code (jeder kann anfragen)" maxlength="30" autocomplete="off"><button class="btn-sm" id="codeSave">Speichern</button><button class="btn-sm" id="codeRand">Zufällig</button><button class="btn-sm btn-warn" id="codeOff">Entfernen</button></div>

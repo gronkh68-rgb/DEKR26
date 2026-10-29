@@ -6,15 +6,9 @@ window.Account = (function () {
   var SESSION = 'dekr26_account', NEWCODES = 'dekr26_newcodes', FAILS = 'dekr26_loginfails', CODEV = 2;
   var ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // ohne 0/O/1/I/L
 
-  // Rechte am Dashboard (zusätzlich zu den Handy-Rechten des Accounts)
-  var DPERMS = [
-    ['d_status', 'Dashboard: Bereit / Nicht bereit setzen'],
-    ['d_close', 'Dashboard: KR abschließen, wieder öffnen, löschen'],
-    ['d_plan', 'Dashboard: KR importieren und anlegen, Layout ändern'],
-    ['d_orders', 'Dashboard: Podest- und Überspielen-Anfragen bearbeiten'],
-    ['d_problems', 'Dashboard: Probleme lösen'],
-    ['d_send', 'Dashboard: Meldungen bestätigen/löschen, Nachrichten senden']
-  ];
+  // Dashboard: nur zwei Stufen. Ohne Haken wird es nur angesehen, mit Haken „dashEdit“ darf man alles bearbeiten (die Chats gehören nicht dazu).
+  var DPERMS = [['dashEdit', 'Dashboard bearbeiten (ohne Haken: nur ansehen)']];
+  var GATES = ['d_status', 'd_close', 'd_plan', 'd_orders', 'd_problems', 'd_send'];   // Kennungen der geschützten Bedienelemente im Dashboard
   // Alles, was zur Person gehört und auf jedem Gerät gleich sein soll (Ton, Ansicht, Karte, Design, Farben, Filter, „Zuletzt“-Liste am Handy)
   var PREF_KEYS = ['dekr26_soundcfg', 'dekr26_days', 'dekr26_showclosed', 'dekr26_mapfont', 'dekr26_mapzoom', 'dekr-theme', 'dekr-colors', 'dekr26_khide', 'dekr26_wake', 'dekr26_impmap'];
   function recentKey() { var s = session(); return s && s.id ? 'dekr26_recent_' + s.id : ''; }
@@ -54,17 +48,11 @@ window.Account = (function () {
     if (!usable(q) || q.codeHash !== s.h) return null;
     return Object.assign({ id: s.id }, q);
   }
-  function dperms(a) {
-    var p = (a && a.perms) || {}, has = DPERMS.some(function (d) { return p[d[0]]; });
-    if (has) return p;
-    // Älterer Account ohne Dashboard-Rechte: aus den Handy-Rechten ableiten
-    return { d_status: p.status || p.report, d_orders: p.podest, d_problems: p.solve, d_send: 1 };
-  }
   function isAdmin() { return !!(window.Auth && Auth.isAdmin && Auth.isAdmin()); }
   function can(state, perm) {
     if (isAdmin()) return true;
     var a = me(state);
-    return !!(a && dperms(a)[perm]);
+    return !!(a && a.perms && a.perms.dashEdit);   // jede geschützte Aktion verlangt nur „bearbeiten“
   }
 
   // Anmeldung mit Code. Nach 5 Fehlversuchen kurze Pause.
@@ -243,6 +231,6 @@ window.Account = (function () {
   }
 
   return { DPERMS: DPERMS, CODEV: CODEV, norm: norm, format: format, gen: gen, hash: hash, accounts: accounts, usable: usable, me: me, session: session,
-    dperms: dperms, can: can, isAdmin: isAdmin, login: login, logout: logout, setStartCode: setStartCode, setPin: setPin, changePin: changePin,
+    GATES: GATES, can: can, isAdmin: isAdmin, login: login, logout: logout, setStartCode: setStartCode, setPin: setPin, changePin: changePin,
     rename: rename, validPin: validPin, claim: claim, becomeGuest: becomeGuest, resumeGuest: resumeGuest, guestId: guestId, remove: remove, removeDevice: removeDevice, syncLogins: syncLogins, isMobileDevice: isMobileDevice, newCodes: newCodes, rememberCode: rememberCode, applyPrefs: applyPrefs, pushPrefs: pushPrefs, wait: wait };
 })();
