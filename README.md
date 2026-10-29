@@ -95,5 +95,5 @@ Dashboard die Anmeldung (Admin ist ausgenommen). Der Account kann seinen Code se
 
 ## Designs
 
-Der Knopf „Design: …“ (Kopfzeile bzw. Handyseite) wechselt zwischen **Cyber** (Cyberpunk), **Bio** (biologischer Horror: Gewebe, Adern, violette Augen, die dem
-Mauszeiger folgen und blinzeln), **Anomalie** (Arcane Staffel 2, nach Referenzbildern: heller milchig-mintfarbener Raum, dunkle pflaumenfarbene Netz-Kugel mit ovalen Löchern, schillernde Seifenhaut-Ränder in Rosa/Gelb/Türkis/Violett, Blasen-Formen, aufsteigende Seifenblasen) und **Schlicht**. Die Wahl wird je Browser gespeichert. Dateien: `css/cyber.css`, `css/bio.css`, `css/arcane.css` (dazu `css/anomaly-sphere.svg`, `css/anomaly-foam.svg`), `js/theme.js`.
+Der Knopf „Design: …“ (Kopfzeile bzw. Handyseite) wechselt zwischen **Cyber** (Cyberpunk) und **Schlicht**. Die Wahl wird je Browser gespeichert.
+Dateien: `css/cyber.css`, `js/theme.js`.

@@ -1,87 +1,13 @@
-// Designs: Cyberpunk, Bio-Horror und schlicht. Umschalter (Auswahl im Browser gespeichert), Klick-Effekt, Augen im Bio-Design
+// Designs: Cyberpunk und schlicht. Umschalter (Auswahl im Browser gespeichert) und Klick-Effekt
 (function () {
   'use strict';
-  var link = document.getElementById('cpCss'), bioLink = document.getElementById('bioCss'), arcLink = document.getElementById('arcCss');
-  var THEMES = ['cp', 'bio', 'arc', 'plain'], NAMES = { cp: 'Design: Cyber', bio: 'Design: Bio', arc: 'Design: Anomalie', plain: 'Design: Schlicht' };
+  var link = document.getElementById('cpCss');
+  var THEMES = ['cp', 'plain'], NAMES = { cp: 'Design: Cyber', plain: 'Design: Schlicht' };
   var KEY = 'dekr-theme';
   function get() { try { var v = localStorage.getItem(KEY); return THEMES.indexOf(v) >= 0 ? v : 'cp'; } catch (e) { return 'cp'; } }
   function apply(t) {
     if (link) link.disabled = (t !== 'cp');
-    if (bioLink) bioLink.disabled = (t !== 'bio');
-    if (arcLink) arcLink.disabled = (t !== 'arc');
     document.documentElement.setAttribute('data-theme', t);
-    if (document.body) { bioEyes(t === 'bio'); arcFx(t === 'arc'); }
-  }
-  // Anomalie-Design (Arcane Staffel 2): schillernde Seifenblasen, die schwebende Kugel und ein Licht, das dem Mauszeiger folgt
-  var fxBox = null, rift = null, foam = null, foam2 = null, fxMove = null, fxQueued = false;
-  function arcFx(on) {
-    if (!on) {
-      if (fxBox && fxBox.parentNode) fxBox.parentNode.removeChild(fxBox);
-      if (rift && rift.parentNode) rift.parentNode.removeChild(rift);
-      if (foam && foam.parentNode) foam.parentNode.removeChild(foam);
-      if (foam2 && foam2.parentNode) foam2.parentNode.removeChild(foam2);
-      fxBox = null; rift = null; foam = null; foam2 = null;
-      if (fxMove) { window.removeEventListener('pointermove', fxMove); fxMove = null; }
-      return;
-    }
-    if (fxBox) return;
-    fxBox = document.createElement('div');
-    fxBox.id = 'arcFx';
-    fxBox.setAttribute('aria-hidden', 'true');
-    var h = '';
-    for (var i = 0; i < 18; i++) {
-      var s = 10 + Math.round(Math.random() * 40);
-      h += '<i style="left:' + Math.round(Math.random() * 100) + '%;width:' + s + 'px;height:' + s + 'px;animation-duration:' + (14 + Math.round(Math.random() * 18)) +
-        's;animation-delay:-' + Math.round(Math.random() * 30) + 's"></i>';
-    }
-    fxBox.innerHTML = h;
-    foam = document.createElement('b');
-    foam.id = 'arcFoam';
-    document.body.appendChild(foam);
-    foam2 = document.createElement('b');
-    foam2.id = 'arcFoam2';
-    document.body.appendChild(foam2);
-    rift = document.createElement('b');
-    rift.id = 'arcRift';
-    document.body.appendChild(rift);
-    document.body.appendChild(fxBox);
-    fxMove = function (e) {
-      if (fxQueued) return;
-      fxQueued = true;
-      requestAnimationFrame(function () {
-        fxQueued = false;
-        document.documentElement.style.setProperty('--mx', e.clientX + 'px');
-        document.documentElement.style.setProperty('--my', e.clientY + 'px');
-      });
-    };
-    window.addEventListener('pointermove', fxMove, { passive: true });
-  }
-  // Bio-Design: Augen am Bildschirmrand, die dem Mauszeiger folgen und blinzeln (nur Dekoration)
-  var eyeBox = null, eyeMove = null;
-  function bioEyes(on) {
-    if (!on) {
-      if (eyeBox && eyeBox.parentNode) eyeBox.parentNode.removeChild(eyeBox);
-      eyeBox = null;
-      if (eyeMove) { window.removeEventListener('pointermove', eyeMove); eyeMove = null; }
-      return;
-    }
-    if (eyeBox) return;
-    eyeBox = document.createElement('div');
-    eyeBox.id = 'bioEyes';
-    eyeBox.setAttribute('aria-hidden', 'true');
-    var spots = [['left:4px;top:38%', 34], ['right:6px;top:24%', 40], ['right:4px;top:62%', 28], ['left:35%;bottom:3px', 36], ['left:68%;bottom:4px', 30], ['left:10%;bottom:5px', 26]];
-    eyeBox.innerHTML = spots.map(function (s, i) {
-      return '<i class="beye" style="' + s[0] + ';width:' + s[1] * 1.5 + 'px;height:' + s[1] + 'px;animation-delay:' + (i * 1.3) + 's"><b></b></i>';
-    }).join('');
-    document.body.appendChild(eyeBox);
-    eyeMove = function (e) {
-      Array.prototype.forEach.call(eyeBox.querySelectorAll('.beye'), function (el) {
-        var r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-        var dx = e.clientX - cx, dy = e.clientY - cy, d = Math.sqrt(dx * dx + dy * dy) || 1, k = Math.min(1, d / 120);
-        el.firstChild.style.transform = 'translate(' + (dx / d * r.width * .22 * k) + 'px,' + (dy / d * r.height * .22 * k) + 'px)';
-      });
-    };
-    window.addEventListener('pointermove', eyeMove, { passive: true });
   }
   apply(get());
   var bootDue = get() === 'cp' && !!document.documentElement && (function () {
@@ -102,7 +28,6 @@
       apply(t); label();
     };
     host.appendChild(b);
-    bioEyes(get() === 'bio'); arcFx(get() === 'arc');
   });
   document.addEventListener('pointerdown', function (e) {
     if (get() === 'plain') return;
