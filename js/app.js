@@ -236,6 +236,11 @@
     $('week-list').innerHTML = list.length ? html : '<div class="empty">Keine KR gefunden.</div>';
   }
 
+  // Kisten pro Tag (am Handy eingetragen): kleine Anzeige am Tageskopf
+  function kistenTag(week, d) {
+    var e = (Store.get().kisten || {})[week + '_' + d] || {};
+    return (e.k2 || e.k5) ? '<small class="kis" title="Kisten K2 / K5">K2 ' + (e.k2 || 0) + ' · K5 ' + (e.k5 || 0) + '</small> ' : '';
+  }
   function renderWeek(tasks) {
     $('dayBar').hidden = allMode;
     $('krFilter').hidden = !allMode;
@@ -260,7 +265,7 @@
       var open = isOpen(d);
       html += '<div class="day' + (isToday ? ' today' : '') + '">' +
         '<div class="day-h orb" data-day="' + d + '"><span>' + (open ? '▾ ' : '▸ ') + Util.DAYS[d] + ' ' + Util.dayDate(viewWeek, d) + (isToday ? ' · heute' : '') +
-        '</span><span class="cnt">' + done + '/' + dt.length + '</span></div>';
+        '</span><span class="cnt">' + kistenTag(viewWeek, d) + done + '/' + dt.length + '</span></div>';
       if (!open) { html += '</div>'; continue; }
       if (!order.length) html += '<div class="empty">– keine KR –</div>';
       html += krCards(dt);
@@ -1095,16 +1100,17 @@
   // ---------- QR-Codes ----------
   // Der Code enthält nur die ID (?q=...). Name, Funktion und Rechte lassen sich daher jederzeit ändern,
   // ohne dass ausgedruckte Codes ungültig werden.
-  var PERM_LABELS = [['report', 'Beipack melden (bereit/Problem)'], ['order', 'Podest bestellen'],
+  var PERM_LABELS = [['report', 'Beipack melden (bereit/Problem)'], ['order', 'Podest bestellen'], ['kisten', 'Kisten pro Tag eintragen (K2/K5)'],
     ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Bereit/Nicht bereit setzen'],
     ['dash', 'Mobiles Dashboard'], ['ueber', 'Anfrage Überspielen']];
   var PRESETS = [
     ['standard', 'Standard (melden + bestellen)', '', { report: 1, order: 1 }],
+    ['kisten', 'Kisten K2/K5 eintragen', '', { report: 1, kisten: 1 }],
     ['podest', 'Podest-Empfänger', 'Podest-Empfänger', { podest: 1, order: 1 }],
     ['elektriker', 'Elektriker', 'Elektriker', { report: 1, status: 1 }],
     ['ueber', 'Anfrage Überspielen', '', { report: 1, ueber: 1 }],
     ['mobil', 'Mobiles Dashboard (Push)', 'Dashboard mobil', { dash: 1 }],
-    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1 }]
+    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1, kisten: 1 }]
   ];
   function permsOf(q) { return q.perms && Object.keys(q.perms).length ? q.perms : { report: 1, order: 1 }; }
   // n/f/p sind nur ein Rückfall, falls das Handy die QR-Daten nicht aus der Datenbank laden kann
@@ -1449,6 +1455,7 @@
       if (p.status !== 'offen' && now - (p.solvedAt || p.t) > 30 * day) ops.push({ coll: 'problems', id: id, val: null });
     });
     Object.keys(state.tasks).forEach(function (id) { if (state.tasks[id].week < cutoff) ops.push({ coll: 'tasks', id: id, val: null }); });
+    Object.keys(state.kisten || {}).forEach(function (id) { if (id.split('_')[0] < cutoff) ops.push({ coll: 'kisten', id: id, val: null }); });
     if (ops.length) Store.batch(ops).catch(function () { /* nächstes Mal */ });
   }
   // MIPP-Lesezeichen: nimmt den gelesenen Listentext entgegen und öffnet damit den Import (gespeichert wird erst mit „Importieren")

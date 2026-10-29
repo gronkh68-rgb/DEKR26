@@ -13,6 +13,9 @@
     "msgs": {
       ".write": "auth != null && (auth.uid === 'ADMIN_UID' || root.child('devices').child(auth.uid).child('ok').val() === true)"
     },
+    "kisten": {
+      ".write": "auth != null && (auth.uid === 'ADMIN_UID' || root.child('devices').child(auth.uid).child('ok').val() === true)"
+    },
     "orders": {
       ".write": "auth != null && (auth.uid === 'ADMIN_UID' || root.child('devices').child(auth.uid).child('ok').val() === true)"
     },

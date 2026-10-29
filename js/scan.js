@@ -7,8 +7,8 @@
   var RECENT_KEY = 'dekr26_recent_' + (new URLSearchParams(location.search).get('q') || 'x');
   var recent = [];
   try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { recent = []; }
-  var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash', 'ueber'];
-  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash', 'chat'];
+  var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash', 'ueber', 'kisten'];
+  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash', 'kisten', 'chat'];
 
   // Name, Funktion und Rechte kommen vom QR-Code (?q=ID, im Dashboard gepflegt).
   // n/f/p im Link sind nur Rückfall, falls die Daten nicht aus der Datenbank kommen.
@@ -170,6 +170,33 @@
     Store.updateMsg(b.dataset.dm, rf).catch(function () { /* Lesebestätigung ist optional */ });
     renderInbox(Store.get());
   };
+
+  // ---------- Kisten pro Tag (K2 / K5) ----------
+  var kWeek = Util.isoWeek(), kDay = Math.min(5, Math.max(1, Util.todayIdx() || 1));
+  function renderKisten(state) {
+    var kis = state.kisten || {}, now = Util.isoWeek();
+    $('kWeek').textContent = 'KW ' + kWeek.split('-W')[1] + (kWeek === now ? ' · diese Woche' : '') + ' · ' + Util.dayDate(kWeek, 1) + '–' + Util.dayDate(kWeek, 5);
+    $('kDays').innerHTML = [1, 2, 3, 4, 5].map(function (d) {
+      var e = kis[kWeek + '_' + d] || {}, sum = (e.k2 || e.k5) ? 'K2 ' + (e.k2 || 0) + ' · K5 ' + (e.k5 || 0) : '–';
+      return '<button type="button" class="menu-btn' + (d === kDay ? ' sel' : '') + '" data-kday="' + d + '"><b>' + esc(Util.DAYS[d]) + ' ' + esc(Util.dayDate(kWeek, d)) +
+        (kWeek === now && d === Util.todayIdx() ? ' · heute' : '') + '</b><small>' + sum + '</small></button>';
+    }).join('');
+    var e = kis[kWeek + '_' + kDay] || {};
+    $('kCtl').innerHTML = '<div class="col-title orb" style="margin-bottom:6px">' + esc(Util.DAYS[kDay]) + ' ' + esc(Util.dayDate(kWeek, kDay)) + '</div>' +
+      ['k2', 'k5'].map(function (f) {
+        return '<div class="kcount"><b>' + f.toUpperCase() + '</b><button type="button" class="big-gray" data-kf="' + f + '" data-kd="-1">−</button>' +
+          '<span class="kn">' + (e[f] || 0) + '</span><button type="button" class="btn-ok big" data-kf="' + f + '" data-kd="1">+</button></div>';
+      }).join('');
+  }
+  $('v-kisten').addEventListener('click', function (e) {
+    var w = e.target.closest('button[data-d]'), d = e.target.closest('button[data-kday]'), c = e.target.closest('button[data-kf]');
+    if (w) { kWeek = Util.addWeeks(kWeek, +w.dataset.d); renderKisten(Store.get()); return; }
+    if (d) { kDay = +d.dataset.kday; renderKisten(Store.get()); return; }
+    if (c) {
+      c.disabled = true;
+      Store.addKisten(kWeek, kDay, c.dataset.kf, +c.dataset.kd).catch(fail).then(function () { c.disabled = false; });
+    }
+  });
 
   // ---------- Messenger (für alle QR-Codes immer aktiv) ----------
   // Empfänger: Dashboard, alle QR-Besitzer oder ein bestimmter QR-Code. Nachrichten an Codes sind type 'dm' (fq = Absender-Code).
@@ -403,6 +430,7 @@
     if (p.podest) v.push(['orders', 'Bestellungen']);
     if (p.solve) v.push(['problems', 'Probleme']);
     if (p.dash) v.push(['dash', 'Dashboard']);
+    if (p.kisten) v.push(['kisten', 'Kisten K2 / K5']);
     v.push(['chat', 'Messenger']);   // für alle QR-Codes immer aktiv
     return v;
   }
@@ -641,6 +669,8 @@
           (fin ? '' : '<span class="acts">' + (o.status === 'offen' ? '<button data-oid="' + id + '" data-st="angenommen">Annehmen</button>' : '') +
             '<button class="btn-ok" data-oid="' + id + '" data-st="erledigt">Erledigt</button></span>') + '</div>';
       }).join('') : '<div class="empty">Keine Bestellungen.</div>';
+    } else if (view === 'kisten') {
+      renderKisten(s);
     } else if (view === 'problems') {
       var pids = Object.keys(s.problems).sort(function (a, b) { return s.problems[b].t - s.problems[a].t; }).slice(0, 40);
       pids.sort(function (a, b) { return (s.problems[a].status !== 'offen') - (s.problems[b].status !== 'offen'); });
