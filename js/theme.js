@@ -13,11 +13,12 @@
     if (document.body) { bioEyes(t === 'bio'); arcFx(t === 'arc'); }
   }
   // Anomalie-Design (Arcane Staffel 2): schwebende Splitter, ein drehender Wirbel und ein Licht, das dem Mauszeiger folgt
-  var fxBox = null, fxMove = null, fxQueued = false;
+  var fxBox = null, rift = null, fxMove = null, fxQueued = false;
   function arcFx(on) {
     if (!on) {
       if (fxBox && fxBox.parentNode) fxBox.parentNode.removeChild(fxBox);
-      fxBox = null;
+      if (rift && rift.parentNode) rift.parentNode.removeChild(rift);
+      fxBox = null; rift = null;
       if (fxMove) { window.removeEventListener('pointermove', fxMove); fxMove = null; }
       return;
     }
@@ -25,14 +26,17 @@
     fxBox = document.createElement('div');
     fxBox.id = 'arcFx';
     fxBox.setAttribute('aria-hidden', 'true');
-    var cols = ['#c04bff', '#ff4fd8', '#6a12b8', '#f0d9ff'], shapes = ['polygon(50% 0,100% 100%,0 80%)', 'polygon(20% 0,100% 30%,70% 100%,0 70%)', 'polygon(0 20%,60% 0,100% 60%,40% 100%)'];
-    var h = '<b class="rift"></b>';
+    var cols = ['#c04bff', '#ff4fd8', '#4deeff', '#f0d9ff'], shapes = ['polygon(50% 0,100% 100%,0 80%)', 'polygon(20% 0,100% 30%,70% 100%,0 70%)', 'polygon(0 20%,60% 0,100% 60%,40% 100%)'];
+    var h = '';
     for (var i = 0; i < 16; i++) {
       var s = 8 + Math.round(Math.random() * 26);
       h += '<i style="left:' + Math.round(Math.random() * 100) + '%;width:' + s + 'px;height:' + Math.round(s * (.8 + Math.random() * .8)) + 'px;background:' + cols[i % cols.length] +
         ';clip-path:' + shapes[i % shapes.length] + ';animation-duration:' + (12 + Math.round(Math.random() * 16)) + 's;animation-delay:-' + Math.round(Math.random() * 26) + 's"></i>';
     }
     fxBox.innerHTML = h;
+    rift = document.createElement('b');
+    rift.id = 'arcRift';
+    document.body.appendChild(rift);
     document.body.appendChild(fxBox);
     fxMove = function (e) {
       if (fxQueued) return;
