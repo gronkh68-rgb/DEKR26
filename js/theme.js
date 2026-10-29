@@ -115,11 +115,12 @@
     var el = document.createElement('div');
     el.id = 'cpBoot';
     var V = window.DEKR_VERSION || { n: '', b: '' };
-    el.innerHTML = '<canvas id="btRain"></canvas><div class="bt-term" id="btTerm"></div><div class="bt-hex" id="btHex"></div>' +
+    el.innerHTML = '<canvas id="btRain"></canvas><div class="bt-haz top"></div><div class="bt-haz bot"></div><i class="bt-c c1"></i><i class="bt-c c2"></i><i class="bt-c c3"></i><i class="bt-c c4"></i><div class="bt-tear" id="btTear"></div>' +
+      '<div class="bt-logo"><b data-t="DEUKRO26">DEUKRO26</b><small>BREACH PROTOCOL // NIGHT CITY EDITION</small></div><div class="bt-term" id="btTerm"></div><div class="bt-hex" id="btHex"></div>' +
       '<div class="bt-mid"><div class="bt-lbl" id="btLbl">ZUGRIFF WIRD ERZWUNGEN</div><div class="bt-pct" id="btPct">0%</div><div class="bt-bar"><i id="btBar"></i></div></div>' +
       '<div class="bt-foot">DEUKRO26 // ICE-BREAKER ' + (V.n ? 'v' + V.n : '') + '<span>KLICK = ÜBERSPRINGEN</span></div>';
     document.body.appendChild(el);
-    var cv = document.getElementById('btRain'), cx = cv.getContext('2d'), cols = 0, drops = [], fs = 16, alive = true, t0 = Date.now(), DUR = 4300, fade = 1;
+    var cv = document.getElementById('btRain'), cx = cv.getContext('2d'), cols = 0, drops = [], fs = 16, alive = true, t0 = Date.now(), DUR = 3100, fade = 1;
     function size() { cv.width = window.innerWidth; cv.height = window.innerHeight; cols = Math.ceil(cv.width / fs); drops = []; for (var c = 0; c < cols; c++) drops.push(Math.random() * -40); }
     size(); window.addEventListener('resize', size);
     var glyphs = 'アイウエオカキクケコサシスセソ0123456789ABCDEF#$%&<>/\\|'.split('');
@@ -141,14 +142,14 @@
     var term = document.getElementById('btTerm'), ua = navigator.userAgent, os = /Android/.test(ua) ? 'ANDROID' : /iPhone|iPad/.test(ua) ? 'IOS' : /Windows/.test(ua) ? 'WINDOWS' : /Mac/.test(ua) ? 'MACOS' : 'LINUX';
     var hex = function (n) { var s = ''; while (n--) s += Math.floor(Math.random() * 16).toString(16).toUpperCase(); return s; };
     var steps = [
-      '> SYSTEMSTART DEUKRO26', '> VERBINDUNG ZUR DATENBANK ..... OK', '> GERÄT ERKENNEN: ' + os + ' ....... OK', '> FIREWALL ABTASTEN ........... 3 PORTS',
-      '> ICE-SCHICHT 1/3 BRECHEN ..... ' + hex(8), '> ICE-SCHICHT 2/3 BRECHEN ..... ' + hex(8), '> ICE-SCHICHT 3/3 BRECHEN ..... ' + hex(8),
-      '> HANDSHAKE ........ SHA-256 OK', '> ZUGRIFFSRECHTE LADEN ........ OK', '> KARTE KOMPILIEREN ........... OK', '> TRACE UMLEITEN ............. OK', '> ROOT-ZUGRIFF ERHALTEN'
+      '> NETRUNNER-VERBINDUNG ....... OK', '> GERÄT: ' + os + ' ................. OK', '> FIREWALL ABTASTEN ........... 3 PORTS',
+      '> ICE-SCHICHT 1/3 ... ' + hex(8), '> ICE-SCHICHT 2/3 ... ' + hex(8), '> ICE-SCHICHT 3/3 ... ' + hex(8),
+      '> DAEMON HOCHGELADEN .......... OK', '> TRACE UMGELEITET ............ OK', '> ROOT-ZUGRIFF ERHALTEN'
     ];
     var si = 0, ivT = setInterval(function () {
       if (si >= steps.length) { clearInterval(ivT); return; }
       var d = document.createElement('div'); d.textContent = steps[si++]; term.appendChild(d);
-      while (term.children.length > 11) term.removeChild(term.firstChild);
+      while (term.children.length > 9) term.removeChild(term.firstChild);
     }, DUR / (steps.length + 1));
     // Hex-Strom rechts
     var hx = document.getElementById('btHex'), ivH = setInterval(function () {
@@ -158,7 +159,7 @@
     // Fortschritt und Abschluss
     var pct = document.getElementById('btPct'), bar = document.getElementById('btBar'), lbl = document.getElementById('btLbl'), done = false;
     var ivP = setInterval(function () {
-      var p = Math.min(100, Math.round(((Date.now() - t0) / (DUR - 700)) * 100 + (Math.random() * 3)));
+      var p = Math.min(100, Math.round(((Date.now() - t0) / (DUR - 550)) * 100 + (Math.random() * 3)));
       if (p >= 100 && !done) { p = 100; done = true; grant(); }
       pct.textContent = p + '%'; bar.style.width = p + '%';
     }, 40);
@@ -172,8 +173,11 @@
       setTimeout(function () { alive = false; window.removeEventListener('resize', size); if (el.parentNode) el.parentNode.removeChild(el); }, 520);
     }
     el.addEventListener('pointerdown', close); document.addEventListener('keydown', close);
-    setTimeout(function () { if (!done) { done = true; pct.textContent = '100%'; bar.style.width = '100%'; grant(); } }, DUR - 650);
+    setTimeout(function () { if (!done) { done = true; pct.textContent = '100%'; bar.style.width = '100%'; grant(); } }, DUR - 500);
     setTimeout(close, DUR);
+    // Bildrisse: kurze Streifen springen über den Schirm
+    var tear = document.getElementById('btTear');
+    [600, 1500, 2300].forEach(function (ms) { setTimeout(function () { if (!alive || closed) return; tear.className = 'bt-tear go'; setTimeout(function () { tear.className = 'bt-tear'; }, 260); }, ms); });
     setTimeout(function () { root.classList.remove('cp-boot'); }, DUR + 800);   // Sicherung
   }
 

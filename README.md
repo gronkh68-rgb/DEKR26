@@ -109,7 +109,7 @@ dann `npx firebase emulators:exec --only database --project demo-dekr "node test
 
 Der Knopf „Design: …“ (Kopfzeile bzw. Handyseite) wechselt zwischen **Cyber** (Cyberpunk) und **Schlicht**. Die Wahl wird je Browser gespeichert.
 Im Cyber-Design wählt der Knopf „Farben“ Haupt- und Nebenfarbe (sieben Vorlagen oder frei); Statusfarben (nicht bereit gelb, bereit grün, Problem rot) bleiben fest.
-Beim Laden läuft im Cyber-Design eine Hacking-Animation (ca. 4,5 s, Klick oder Taste überspringt; „Weniger Effekte“ schaltet sie ab).
+Beim Laden läuft im Cyber-Design eine Hacking-Animation (ca. 3 s, Klick oder Taste überspringt; „Weniger Effekte“ schaltet sie ab).
 Cyber-Extras: Kreismenü auf der Karte (Rechtsklick oder langes Tippen), Scanner mit Hologramm-Label beim Anklicken einer Position, Segment-Balken je Tag, tippende Meldungen, Breach-Raster
 bei der Anmeldung, entschlüsselnde Überschriften, Bedien-Töne (im Ton-Fenster), Linseneffekt und „Weniger Effekte“ (im Farben-Fenster), Farbvorlagen Off-Rot und Eierschale.
 Dateien: `css/cyber.css`, `js/theme.js`.
