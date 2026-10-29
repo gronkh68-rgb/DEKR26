@@ -8,7 +8,7 @@
   var recent = [];
   try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { recent = []; }
   var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash', 'ueber', 'kisten'];
-  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash', 'kisten', 'chat'];
+  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash', 'kisten', 'map', 'chat'];
 
   // Name, Funktion und Rechte kommen vom QR-Code (?q=ID, im Dashboard gepflegt).
   // n/f/p im Link sind nur Rückfall, falls die Daten nicht aus der Datenbank kommen.
@@ -141,6 +141,52 @@
     });
     if (changed) { try { localStorage.setItem('dekr26_probseen', JSON.stringify(seenP)); } catch (e) { /* ignorieren */ } }
   }
+
+  // ---------- Karte (nur ansehen) ----------
+  var mmHall = 0, mmZoom = 100, mmSel = '';
+  function mmOv(id) { return Store.get().layout[id] || Halls.get(id).layout || {}; }
+  function renderMobMap(state) {
+    var hall = Halls.all[mmHall] || Halls.all[0], lay = Halls.layout(hall.id, mmOv(hall.id));
+    var probs = {}, byPos = {};
+    Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') probs[state.problems[id].kr] = 1; });
+    Object.keys(state.tasks).forEach(function (id) {
+      var t = Object.assign({ id: id }, state.tasks[id]);
+      if (t.hall !== hall.id || !t.pos || (kHide && t.closed)) return;
+      (byPos[t.pos] = byPos[t.pos] || []).push(t);
+    });
+    var known = {}, drawn = [], keys = Object.keys(byPos), ready = 0;
+    lay.positions.forEach(function (p) { known[p.id] = p; });
+    keys.forEach(function (id) {
+      var c = known[id] || Halls.cellFor(hall.id, id, mmOv(hall.id)); if (c) drawn.push(c);
+      if (byPos[id].every(function (t) { return t.done; })) ready++;
+    });
+    $('mmHalls').innerHTML = Halls.all.map(function (h, i) { return '<button type="button" class="btn-sm' + (i === mmHall ? ' sel' : '') + '" data-mh="' + i + '">' + esc(h.name) + '</button>'; }).join('');
+    $('mmStat').textContent = ready + '/' + keys.length + ' Positionen bereit · Tippen für Details';
+    var svg = '<svg class="map plan" style="width:' + mmZoom + '%" viewBox="' + lay.vb + '">' + (lay.plan || '');
+    drawn.forEach(function (p) {
+      var ts = byPos[p.id], cls = 'cell ' + (ts.every(function (t) { return t.done; }) ? 'done' : 'open') + (ts.some(function (t) { return probs[t.kr]; }) ? ' prob' : '') + (mmSel === p.id ? ' sel' : '');
+      svg += '<g data-pos="' + esc(p.id) + '"><rect class="' + cls + '" x="' + p.x + '" y="' + p.y + '" width="' + p.w + '" height="' + p.h + '" rx="2"/>' +
+        '<text class="cell-t" style="font-size:' + p.f * 1.1 + 'px" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2 + p.f * .37) + '">' + esc(Halls.label('', p.id)) + '</text></g>';
+    });
+    var box = $('mmBox'), sx = box.scrollLeft, sy = box.scrollTop;
+    box.innerHTML = svg + '</svg>'; box.scrollLeft = sx; box.scrollTop = sy;
+    var ts = byPos[mmSel] || [];
+    $('mmInfo').innerHTML = mmSel && ts.length ? '<div class="col-title orb" style="margin:8px 0 4px">Position ' + esc(Halls.label(hall.id, mmSel)) + '</div>' + ts.map(function (t) {
+      return '<div class="krrow' + (t.closed ? ' closed' : t.done ? ' ok' : '') + '"><span><b>KR ' + esc(t.kr) + '</b>' + (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') +
+        (probs[t.kr] ? ' <span class="badge prob">Problem</span>' : '') + (t.k2 || t.k5 ? ' <span class="badge kis">' + (t.k2 ? 'K2 ×' + t.k2 : '') + (t.k2 && t.k5 ? ' · ' : '') + (t.k5 ? 'K5 ×' + t.k5 : '') + '</span>' : '') +
+        '<small>' + esc(Util.DAYS[t.day] || '') + ' ' + esc(Util.dayDate(t.week, t.day)) + '</small></span><span class="st">' + (t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit') + '</span></div>';
+    }).join('') : '';
+  }
+  $('v-map').addEventListener('click', function (e) {
+    var h = e.target.closest('button[data-mh]'), g = e.target.closest('g[data-pos]');
+    if (h) { mmHall = +h.dataset.mh; mmSel = ''; }
+    else if (e.target.closest('#mmIn')) mmZoom = Math.min(400, mmZoom + 40);
+    else if (e.target.closest('#mmOut')) mmZoom = Math.max(100, mmZoom - 40);
+    else if (e.target.closest('#mmFit')) mmZoom = 100;
+    else if (g) mmSel = g.getAttribute('data-pos');
+    else return;
+    renderMobMap(Store.get());
+  });
 
   // ---------- Kisten je KR (K2 / K5) ----------
   var kWeek = Util.isoWeek(), kDay = Math.min(5, Math.max(1, Util.todayIdx() || 1));
@@ -421,6 +467,7 @@
     if (p.solve) v.push(['problems', 'Probleme']);
     if (p.dash) v.push(['dash', 'Dashboard']);
     if (p.kisten) v.push(['kisten', 'Kisten K2 / K5']);
+    v.push(['map', 'Karte']);
     v.push(['chat', 'Messenger']);   // für alle QR-Codes immer aktiv
     return v;
   }
@@ -660,6 +707,8 @@
           (fin ? '' : '<span class="acts">' + (o.status === 'offen' ? '<button data-oid="' + id + '" data-st="angenommen">Annehmen</button>' : '') +
             '<button class="btn-ok" data-oid="' + id + '" data-st="erledigt">Erledigt</button></span>') + '</div>';
       }).join('') : '<div class="empty">Keine Bestellungen.</div>';
+    } else if (view === 'map') {
+      renderMobMap(s);
     } else if (view === 'kisten') {
       renderKisten(s);
     } else if (view === 'problems') {

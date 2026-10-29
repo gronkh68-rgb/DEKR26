@@ -93,6 +93,15 @@
     <div id="kList"></div>
   </section>
 
+  <section class="sec" id="v-map" hidden>
+    <div class="mm-bar"><span id="mmHalls" class="mm-halls"></span>
+      <span class="mm-zoom"><button type="button" class="btn-sm" id="mmOut" aria-label="Verkleinern">−</button><button type="button" class="btn-sm" id="mmFit">Einpassen</button><button type="button" class="btn-sm" id="mmIn" aria-label="Vergrößern">+</button></span></div>
+    <div class="empty" id="mmStat"></div>
+    <div class="mm-box" id="mmBox"></div>
+    <div class="mm-leg"><span><i class="o"></i>nicht bereit</span><span><i class="d"></i>bereit</span><span><i class="p"></i>Problem</span></div>
+    <div id="mmInfo" class="mm-info"></div>
+  </section>
+
   <section class="sec" id="v-chat" hidden>
     <div id="chatRoot"></div>
   </section>
@@ -136,6 +145,8 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<script src="js/version.js?v=0"></script>
+<script src="js/update.js?v=0"></script>
 <script src="js/config.js?v=b474412"></script>
 <script src="js/halls.js?v=1921e79"></script>
 <script src="js/core.js?v=0ae8841"></script>

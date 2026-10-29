@@ -230,7 +230,7 @@
         '<div class="prf-sec"><div class="prf-t">Eigenen Code ändern (6 Ziffern)</div><form id="prfCode" class="prf-col" autocomplete="off" novalidate>' +
         '<input id="prfOld" placeholder="Alter Code" autocomplete="off" required><input id="prfNew" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Neuer Code" autocomplete="off" required>' +
         '<input id="prfNew2" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Neuen Code wiederholen" autocomplete="off" required><button class="btn-main">Code speichern</button></form></div>') +
-      '<div class="note" id="prfMsg"></div>' +
+      '<div class="note" id="prfMsg"></div><div class="empty">Version ' + esc(window.DekrVersion ? DekrVersion.label() : '') + (window.DEKR_VERSION ? ' · ' + esc(DEKR_VERSION.d) : '') + '</div>' +
       '<div class="prf-sec"><button type="button" class="btn-warn" id="prfOut">Abmelden</button></div></div>';
     document.body.appendChild(pm);
     var msg = function (t, ok) { var e = $('prfMsg'); e.textContent = t; e.style.color = ok ? 'var(--green)' : ''; };

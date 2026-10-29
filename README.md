@@ -112,3 +112,10 @@ Im Cyber-Design wählt der Knopf „Farben“ Haupt- und Nebenfarbe (sieben Vorl
 Cyber-Extras: Kreismenü auf der Karte (Rechtsklick oder langes Tippen), Scanner mit Hologramm-Label beim Anklicken einer Position, Segment-Balken je Tag, tippende Meldungen, Breach-Raster
 bei der Anmeldung, entschlüsselnde Überschriften, Bedien-Töne (im Ton-Fenster), Linseneffekt und „Weniger Effekte“ (im Farben-Fenster), Farbvorlagen Off-Rot und Eierschale.
 Dateien: `css/cyber.css`, `js/theme.js`.
+
+## Version und Updates
+
+Die Versionsnummer (`n` in `js/version.js`, von Hand erhöhen) steht unten rechts als „v2.1 · Build“ und im Profil. Nach jedem Veröffentlichen `scripts/stamp.sh` ausführen
+(setzt Build, Datum, `version.json` und die Cache-Buster) und das Ergebnis einchecken. Die Seiten prüfen `version.json` alle 5 Minuten und beim Zurückkehren in die App:
+ist sie neuer, erscheint oben der Hinweis „Neue Version verfügbar – Jetzt neu laden“. Ein Klick auf die Versionsangabe prüft sofort.
+Die Karte am Handy (Menü „Karte“) zeigt die Positionen der Hallen zum Ansehen; Tippen auf eine Position zeigt die KR, Status und Kisten.
