@@ -418,3 +418,8 @@ body.cp-alert::before { content: ''; position: fixed; inset: 0; z-index: 98; poi
 .kitem .kcount .kn { font-size: 28px; }
 .kitem .kcount button { padding: 8px 0; }
 .badge.kis { border-color: var(--accent); color: var(--accent); }
+.kitem .khead { align-items: center; }
+.kitem .khead b { font-size: 18px; }
+.kitem .kpos { font-size: 22px; font-weight: 700; color: var(--accent); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.kitem .kmeta { color: var(--dim); font-size: 12px; margin: -2px 0 4px; }
+.kitem.closed { opacity: .6; }

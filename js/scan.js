@@ -173,9 +173,17 @@
 
   // ---------- Kisten je KR (K2 / K5) ----------
   var kWeek = Util.isoWeek(), kDay = Math.min(5, Math.max(1, Util.todayIdx() || 1));
+  var kHide = true;   // abgeschlossene KR ausblenden (im Browser gemerkt)
+  try { kHide = localStorage.getItem('dekr26_khide') !== '0'; } catch (e) { /* ignorieren */ }
+  $('kHide').checked = kHide;
+  $('kHide').onchange = function () {
+    kHide = $('kHide').checked;
+    try { localStorage.setItem('dekr26_khide', kHide ? '1' : '0'); } catch (e) { /* ignorieren */ }
+    renderKisten(Store.get());
+  };
   function dayTasks(state, week, day) {
     return Object.keys(state.tasks).map(function (id) { return Object.assign({ id: id }, state.tasks[id]); })
-      .filter(function (t) { return t.week === week && t.day === day; })
+      .filter(function (t) { return t.week === week && t.day === day && !(kHide && t.closed); })
       .sort(function (a, b) { return a.kr < b.kr ? -1 : a.kr > b.kr ? 1 : 0; });
   }
   function renderKisten(state) {
@@ -189,8 +197,9 @@
     }).join('');
     var list = dayTasks(state, kWeek, kDay);
     $('kList').innerHTML = list.length ? list.map(function (t) {
-      return '<div class="kitem"><div class="khead"><b>KR ' + esc(t.kr) + '</b><small>' +
-        (t.pos ? esc(Halls.label(t.hall, t.pos)) : t.from ? 'Lieferung aus Halle ' + esc(t.from) : 'ohne Position') + '</small></div>' +
+      return '<div class="kitem' + (t.closed ? ' closed' : '') + '"><div class="khead"><b>KR ' + esc(t.kr) + '</b><span class="kpos">' +
+        (t.pos ? esc(Halls.label(t.hall, t.pos)) : t.from ? 'Lieferung Halle ' + esc(t.from) : 'ohne Position') + '</span></div>' +
+        (t.scope || t.closed ? '<div class="kmeta">' + (t.scope ? esc(t.scope) : '') + (t.closed ? ' · abgeschlossen' : '') + '</div>' : '') +
         ['k2', 'k5'].map(function (f) {
           return '<div class="kcount"><b>' + f.toUpperCase() + '</b><button type="button" class="big-gray" data-tid="' + esc(t.id) + '" data-kf="' + f + '" data-kd="-1">−</button>' +
             '<span class="kn">' + (t[f] || 0) + '</span><button type="button" class="btn-ok big" data-tid="' + esc(t.id) + '" data-kf="' + f + '" data-kd="1">+</button></div>';
