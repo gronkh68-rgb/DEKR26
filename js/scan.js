@@ -8,7 +8,7 @@
   var recent = [];
   try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { recent = []; }
   var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash', 'ueber', 'kisten'];
-  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash', 'kisten', 'map', 'chat'];
+  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash', 'kisten', 'chat'];
 
   // Name, Funktion und Rechte kommen vom QR-Code (?q=ID, im Dashboard gepflegt).
   // n/f/p im Link sind nur Rückfall, falls die Daten nicht aus der Datenbank kommen.
@@ -142,16 +142,23 @@
     if (changed) { try { localStorage.setItem('dekr26_probseen', JSON.stringify(seenP)); } catch (e) { /* ignorieren */ } }
   }
 
-  // ---------- Karte (nur ansehen) ----------
-  var mmHall = 0, mmZoom = 100, mmSel = '';
+  // ---------- Karte im mobilen Dashboard (nur ansehen, mit Optionen) ----------
+  var mmHall = 0, mmZoom = 100, mmSel = '', mmWeek = Util.isoWeek(), mmDay = 0, mmStat = '', mmQ = '';
   function mmOv(id) { return Store.get().layout[id] || Halls.get(id).layout || {}; }
   function renderMobMap(state) {
-    var hall = Halls.all[mmHall] || Halls.all[0], lay = Halls.layout(hall.id, mmOv(hall.id));
-    var probs = {}, byPos = {};
+    if (view !== 'dash' || dashTab !== 'map') return;
+    var hall = Halls.all[mmHall] || Halls.all[0], lay = Halls.layout(hall.id, mmOv(hall.id)), now = Util.isoWeek(), q = mmQ.trim().toLowerCase();
+    var probs = {}, byPos = {}, perDay = [0, 0, 0, 0, 0, 0];
     Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') probs[state.problems[id].kr] = 1; });
     Object.keys(state.tasks).forEach(function (id) {
       var t = Object.assign({ id: id }, state.tasks[id]);
-      if (t.hall !== hall.id || !t.pos || (kHide && t.closed)) return;
+      if (t.week !== mmWeek || (kHide && t.closed)) return;
+      if (t.hall === hall.id && t.pos) perDay[t.day] = (perDay[t.day] || 0) + 1;
+      if (t.hall !== hall.id || !t.pos) return;
+      if (mmDay && t.day !== mmDay) return;
+      var st = probs[t.kr] ? 'prob' : t.done ? 'done' : 'open';
+      if (mmStat && mmStat !== st) return;
+      if (q && (t.kr + ' ' + Halls.label(t.hall, t.pos)).toLowerCase().indexOf(q) < 0) return;
       (byPos[t.pos] = byPos[t.pos] || []).push(t);
     });
     var known = {}, drawn = [], keys = Object.keys(byPos), ready = 0;
@@ -160,6 +167,14 @@
       var c = known[id] || Halls.cellFor(hall.id, id, mmOv(hall.id)); if (c) drawn.push(c);
       if (byPos[id].every(function (t) { return t.done; })) ready++;
     });
+    $('mmWk').textContent = 'KW ' + mmWeek.split('-W')[1] + (mmWeek === now ? ' · diese Woche' : '') + ' · ' + Util.dayDate(mmWeek, 1) + '–' + Util.dayDate(mmWeek, 5);
+    $('mmDays').innerHTML = ['Alle', 'Mo', 'Di', 'Mi', 'Do', 'Fr'].map(function (n, d) {
+      var c = d ? perDay[d] : perDay[1] + perDay[2] + perDay[3] + perDay[4] + perDay[5];
+      return '<button type="button" class="btn-sm' + (mmDay === d ? ' sel' : '') + (d && mmWeek === now && d === Util.todayIdx() ? ' today' : '') + '" data-md="' + d + '">' + n + '<small>' + c + '</small></button>';
+    }).join('');
+    $('mmSt').innerHTML = [['', 'Alle'], ['open', 'Offen'], ['done', 'Bereit'], ['prob', 'Probleme']].map(function (x) {
+      return '<button type="button" class="btn-sm' + (mmStat === x[0] ? ' sel' : '') + '" data-ms="' + x[0] + '">' + x[1] + '</button>';
+    }).join('');
     $('mmHalls').innerHTML = Halls.all.map(function (h, i) { return '<button type="button" class="btn-sm' + (i === mmHall ? ' sel' : '') + '" data-mh="' + i + '">' + esc(h.name) + '</button>'; }).join('');
     $('mmStat').textContent = ready + '/' + keys.length + ' Positionen bereit · Tippen für Details';
     var svg = '<svg class="map plan" style="width:' + mmZoom + '%" viewBox="' + lay.vb + '">' + (lay.plan || '');
@@ -177,9 +192,13 @@
         '<small>' + esc(Util.DAYS[t.day] || '') + ' ' + esc(Util.dayDate(t.week, t.day)) + '</small></span><span class="st">' + (t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit') + '</span></div>';
     }).join('') : '';
   }
-  $('v-map').addEventListener('click', function (e) {
-    var h = e.target.closest('button[data-mh]'), g = e.target.closest('g[data-pos]');
+  $('dashMap').addEventListener('click', function (e) {
+    var h = e.target.closest('button[data-mh]'), g = e.target.closest('g[data-pos]'), d = e.target.closest('button[data-md]'), st = e.target.closest('button[data-ms]');
     if (h) { mmHall = +h.dataset.mh; mmSel = ''; }
+    else if (d) mmDay = +d.dataset.md;
+    else if (st) mmStat = st.dataset.ms;
+    else if (e.target.closest('#mmWkP')) { mmWeek = Util.addWeeks(mmWeek, -1); mmSel = ''; }
+    else if (e.target.closest('#mmWkN')) { mmWeek = Util.addWeeks(mmWeek, 1); mmSel = ''; }
     else if (e.target.closest('#mmIn')) mmZoom = Math.min(400, mmZoom + 40);
     else if (e.target.closest('#mmOut')) mmZoom = Math.max(100, mmZoom - 40);
     else if (e.target.closest('#mmFit')) mmZoom = 100;
@@ -187,6 +206,7 @@
     else return;
     renderMobMap(Store.get());
   });
+  $('mmFilter').addEventListener('input', function () { mmQ = $('mmFilter').value; mmSel = ''; renderMobMap(Store.get()); });
 
   // ---------- Kisten je KR (K2 / K5) ----------
   var kWeek = Util.isoWeek(), kDay = Math.min(5, Math.max(1, Util.todayIdx() || 1));
@@ -355,6 +375,16 @@
 
   // Alle KR aller Wochen mit Suche
   var dashTab = 'new';
+  // Ohne Dashboard-Recht gibt es keine Meldungen: Karte und KR-Listen bleiben
+  function fixDashTabs() {
+    var dashOk = !!perms().dash, nb = $('v-dash').querySelector('button[data-dt="new"]');
+    if (nb) nb.hidden = !dashOk;
+    if (!dashOk && dashTab === 'new') {
+      dashTab = 'map';
+      Array.prototype.forEach.call($('v-dash').querySelectorAll('button[data-dt]'), function (x) { x.classList.toggle('sel', x.dataset.dt === dashTab); });
+      $('dashNew').hidden = true; $('dashAll').hidden = true; $('dashMap').hidden = false;
+    }
+  }
   function renderAllList(state) {
     if ($('dashAll').hidden) return;
     var q = $('allFilter').value.trim().toLowerCase();
@@ -386,8 +416,9 @@
     dashTab = b.dataset.dt;
     Array.prototype.forEach.call($('v-dash').querySelectorAll('button[data-dt]'), function (x) { x.classList.toggle('sel', x.dataset.dt === dashTab); });
     $('dashNew').hidden = dashTab !== 'new';
-    $('dashAll').hidden = dashTab === 'new';
-    renderAllList(Store.get());
+    $('dashAll').hidden = dashTab !== 'week' && dashTab !== 'all';
+    $('dashMap').hidden = dashTab !== 'map';
+    renderAllList(Store.get()); renderMobMap(Store.get());
   });
   $('v-dash').onclick = function (e) {
     var b = e.target.closest('button[data-ackm]');
@@ -465,9 +496,8 @@
     if (p.ueber) v.push(['ueber', 'Anfrage Überspielen']);
     if (p.podest) v.push(['orders', 'Bestellungen']);
     if (p.solve) v.push(['problems', 'Probleme']);
-    if (p.dash) v.push(['dash', 'Dashboard']);
+    v.push(['dash', p.dash ? 'Dashboard' : 'Karte & KR']);   // Karte und KR-Listen sind für alle da, die Meldungen nur für Dashboard-Accounts
     if (p.kisten) v.push(['kisten', 'Kisten K2 / K5']);
-    v.push(['map', 'Karte']);
     v.push(['chat', 'Messenger']);   // für alle QR-Codes immer aktiv
     return v;
   }
@@ -494,7 +524,7 @@
     var b = e.target.closest('button[data-view]');
     if (!b) return;
     view = b.dataset.view;
-    renderMenu(); renderLists();
+    renderMenu(); renderLists(); renderMobMap(Store.get());
     if (chatUi && view === 'chat') chatUi.render(Store.get());
   };
 
@@ -707,8 +737,6 @@
           (fin ? '' : '<span class="acts">' + (o.status === 'offen' ? '<button data-oid="' + id + '" data-st="angenommen">Annehmen</button>' : '') +
             '<button class="btn-ok" data-oid="' + id + '" data-st="erledigt">Erledigt</button></span>') + '</div>';
       }).join('') : '<div class="empty">Keine Bestellungen.</div>';
-    } else if (view === 'map') {
-      renderMobMap(s);
     } else if (view === 'kisten') {
       renderKisten(s);
     } else if (view === 'problems') {
@@ -794,7 +822,9 @@
     renderInbox(state);
     setupChat();
     if (chatUi && view === 'chat') chatUi.render(state);
+    fixDashTabs();
     renderDash(state);
+    renderMobMap(state);
     watchDone(state);
     checkAcks(state);
     checkOrders(state);

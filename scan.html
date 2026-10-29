@@ -93,15 +93,6 @@
     <div id="kList"></div>
   </section>
 
-  <section class="sec" id="v-map" hidden>
-    <div class="mm-bar"><span id="mmHalls" class="mm-halls"></span>
-      <span class="mm-zoom"><button type="button" class="btn-sm" id="mmOut" aria-label="Verkleinern">−</button><button type="button" class="btn-sm" id="mmFit">Einpassen</button><button type="button" class="btn-sm" id="mmIn" aria-label="Vergrößern">+</button></span></div>
-    <div class="empty" id="mmStat"></div>
-    <div class="mm-box" id="mmBox"></div>
-    <div class="mm-leg"><span><i class="o"></i>nicht bereit</span><span><i class="d"></i>bereit</span><span><i class="p"></i>Problem</span></div>
-    <div id="mmInfo" class="mm-info"></div>
-  </section>
-
   <section class="sec" id="v-chat" hidden>
     <div id="chatRoot"></div>
   </section>
@@ -112,6 +103,7 @@
       <button type="button" class="menu-btn sel" data-dt="new">Meldungen</button>
       <button type="button" class="menu-btn" data-dt="week">Diese Woche</button>
       <button type="button" class="menu-btn" data-dt="all">Alle KR</button>
+      <button type="button" class="menu-btn" data-dt="map">Karte</button>
     </div>
     <div id="dashNew">
       <div class="box">
@@ -120,6 +112,20 @@
         <div class="empty" id="notifInfo"></div>
       </div>
       <div id="dashList"></div>
+    </div>
+    <div id="dashMap" hidden>
+      <div class="mm-opts">
+        <div class="mm-wk"><button type="button" class="btn-sm" id="mmWkP" aria-label="Vorherige Woche">‹</button><span class="tag" id="mmWk"></span><button type="button" class="btn-sm" id="mmWkN" aria-label="Nächste Woche">›</button></div>
+        <div class="mm-days" id="mmDays"></div>
+        <div class="mm-st" id="mmSt"></div>
+        <input id="mmFilter" class="full-in" placeholder="KR oder Position suchen …" autocomplete="off">
+      </div>
+      <div class="mm-bar"><span id="mmHalls" class="mm-halls"></span>
+        <span class="mm-zoom"><button type="button" class="btn-sm" id="mmOut" aria-label="Verkleinern">−</button><button type="button" class="btn-sm" id="mmFit">Einpassen</button><button type="button" class="btn-sm" id="mmIn" aria-label="Vergrößern">+</button></span></div>
+      <div class="empty" id="mmStat"></div>
+      <div class="mm-box" id="mmBox"></div>
+      <div class="mm-leg"><span><i class="o"></i>nicht bereit</span><span><i class="d"></i>bereit</span><span><i class="p"></i>Problem</span></div>
+      <div id="mmInfo" class="mm-info"></div>
     </div>
     <div id="dashAll" hidden>
       <label class="chk" style="margin:0 0 6px"><input type="checkbox" id="allHide"> Abgeschlossene KR ausblenden</label>
