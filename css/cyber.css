@@ -273,3 +273,22 @@ html.fx-low .top h1 { text-shadow: none; } html.fx-low button { clip-path: none;
 .bt-mid { bottom: 9vh; } .bt-pct { font-size: clamp(40px, 11vw, 84px); } .bt-term { top: 10vh; }
 @media (max-width: 700px) { .bt-logo { top: 38vh; } .bt-term { top: 8vh; } }
 .bt-logo { top: 38vh; } .bt-term { font-size: 12px; line-height: 1.6; } @media (max-width: 700px) { .bt-logo { top: 44vh; } }
+
+/* Bildschirmschoner */
+#cpSaver { position: fixed; inset: 0; z-index: 380; background: #030409; color: var(--accent); font-family: 'Share Tech Mono', monospace; cursor: none; animation: svIn .8s ease-out; transition: opacity .38s, filter .38s; overflow: hidden; }
+#cpSaver.out { opacity: 0; filter: brightness(2) blur(4px); } @keyframes svIn { from { opacity: 0; } }
+#cpSaver canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#cpSaver::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,.88)); }
+.sv-haz { position: absolute; left: 0; right: 0; height: 10px; z-index: 3; opacity: .85; background: repeating-linear-gradient(-45deg, var(--accent) 0 12px, #0a0a0a 12px 24px); } .sv-haz.top { top: 0; } .sv-haz.bot { bottom: 0; }
+.sv-box { position: absolute; left: 50%; top: 50%; margin: -130px 0 0 -300px; width: 600px; max-width: 90vw; text-align: center; z-index: 2; transition: transform 1s linear; padding: 20px; background: rgba(3,4,9,.7); border: 1px solid rgba(var(--acc-rgb), .5); clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px)); }
+.sv-st { font-size: 12px; letter-spacing: .4em; color: var(--cyan); animation: svBlink 2.4s ease-in-out infinite; } @keyframes svBlink { 50% { opacity: .35; } }
+.sv-time { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(60px, 15vw, 130px); color: #fff; letter-spacing: .06em; text-shadow: 4px 0 var(--red), -4px 0 var(--cyan), 0 0 36px rgba(var(--acc-rgb), .55); animation: svGl 7s steps(1) infinite; }
+@keyframes svGl { 0%, 94%, 100% { transform: none; } 95% { transform: translate(-8px, 0) skewX(-8deg); } 96% { transform: translate(8px, 1px); } 97% { transform: none; } 98% { transform: translate(-3px, 0); } }
+.sv-date { font-size: 15px; letter-spacing: .35em; color: var(--accent); margin-top: 2px; } .sv-info { margin-top: 12px; font-size: 13px; letter-spacing: .15em; color: #9fb4c2; } .sv-info .bad { color: var(--red); text-shadow: 0 0 10px var(--red); animation: svBlink 1s steps(1) infinite; }
+#cpSaver.alert .sv-box { border-color: var(--red); box-shadow: 0 0 30px rgba(255,42,85,.4); }
+.sv-radar { position: absolute; right: 5vw; bottom: 9vh; width: 130px; height: 130px; border: 1px solid var(--cyan); border-radius: 50%; z-index: 2; box-shadow: 0 0 18px rgba(var(--cy-rgb), .35), inset 0 0 20px rgba(var(--cy-rgb), .2);
+  background: radial-gradient(circle, transparent 0 30%, rgba(var(--cy-rgb), .25) 31% 32%, transparent 33% 62%, rgba(var(--cy-rgb), .25) 63% 64%, transparent 65%); }
+.sv-radar i { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, rgba(var(--cy-rgb), .6), transparent 25%); animation: svRad 3s linear infinite; } @keyframes svRad { to { transform: rotate(360deg); } }
+.sv-wake { position: absolute; left: 0; right: 0; bottom: 3.2vh; text-align: center; z-index: 3; font-size: 11px; letter-spacing: .35em; color: #546a76; animation: svBlink 3s ease-in-out infinite; }
+html.fx-low #cpSaver { display: none !important; }
+@media (max-width: 700px) { .sv-box { margin: -110px 0 0 -45vw; width: 90vw; } .sv-radar { width: 90px; height: 90px; } }

@@ -350,6 +350,73 @@
     setInterval(fit, 300);
   }
 
+  // Bildschirmschoner nach 10 Minuten ohne Eingabe (Maus, Tastatur, Touch), endet bei Bewegung. Nur im Cyber-Design ohne „Weniger Effekte“.
+  function screensaver() {
+    var IDLE = 600000;
+    try { var o = +localStorage.getItem('dekr-idle-ms'); if (o >= 1000) IDLE = o; } catch (e) { /* Standard */ }
+    var timer = null, el = null, raf = 0, shownAt = 0, lastX = -1, lastY = -1, clockIv = null;
+    function arm() { clearTimeout(timer); if (!el) timer = setTimeout(show, IDLE); }
+    function show() {
+      if (!on() || document.visibilityState === 'hidden') { arm(); return; }
+      var cs = getComputedStyle(document.documentElement), acc = (cs.getPropertyValue('--accent') || '#fcee09').trim(), cy = (cs.getPropertyValue('--cyan') || '#00f0ff').trim();
+      el = document.createElement('div'); el.id = 'cpSaver'; shownAt = Date.now();
+      el.innerHTML = '<canvas id="svCv"></canvas><div class="sv-haz top"></div><div class="sv-haz bot"></div><div class="sv-box" id="svBox"><div class="sv-st">STANDBY // KEINE AKTIVITÄT</div>' +
+        '<div class="sv-time" id="svTime">00:00</div><div class="sv-date" id="svDate"></div><div class="sv-info" id="svInfo"></div></div>' +
+        '<div class="sv-radar"><i></i></div><div class="sv-wake">BEWEGUNG ODER TASTE = AUFWACHEN</div>';
+      document.body.appendChild(el);
+      var cv = document.getElementById('svCv'), cx = cv.getContext('2d'), W, H, fs = 18, cols, drops, glyphs = 'アイウエオカキクケコ0123456789ABCDEF<>/\\|#$%'.split('');
+      function size() { W = cv.width = window.innerWidth; H = cv.height = window.innerHeight; cols = Math.ceil(W / fs); drops = []; for (var c = 0; c < cols; c++) drops.push(Math.random() * -60); }
+      size(); el._size = size; window.addEventListener('resize', size);
+      function frame() {
+        if (!el) return;
+        cx.fillStyle = 'rgba(3,4,9,.10)'; cx.fillRect(0, 0, W, H); cx.font = fs + 'px "Share Tech Mono", monospace';
+        for (var c = 0; c < cols; c++) {
+          if (Math.random() < .55) { drops[c] += .35; continue; }
+          cx.globalAlpha = .38; cx.fillStyle = c % 6 === 0 ? cy : acc; cx.fillText(glyphs[Math.floor(Math.random() * glyphs.length)], c * fs, drops[c] * fs); cx.globalAlpha = 1;
+          if (drops[c] * fs > H && Math.random() > .98) drops[c] = Math.random() * -20; drops[c] += 1;
+        }
+        raf = requestAnimationFrame(frame);
+      }
+      frame();
+      function tick() {
+        var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+        document.getElementById('svTime').textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + (d.getSeconds() % 2 ? '' : '');
+        document.getElementById('svDate').textContent = ['SONNTAG', 'MONTAG', 'DIENSTAG', 'MITTWOCH', 'DONNERSTAG', 'FREITAG', 'SAMSTAG'][d.getDay()] + ' · ' + p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear();
+        var S = window.Store ? Store.get() : null, info = '';
+        if (S) {
+          var pr = Object.keys(S.problems).filter(function (k) { return S.problems[k].status === 'offen'; }).length, W0 = Util.isoWeek(), td = Util.todayIdx();
+          var today = Object.keys(S.tasks).map(function (k) { return S.tasks[k]; }).filter(function (x) { return x.week === W0 && x.day === td && !x.closed; });
+          info = 'HEUTE ' + today.filter(function (x) { return x.done; }).length + '/' + today.length + ' BEREIT' + (pr ? ' · <b class="bad">⚠ ' + pr + ' OFFENES PROBLEM' + (pr > 1 ? 'E' : '') + '</b>' : '');
+          el.classList.toggle('alert', pr > 0);
+        }
+        document.getElementById('svInfo').innerHTML = info;
+        var b = document.getElementById('svBox'); if (b) { var m = (Date.now() / 1000) % 90; b.style.transform = 'translate(' + Math.round(Math.sin(m / 90 * 6.283) * 12) + 'vw,' + Math.round(Math.cos(m / 90 * 6.283 * 1.3) * 8) + 'vh)'; }
+      }
+      tick(); clockIv = setInterval(tick, 1000);
+    }
+    function hide() {
+      if (!el) return;
+      cancelAnimationFrame(raf); clearInterval(clockIv);
+      var e = el; el = null; e.classList.add('out'); window.removeEventListener('resize', e._size);
+      setTimeout(function () { if (e.parentNode) e.parentNode.removeChild(e); }, 380);
+    }
+    function activity(ev) {
+      if (el) {
+        if (Date.now() - shownAt < 700) return;   // Erschütterungen direkt nach dem Start ignorieren
+        if (ev.type === 'pointermove' || ev.type === 'mousemove') {
+          if (lastX < 0) { lastX = ev.clientX; lastY = ev.clientY; return; }
+          if (Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY) < 6) return;
+        }
+        lastX = -1; hide();
+      } else { lastX = ev.clientX == null ? -1 : ev.clientX; lastY = ev.clientY == null ? -1 : ev.clientY; }
+      arm();
+    }
+    ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(function (n) { window.addEventListener(n, activity, { passive: true, capture: true }); });
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') arm(); });
+    window.DekrSaver = { show: function () { clearTimeout(timer); show(); }, hide: hide };
+    arm();
+  }
+
   // 12: Überschriften entschlüsseln sich beim Laden
   function decodeTitles() {
     setTimeout(function () {
@@ -467,6 +534,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    boot(); watchMsgs(); countUp($('hallStat')); alertMode(); pings(); statusBar(); hud(); decodeTitles(); typedToast(); scanner(); radial(); uiSounds();
+    boot(); watchMsgs(); countUp($('hallStat')); alertMode(); pings(); statusBar(); hud(); decodeTitles(); typedToast(); scanner(); radial(); uiSounds(); screensaver();
   });
 })();
