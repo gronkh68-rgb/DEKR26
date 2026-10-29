@@ -602,6 +602,7 @@ window.Store = (function () {
 
 // Sichtbare Fehlermeldung statt stillem Ausfall (z.B. bei veraltetem Browser-Cache)
 window.addEventListener('error', function (e) {
+  if (/^ResizeObserver loop/.test(String(e.message))) return;   // harmlose Browser-Meldung, kein Fehler der Seite
   var bar = document.getElementById('errbar');
   if (!bar) {
     bar = document.createElement('div');

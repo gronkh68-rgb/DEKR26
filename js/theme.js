@@ -1,12 +1,42 @@
-// Cyberpunk-Theme: Umschalter (Auswahl im Browser gespeichert) und Klick-Effekt
+// Designs: Cyberpunk, Bio-Horror und schlicht. Umschalter (Auswahl im Browser gespeichert), Klick-Effekt, Augen im Bio-Design
 (function () {
   'use strict';
-  var link = document.getElementById('cpCss');
+  var link = document.getElementById('cpCss'), bioLink = document.getElementById('bioCss');
+  var THEMES = ['cp', 'bio', 'plain'], NAMES = { cp: 'Design: Cyber', bio: 'Design: Bio', plain: 'Design: Schlicht' };
   var KEY = 'dekr-theme';
-  function get() { try { return localStorage.getItem(KEY) || 'cp'; } catch (e) { return 'cp'; } }
+  function get() { try { var v = localStorage.getItem(KEY); return THEMES.indexOf(v) >= 0 ? v : 'cp'; } catch (e) { return 'cp'; } }
   function apply(t) {
-    if (link) link.disabled = (t === 'plain');
+    if (link) link.disabled = (t !== 'cp');
+    if (bioLink) bioLink.disabled = (t !== 'bio');
     document.documentElement.setAttribute('data-theme', t);
+    if (document.body) bioEyes(t === 'bio');
+  }
+  // Bio-Design: Augen am Bildschirmrand, die dem Mauszeiger folgen und blinzeln (nur Dekoration)
+  var eyeBox = null, eyeMove = null;
+  function bioEyes(on) {
+    if (!on) {
+      if (eyeBox && eyeBox.parentNode) eyeBox.parentNode.removeChild(eyeBox);
+      eyeBox = null;
+      if (eyeMove) { window.removeEventListener('pointermove', eyeMove); eyeMove = null; }
+      return;
+    }
+    if (eyeBox) return;
+    eyeBox = document.createElement('div');
+    eyeBox.id = 'bioEyes';
+    eyeBox.setAttribute('aria-hidden', 'true');
+    var spots = [['left:4px;top:38%', 34], ['right:6px;top:24%', 40], ['right:4px;top:62%', 28], ['left:35%;bottom:3px', 36], ['left:68%;bottom:4px', 30], ['left:10%;bottom:5px', 26]];
+    eyeBox.innerHTML = spots.map(function (s, i) {
+      return '<i class="beye" style="' + s[0] + ';width:' + s[1] * 1.5 + 'px;height:' + s[1] + 'px;animation-delay:' + (i * 1.3) + 's"><b></b></i>';
+    }).join('');
+    document.body.appendChild(eyeBox);
+    eyeMove = function (e) {
+      Array.prototype.forEach.call(eyeBox.querySelectorAll('.beye'), function (el) {
+        var r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        var dx = e.clientX - cx, dy = e.clientY - cy, d = Math.sqrt(dx * dx + dy * dy) || 1, k = Math.min(1, d / 120);
+        el.firstChild.style.transform = 'translate(' + (dx / d * r.width * .22 * k) + 'px,' + (dy / d * r.height * .22 * k) + 'px)';
+      });
+    };
+    window.addEventListener('pointermove', eyeMove, { passive: true });
   }
   apply(get());
   var bootDue = get() === 'cp' && !!document.documentElement && (function () {
@@ -19,17 +49,18 @@
     b.id = 'cpTheme';
     b.type = "button"; b.className = "btn-sm";
     b.title = 'Design umschalten';
-    function label() { b.textContent = get() === 'cp' ? 'CP an' : 'CP aus'; }
+    function label() { b.textContent = NAMES[get()]; }
     label();
     b.onclick = function () {
-      var t = get() === 'cp' ? 'plain' : 'cp';
+      var t = THEMES[(THEMES.indexOf(get()) + 1) % THEMES.length];
       try { localStorage.setItem(KEY, t); } catch (e) { /* ohne Speicher nur für diese Sitzung */ }
       apply(t); label();
     };
     host.appendChild(b);
+    bioEyes(get() === 'bio');
   });
   document.addEventListener('pointerdown', function (e) {
-    if (get() !== 'cp') return;
+    if (get() === 'plain') return;
     var el = e.target.closest ? e.target.closest('button') : null;
     if (!el || el.disabled) return;
     var r = el.getBoundingClientRect();

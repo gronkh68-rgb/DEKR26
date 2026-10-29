@@ -92,3 +92,8 @@ Dashboard die Anmeldung (Admin ist ausgenommen). Der Account kann seinen Code se
 - **Persönliche Einstellungen** (Ton, Tage, Karte) werden am Account gespeichert und auf jedes Gerät geladen.
 - **Sicherheit:** Der Code ist eine Kennung, kein starkes Passwort. Die Rechte wirken in der Oberfläche, die Datenbank prüft sie nicht je Account.
   Gegen Fremde schützt weiter die Geräte-Freigabe. In `firebase-rules.json` dürfen freigegebene Geräte nur `codeHash` und `prefs` eines Accounts schreiben.
+
+## Designs
+
+Der Knopf „Design: …“ (Kopfzeile bzw. Handyseite) wechselt zwischen **Cyber** (Cyberpunk), **Bio** (biologischer Horror: Gewebe, Adern, violette Augen, die dem
+Mauszeiger folgen und blinzeln) und **Schlicht**. Die Wahl wird je Browser gespeichert. Dateien: `css/cyber.css`, `css/bio.css`, `js/theme.js`.

@@ -1,0 +1,69 @@
+/* Bio-Horror-Design: dunkles Gewebe, Adern, violette Augen. Nur Farben und Formen, keine Funktion ändert sich. */
+:root {
+  --bg: #0a0410; --panel: #190a1c; --panel2: #240d27; --line: #4d1e45;
+  --accent: #b24bff; --green: #6cffa0; --orange: #ff8f4a; --red: #ff3b61;
+  --text: #efe3f5; --dim: #9b84a8; --cyan: #c9a0ff;
+}
+body {
+  background-color: #0a0410;
+  background-image: radial-gradient(ellipse at 15% 0%, rgba(178,75,255,.20), transparent 55%), radial-gradient(ellipse at 95% 105%, rgba(190,40,100,.22), transparent 55%), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='520' height='520' viewBox='0 0 520 520' fill='none' stroke='%23b24bff' stroke-linecap='round'><g opacity='.10' stroke-width='3'><path d='M0 120 Q90 90 150 140 T290 110 T420 170 T520 130'/><path d='M150 140 Q170 220 130 290 T170 430'/><path d='M290 110 Q330 40 300 0'/><path d='M420 170 Q470 260 430 350 T500 520'/><path d='M130 290 Q60 330 20 420'/></g><g opacity='.07' stroke-width='1.5'><path d='M90 90 Q80 60 100 30'/><path d='M200 125 q40 30 30 70'/><path d='M360 140 q-30 60 10 110'/><path d='M60 330 q50 10 80 60'/></g></svg>");
+  background-attachment: fixed; font-family: 'Inter', system-ui, sans-serif;
+}
+body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 99; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.6)); }
+h1, h2, h3, .orb, .tab, .col-title, .daychip { font-family: 'Rajdhani', 'Inter', sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.top { background: linear-gradient(90deg, #1c0a22, #2a0c2c 55%, #1c0a22); border-bottom: 1px solid #7a2a74; position: relative; animation: bioBeat 2.8s ease-in-out infinite; }
+@keyframes bioBeat { 0%, 100% { box-shadow: 0 2px 14px rgba(178,75,255,.10); } 12% { box-shadow: 0 3px 26px rgba(178,75,255,.45); } 24% { box-shadow: 0 2px 16px rgba(178,75,255,.14); } 36% { box-shadow: 0 3px 22px rgba(178,75,255,.34); } }
+.top h1 { color: #ecd2ff; text-shadow: 0 0 12px rgba(178,75,255,.7); font-size: 19px; }
+.top h1::before { content: ''; display: inline-block; width: 28px; height: 17px; border-radius: 50%; margin-right: 10px; vertical-align: -3px;
+  background: radial-gradient(ellipse at 50% 50%, #0a0210 0 12%, #d7a4ff 14% 38%, #7a18d6 40% 100%); box-shadow: 0 0 12px #b24bff, inset 0 0 0 2px #14041a; animation: bioBlink 6s infinite; }
+@keyframes bioBlink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.08); } }
+.card, .item, .msg, .map-box, .modal-box, .menu-btn, .chat-row, .box { border-radius: 16px 6px 18px 8px; }
+.card, .item, .modal-box, .box { background: linear-gradient(145deg, #2a0f2c 0%, #170719 70%); border: 1px solid #5a2350; box-shadow: inset 0 0 26px rgba(178,75,255,.10), 0 2px 10px rgba(0,0,0,.5); }
+.card:hover { border-color: #b24bff; box-shadow: inset 0 0 26px rgba(178,75,255,.2), 0 0 14px rgba(178,75,255,.35); }
+.card.ok { border-left: 4px solid var(--green); } .card.open { border-left: 4px solid var(--orange); } .card.closed { border-left: 4px solid var(--dim); }
+.col-title { color: #d9b4ff; border-bottom: 1px solid #5a2350; padding-bottom: 4px; }
+.day.today .day-h { background: linear-gradient(90deg, #7a18d6, #b24bff); color: #fff; border-radius: 12px 4px 12px 4px; padding: 3px 10px; }
+.tag { border-radius: 14px 5px 14px 5px; border-color: #7a2a74; color: #d9b4ff; }
+.tab, .daychip { border-radius: 14px 5px 14px 5px; }
+.tab.sel { background: linear-gradient(135deg, #8a28e6, #b24bff); color: #fff; border-color: #d9a4ff; box-shadow: 0 0 14px rgba(178,75,255,.55); }
+button, input, select, textarea { background: #1d0a20; border-color: #5a2350; border-radius: 12px 5px 12px 5px; color: var(--text); }
+input:focus, select:focus, textarea:focus { border-color: #b24bff; box-shadow: 0 0 12px rgba(178,75,255,.5); }
+button { position: relative; overflow: hidden; transition: box-shadow .2s, border-color .2s, transform .12s, background .2s; }
+button:hover:not(:disabled) { border-color: #c98bff; box-shadow: 0 0 16px rgba(178,75,255,.6), inset 0 0 12px rgba(178,75,255,.25); transform: scale(1.03); }
+button:active:not(:disabled) { transform: scale(.96); filter: brightness(1.3); }
+.btn-main { background: linear-gradient(135deg, #7a18d6, #b24bff); border-color: #d9a4ff; color: #fff; text-shadow: 0 0 6px rgba(0,0,0,.5); }
+.btn-ok { background: linear-gradient(135deg, #1f9a58, #6cffa0); color: #04140a; border-color: #6cffa0; }
+.btn-warn { border-color: var(--red); color: #ff7a93; }
+.rip { position: absolute; border-radius: 50%; pointer-events: none; width: 10px; height: 10px; margin: -5px 0 0 -5px; background: radial-gradient(circle, #fff, rgba(178,75,255,.8) 40%, transparent 70%); animation: ripBio .6s ease-out forwards; }
+@keyframes ripBio { to { transform: scale(18); opacity: 0; } }
+.chip { border-radius: 12px 4px 12px 4px; border-color: #b24bff; color: #e5ccff; } .chip.done { border-color: var(--green); color: var(--green); background: rgba(108,255,160,.08); }
+.badge { border-radius: 10px 3px 10px 3px; border-color: #7a2a74; color: #d9b4ff; } .badge.usa { border-color: var(--red); color: var(--red); } .badge.kis { border-color: #b24bff; color: #e5ccff; }
+.map-box { background: #07020b; border: 1px solid #7a2a74; box-shadow: inset 0 0 50px rgba(178,75,255,.14), 0 0 22px rgba(178,75,255,.18); position: relative; }
+.p-floor { fill: #0b0412; } .p-aisle { fill: rgba(125,40,110,.30); stroke: rgba(178,75,255,.4); stroke-width: 1.5; stroke-dasharray: 8 6; }
+.p-block { fill: #14081a; stroke: #4d1e45; stroke-width: 2; } .p-office { fill: #1c0a1d; stroke: #6a1f4a; stroke-width: 2; } .p-t { fill: #9b84a8; }
+svg.map.plan .cell { fill: rgba(178,75,255,.05); stroke: rgba(178,75,255,.14); }
+svg.map.plan .cell.open { fill: rgba(255,143,74,.42); stroke: #ff8f4a; filter: drop-shadow(0 0 5px rgba(255,143,74,.7)); }
+svg.map.plan .cell.done { fill: rgba(108,255,160,.45); stroke: #6cffa0; filter: drop-shadow(0 0 7px rgba(108,255,160,.85)); }
+svg.map.plan .cell.sel { stroke: #fff; } svg.map .cell.prob { fill: rgba(255,59,97,.6); stroke: #ff3b61; filter: drop-shadow(0 0 9px rgba(255,59,97,.95)); }
+svg.map.plan .cell.wave { fill: rgba(108,255,160,.55); stroke: #6cffa0; filter: drop-shadow(0 0 10px rgba(108,255,160,1)); }
+.cp-ring { stroke: #b24bff; filter: drop-shadow(0 0 5px #b24bff); } .cp-ring.red { stroke: #ff3b61; filter: drop-shadow(0 0 5px #ff3b61); }
+.cell-t { fill: #fff; font-weight: 700; }
+.msg { background: #1a0a20; border-left: 4px solid var(--accent); } .msg.done { border-left-color: var(--green); } .msg.problem { border-left-color: var(--red); }
+.msg.pulse { background: rgba(108,255,160,.12); box-shadow: 0 0 16px rgba(108,255,160,.4); animation: none; } .msg.problem.pulse { background: rgba(255,59,97,.16); box-shadow: 0 0 16px rgba(255,59,97,.5); }
+.chat-b.own { background: #3a1458; border-radius: 14px 14px 3px 14px; } .chat-b.other { background: #240d27; border-radius: 14px 14px 14px 3px; }
+.chat-av { background: linear-gradient(135deg, #7a18d6, #b24bff); color: #fff; } .chat-badge { background: var(--green); } .chat-m .tk.seen { color: #c9a0ff; }
+.menu-btn { background: #1d0a20; border: 1px solid #5a2350; } .menu-btn.sel { background: linear-gradient(135deg, #7a18d6, #b24bff); color: #fff; }
+.toast { background: #1d0a20; border: 1px solid #b24bff; color: #e5ccff; box-shadow: 0 0 20px rgba(178,75,255,.45); border-radius: 14px 5px 14px 5px; }
+.modal-box { border: 1px solid #7a2a74; }
+.mobile h1 { color: #ecd2ff; text-shadow: 0 0 12px rgba(178,75,255,.7); }
+::-webkit-scrollbar { width: 9px; height: 9px; } ::-webkit-scrollbar-thumb { background: #5a2350; border-radius: 6px; } ::-webkit-scrollbar-track { background: #12061a; }
+body.cp-alert { --accent: #ff3b61; --line: #5a1c2c; }
+body.cp-alert .top { background: linear-gradient(90deg, #26060f, #3a0a18 55%, #26060f); border-bottom-color: #ff3b61; }
+body.cp-alert .map-box { box-shadow: inset 0 0 50px rgba(255,59,97,.2), 0 0 24px rgba(255,59,97,.3); }
+/* Augen am Rand */
+#bioEyes { position: fixed; inset: 0; pointer-events: none; z-index: 97; }
+#bioEyes .beye { position: absolute; display: block; border-radius: 50%; overflow: hidden; background: radial-gradient(ellipse at 50% 50%, #3a1650, #1a0624); box-shadow: 0 0 14px rgba(178,75,255,.75), inset 0 0 0 2px #14041a; animation: eyeBlink 7s infinite; }
+#bioEyes .beye b { position: absolute; left: 30%; top: 12%; width: 40%; height: 76%; border-radius: 50%; transition: transform .08s linear;
+  background: radial-gradient(circle at 50% 50%, #0a0210 0 16%, #d7a4ff 18% 45%, #7a18d6 47% 100%); }
+@keyframes eyeBlink { 0%, 90%, 100% { transform: scaleY(1); } 93% { transform: scaleY(.06); } }
+@media (max-width: 700px) { #bioEyes .beye:nth-child(-n+3) { display: none; } }
