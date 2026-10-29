@@ -1,0 +1,93 @@
+/* Arcane-Anomalie: Hextech-Messing und Türkis, Zaun-Schimmer in Magenta, Sechsecke, Nieten, schwebende Anomalie-Funken */
+:root {
+  --bg: #050c11; --panel: #0d1a21; --panel2: #13242d; --line: #6b5226;
+  --accent: #3be8d8; --green: #4dffb0; --orange: #e3a23a; --red: #ff3d77;
+  --text: #e6f4f1; --dim: #7fa0a4; --gold: #e8c77a; --shimmer: #ff3dc8;
+}
+body {
+  background-color: #050c11; color: var(--text); font-family: 'Inter', system-ui, sans-serif;
+  background-image: radial-gradient(ellipse at 10% -10%, rgba(59,232,216,.20), transparent 55%), radial-gradient(ellipse at 100% 110%, rgba(255,61,200,.18), transparent 55%), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='52' height='90' viewBox='0 0 52 90' fill='none' stroke='%2343e6d8' stroke-opacity='.11' stroke-width='1'><path d='M0 15 L26 0 L52 15 M0 15 V45 M52 15 V45 M0 45 L26 60 L52 45 M26 60 V90'/></svg>");
+  background-attachment: fixed;
+}
+/* Anomalie: atmendes Licht, folgt dem Mauszeiger */
+body::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle 340px at var(--mx, 70%) var(--my, 30%), rgba(59,232,216,.13), transparent 70%), radial-gradient(circle 520px at calc(100% - var(--mx, 70%)) calc(100% - var(--my, 30%)), rgba(255,61,200,.09), transparent 70%);
+  animation: arcBreath 6s ease-in-out infinite alternate; }
+@keyframes arcBreath { from { opacity: .65; } to { opacity: 1; } }
+body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 99; background: radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.62)); }
+.app, .mobile { position: relative; z-index: 1; }
+h1, h2, h3, .orb, .col-title, .tab, .daychip { font-family: 'Cinzel', 'Rajdhani', serif; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
+/* Kopfzeile: Messingleiste mit Hextech-Kristall */
+.top { background: linear-gradient(180deg, #1c2a30, #0c161b); border-bottom: 3px solid #b8893a; box-shadow: 0 3px 0 #2a1f0c, 0 6px 24px rgba(59,232,216,.15); }
+.top::after { content: ''; position: absolute; left: 0; right: 0; bottom: -7px; height: 3px; background: repeating-linear-gradient(90deg, #b8893a 0 6px, transparent 6px 14px); opacity: .6; }
+.top h1 { color: var(--gold); font-size: 17px; text-shadow: 2px 0 rgba(255,61,200,.55), -2px 0 rgba(59,232,216,.55); }
+.top h1::before { content: ''; display: inline-block; width: 24px; height: 27px; margin-right: 12px; vertical-align: -7px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: radial-gradient(circle at 50% 50%, #fff 0 12%, #3be8d8 28%, #0a6b73 70%, #062a30 100%);
+  box-shadow: 0 0 18px #3be8d8; animation: arcCore 3.2s ease-in-out infinite alternate; filter: drop-shadow(0 0 6px #3be8d8); }
+@keyframes arcCore { from { filter: drop-shadow(0 0 3px #3be8d8) hue-rotate(0deg); } to { filter: drop-shadow(0 0 10px #ff3dc8) hue-rotate(60deg); } }
+.tag { border-radius: 0; border: 1px solid #b8893a; color: var(--gold); background: rgba(184,137,58,.08); clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0 50%); padding: 3px 14px; }
+.tag.demo { border-color: var(--red); color: var(--red); }
+/* Panels: Sechseck-Ecken, Messingrand, Nieten */
+.card, .item, .msg, .modal-box, .box, .menu-btn, .chat-row { border-radius: 0; border: 1px solid #6b5226;
+  background-color: #0d1a21; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='52' height='90' viewBox='0 0 52 90' fill='none' stroke='%2343e6d8' stroke-opacity='.045' stroke-width='1'><path d='M0 15 L26 0 L52 15 M0 15 V45 M52 15 V45 M0 45 L26 60 L52 45 M26 60 V90'/></svg>"), linear-gradient(160deg, #15303a 0%, #0a141a 70%); background-size: 52px 90px, 100% 100%;
+  box-shadow: inset 0 0 0 1px rgba(232,199,122,.10);
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px); }
+.card:hover { border-color: #e8c77a; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='52' height='90' viewBox='0 0 52 90' fill='none' stroke='%2343e6d8' stroke-opacity='.045' stroke-width='1'><path d='M0 15 L26 0 L52 15 M0 15 V45 M52 15 V45 M0 45 L26 60 L52 45 M26 60 V90'/></svg>"), linear-gradient(160deg, #1b3d49 0%, #0d1b22 70%); }
+.card.ok { border-left: 4px solid var(--green); } .card.open { border-left: 4px solid var(--orange); } .card.closed { border-left: 4px solid var(--dim); }
+.col-title { color: var(--gold); border-bottom: 1px solid #6b5226; padding-bottom: 4px; }
+.col-title span::before { content: '⬢ '; color: var(--accent); font-size: .8em; }
+.day.today .day-h { background: linear-gradient(90deg, #8a6420, #e8c77a, #8a6420); color: #1a1205; padding: 3px 14px; clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); }
+.day.today .day-h .cnt { color: #1a1205; }
+.kr-n { font-family: 'Cinzel', serif; font-weight: 700; letter-spacing: .08em; }
+/* Knöpfe: Sechseck-Form */
+button, input, select, textarea { border-radius: 0; background: #0f1f26; border: 1px solid #6b5226; color: var(--text); }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 14px rgba(59,232,216,.45); }
+button { position: relative; overflow: hidden; font-family: 'Rajdhani', 'Inter', sans-serif; font-weight: 700; letter-spacing: .06em;
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); padding-left: 16px; padding-right: 16px; transition: color .15s, background .15s, filter .15s, transform .1s; }
+button:hover:not(:disabled) { border-color: var(--accent); color: #fff; background: linear-gradient(90deg, #0f3a40, #11555c, #0f3a40); filter: drop-shadow(0 0 8px rgba(59,232,216,.8)); }
+button:active:not(:disabled) { transform: scale(.95); filter: brightness(1.5); }
+.btn-main, .tab.sel { background: linear-gradient(90deg, #8a6420, #e8c77a 50%, #8a6420); color: #1a1205; border-color: #e8c77a; text-shadow: none; }
+.btn-main:hover:not(:disabled), .tab.sel:hover { background: linear-gradient(90deg, #a9791f, #ffe39a 50%, #a9791f); color: #1a1205; }
+.btn-ok { background: linear-gradient(90deg, #0d7a52, #4dffb0 50%, #0d7a52); color: #02150d; border-color: #4dffb0; }
+.btn-ok:hover:not(:disabled) { background: linear-gradient(90deg, #12a06c, #8dffd0 50%, #12a06c); color: #02150d; }
+.btn-warn { border-color: var(--red); color: #ff8aa8; }
+.menu-btn.sel { background: linear-gradient(90deg, #8a6420, #e8c77a 50%, #8a6420); color: #1a1205; }
+.rip { position: absolute; border-radius: 50%; pointer-events: none; width: 10px; height: 10px; margin: -5px 0 0 -5px; background: radial-gradient(circle, #fff, rgba(59,232,216,.8) 40%, rgba(255,61,200,.4) 60%, transparent 72%); animation: ripArc .65s ease-out forwards; }
+@keyframes ripArc { to { transform: scale(20); opacity: 0; } }
+.chip { border-radius: 0; border-color: #b8893a; color: var(--gold); clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 6px 100%, 0 50%); padding-left: 12px; padding-right: 12px; }
+.chip.done { border-color: var(--green); color: var(--green); background: rgba(77,255,176,.08); }
+.badge { border-radius: 0; border-color: #3be8d8; color: #7ff3ea; } .badge.usa, .badge.prob { border-color: var(--red); color: #ff8aa8; } .badge.kis { border-color: var(--gold); color: var(--gold); }
+/* Karte */
+.map-box { border-radius: 0; background: #040a0e; border: 2px solid #b8893a; box-shadow: inset 0 0 0 1px #2a1f0c, inset 0 0 60px rgba(59,232,216,.10), 0 0 24px rgba(59,232,216,.18);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='52' height='90' viewBox='0 0 52 90' fill='none' stroke='%2343e6d8' stroke-opacity='.045' stroke-width='1'><path d='M0 15 L26 0 L52 15 M0 15 V45 M52 15 V45 M0 45 L26 60 L52 45 M26 60 V90'/></svg>"); background-size: 52px 90px; }
+.p-floor { fill: #061015; } .p-aisle { fill: rgba(59,232,216,.08); stroke: rgba(232,199,122,.45); stroke-width: 1.5; stroke-dasharray: 3 7; }
+.p-block { fill: #0c1a21; stroke: #6b5226; stroke-width: 2; } .p-office { fill: #11202a; stroke: #8a6420; stroke-width: 2; } .p-t { fill: #7fa0a4; }
+svg.map.plan .cell { fill: rgba(59,232,216,.04); stroke: rgba(59,232,216,.14); }
+svg.map.plan .cell.open { fill: rgba(227,162,58,.45); stroke: #e3a23a; filter: drop-shadow(0 0 5px rgba(227,162,58,.8)); }
+svg.map.plan .cell.done { fill: rgba(77,255,176,.40); stroke: #4dffb0; filter: drop-shadow(0 0 8px rgba(77,255,176,.95)); }
+svg.map.plan .cell.sel { stroke: #fff; } svg.map .cell.prob { fill: rgba(255,61,119,.55); stroke: #ff3d77; filter: drop-shadow(0 0 10px rgba(255,61,200,1)); }
+svg.map.plan .cell.wave { fill: rgba(77,255,176,.55); stroke: #4dffb0; filter: drop-shadow(0 0 12px rgba(59,232,216,1)); }
+.cp-ring { stroke: #3be8d8; filter: drop-shadow(0 0 5px #3be8d8); } .cp-ring.red { stroke: #ff3dc8; filter: drop-shadow(0 0 6px #ff3dc8); }
+.cell-t { fill: #fff; font-family: 'Rajdhani', sans-serif; font-weight: 700; }
+/* Nachrichten, Chat, Hinweise */
+.msg { border-left: 4px solid #3be8d8; } .msg.done { border-left-color: var(--green); } .msg.problem { border-left-color: var(--red); }
+.msg.pulse { background-color: rgba(77,255,176,.16); box-shadow: 0 0 18px rgba(77,255,176,.4); animation: none; } .msg.problem.pulse { background-color: rgba(255,61,119,.18); box-shadow: 0 0 18px rgba(255,61,200,.5); }
+.chat-b { border-radius: 0; } .chat-b.own { background: #2c2410; border-right: 3px solid #e8c77a; clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px); }
+.chat-b.other { background: #0e2a31; border-left: 3px solid #3be8d8; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%); }
+.chat-av { border-radius: 0; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: linear-gradient(135deg, #e8c77a, #8a6420); color: #1a1205; } .chat-badge { border-radius: 0; background: var(--green); }
+.chat-day { border-radius: 0; color: var(--gold); } .chat-m .tk.seen { color: #3be8d8; text-shadow: 0 0 6px #3be8d8; }
+.toast { border-radius: 0; background: #0d1a21; border: 1px solid #e8c77a; color: var(--gold); box-shadow: 0 0 22px rgba(232,199,122,.35); }
+.mobile h1 { color: var(--gold); text-shadow: 2px 0 rgba(255,61,200,.55), -2px 0 rgba(59,232,216,.55); }
+::-webkit-scrollbar { width: 9px; height: 9px; } ::-webkit-scrollbar-thumb { background: #6b5226; } ::-webkit-scrollbar-track { background: #08121a; }
+/* Alarm: Zaun-Schimmer in Magenta-Rot */
+body.cp-alert { --accent: #ff3d77; --line: #5a1c2c; --gold: #ff9fb8; }
+body.cp-alert .top { border-bottom-color: #ff3d77; box-shadow: 0 3px 0 #3a0a18, 0 6px 28px rgba(255,61,119,.5); }
+body.cp-alert .map-box { border-color: #ff3d77; box-shadow: inset 0 0 60px rgba(255,61,119,.22), 0 0 26px rgba(255,61,200,.35); }
+body.cp-alert::before { background: radial-gradient(circle 520px at var(--mx, 70%) var(--my, 30%), rgba(255,61,119,.22), transparent 70%); }
+/* Schwebende Hextech-Funken */
+#arcFx { position: fixed; inset: 0; pointer-events: none; z-index: 96; overflow: hidden; }
+#arcFx i { position: absolute; bottom: -40px; display: block; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); opacity: 0; animation: arcRise linear infinite; }
+@keyframes arcRise { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 12% { opacity: .55; } 80% { opacity: .35; } 100% { transform: translateY(-105vh) rotate(260deg); opacity: 0; } }
+.tab { font-family: 'Rajdhani', sans-serif; letter-spacing: .04em; font-size: 12px; padding-left: 8px; padding-right: 8px; white-space: nowrap; }
+.tabs { gap: 3px; }
+@media (max-width: 700px) { #arcFx i:nth-child(n+8) { display: none; } #arcFx i { transform-origin: center; } }

@@ -1,15 +1,48 @@
 // Designs: Cyberpunk, Bio-Horror und schlicht. Umschalter (Auswahl im Browser gespeichert), Klick-Effekt, Augen im Bio-Design
 (function () {
   'use strict';
-  var link = document.getElementById('cpCss'), bioLink = document.getElementById('bioCss');
-  var THEMES = ['cp', 'bio', 'plain'], NAMES = { cp: 'Design: Cyber', bio: 'Design: Bio', plain: 'Design: Schlicht' };
+  var link = document.getElementById('cpCss'), bioLink = document.getElementById('bioCss'), arcLink = document.getElementById('arcCss');
+  var THEMES = ['cp', 'bio', 'arc', 'plain'], NAMES = { cp: 'Design: Cyber', bio: 'Design: Bio', arc: 'Design: Arcane', plain: 'Design: Schlicht' };
   var KEY = 'dekr-theme';
   function get() { try { var v = localStorage.getItem(KEY); return THEMES.indexOf(v) >= 0 ? v : 'cp'; } catch (e) { return 'cp'; } }
   function apply(t) {
     if (link) link.disabled = (t !== 'cp');
     if (bioLink) bioLink.disabled = (t !== 'bio');
+    if (arcLink) arcLink.disabled = (t !== 'arc');
     document.documentElement.setAttribute('data-theme', t);
-    if (document.body) bioEyes(t === 'bio');
+    if (document.body) { bioEyes(t === 'bio'); arcFx(t === 'arc'); }
+  }
+  // Arcane-Design: schwebende Sechsecke (Hextech-Funken) und ein Licht, das dem Mauszeiger folgt
+  var fxBox = null, fxMove = null, fxQueued = false;
+  function arcFx(on) {
+    if (!on) {
+      if (fxBox && fxBox.parentNode) fxBox.parentNode.removeChild(fxBox);
+      fxBox = null;
+      if (fxMove) { window.removeEventListener('pointermove', fxMove); fxMove = null; }
+      return;
+    }
+    if (fxBox) return;
+    fxBox = document.createElement('div');
+    fxBox.id = 'arcFx';
+    fxBox.setAttribute('aria-hidden', 'true');
+    var cols = ['#3be8d8', '#3be8d8', '#e8c77a', '#ff3dc8'], h = '';
+    for (var i = 0; i < 16; i++) {
+      var s = 8 + Math.round(Math.random() * 22);
+      h += '<i style="left:' + Math.round(Math.random() * 100) + '%;width:' + s + 'px;height:' + Math.round(s * 1.1) + 'px;background:' + cols[i % cols.length] +
+        ';animation-duration:' + (14 + Math.round(Math.random() * 16)) + 's;animation-delay:-' + Math.round(Math.random() * 28) + 's"></i>';
+    }
+    fxBox.innerHTML = h;
+    document.body.appendChild(fxBox);
+    fxMove = function (e) {
+      if (fxQueued) return;
+      fxQueued = true;
+      requestAnimationFrame(function () {
+        fxQueued = false;
+        document.documentElement.style.setProperty('--mx', e.clientX + 'px');
+        document.documentElement.style.setProperty('--my', e.clientY + 'px');
+      });
+    };
+    window.addEventListener('pointermove', fxMove, { passive: true });
   }
   // Bio-Design: Augen am Bildschirmrand, die dem Mauszeiger folgen und blinzeln (nur Dekoration)
   var eyeBox = null, eyeMove = null;
@@ -57,7 +90,7 @@
       apply(t); label();
     };
     host.appendChild(b);
-    bioEyes(get() === 'bio');
+    bioEyes(get() === 'bio'); arcFx(get() === 'arc');
   });
   document.addEventListener('pointerdown', function (e) {
     if (get() === 'plain') return;
