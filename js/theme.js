@@ -357,7 +357,7 @@
     var timer = null, el = null, raf = 0, shownAt = 0, lastX = -1, lastY = -1, clockIv = null;
     function arm() { clearTimeout(timer); if (!el) timer = setTimeout(show, IDLE); }
     function show() {
-      if (!on() || document.visibilityState === 'hidden') { arm(); return; }
+      if (!on()) { arm(); return; }   // startet auch im Hintergrund-Tab, damit er beim Zurückkehren schon läuft
       var cs = getComputedStyle(document.documentElement), acc = (cs.getPropertyValue('--accent') || '#fcee09').trim(), cy = (cs.getPropertyValue('--cyan') || '#00f0ff').trim();
       el = document.createElement('div'); el.id = 'cpSaver'; shownAt = Date.now();
       el.innerHTML = '<canvas id="svCv"></canvas><div class="sv-haz top"></div><div class="sv-haz bot"></div><div class="sv-box" id="svBox"><div class="sv-st">STANDBY // KEINE AKTIVITÄT</div>' +
@@ -412,7 +412,6 @@
       arm();
     }
     ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(function (n) { window.addEventListener(n, activity, { passive: true, capture: true }); });
-    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') arm(); });
     window.DekrSaver = { show: function () { clearTimeout(timer); show(); }, hide: hide };
     arm();
   }
