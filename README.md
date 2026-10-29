@@ -82,20 +82,28 @@ aus den Maßen). Flach drucken, Rückseite aufs Bett, ohne Stützen. Kartenmaße
 
 ## Accounts und Anmeldung
 
-Die Seite öffnet immer mit einer **Anmeldeseite** (Cyberpunk-Stil). Ablauf:
+Die Seite öffnet immer mit einer **Anmeldeseite** (Cyberpunk-Stil). **Der Account-Code ist die Freigabe**: Wer einen gültigen Code eingibt, kommt direkt hinein.
 
-1. **Gerät freigeben:** Ein neues Gerät fragt die Freigabe an (wie bisher, Admin gibt unter „Admin“ frei).
-2. **Code eingeben:** Der Admin legt unter **„Accounts“** Accounts an. Jeder Account bekommt einen **Startcode** (`XXXX-XXXX`, nur einmal sichtbar) und
-   einen **QR-Code zum Profil** (`index.html?p=ID`, optional mit Zugangscode `k` für die Geräte-Freigabe). Die Karte „Karte drucken“ zeigt beides.
-3. **Eigener Code:** Beim ersten Anmelden legt die Person einen **eigenen 6-stelligen Code (Ziffern)** fest. Jeder Code ist nur einmal vergebbar.
-4. **Weiterleitung:** Am PC öffnet das Dashboard (mit dem Namen des Accounts), am Handy die Handyseite. Wer angemeldet bleibt, wird nicht erneut gefragt.
-5. **Profil:** Knopf mit dem Namen oben: Name ändern, Code ändern (alter Code nötig), Abmelden.
-6. **Admin:** Unter der Code-Eingabe „Admin-Anmeldung“ (E-Mail und Passwort). Der Admin hat alle Rechte, verwaltet Accounts und Freigaben.
+1. **Accounts anlegen (Admin):** Unter **„Accounts“** entstehen Accounts. Jeder bekommt einen **Startcode** (`XXXX-XXXX`, nur einmal sichtbar) und einen
+   **QR-Code zum Profil** (`index.html?p=ID`). „Karte drucken“ zeigt beides.
+2. **Code eingeben:** Das Gerät schlägt den Code-Prüfwert unter `logins/<Prüfwert>` nach, trägt sich selbst als freigegeben ein (mit Account und Platz PC oder Handy)
+   und belegt den Platz. Danach legt die Person beim ersten Mal einen **eigenen 6-stelligen Code (Ziffern)** fest. Jeder Code ist nur einmal vergebbar.
+3. **Ein PC und ein Handy je Account:** Im Account-Eintrag steht, welche Geräte ihn nutzen (Modell, seit wann). Ein zweiter PC (oder zweites Handy) wird abgewiesen, bis der Admin das
+   Gerät **zurücksetzt**. Das erzwingen die Datenbank-Regeln für ehrliche Geräte; ein manipulierter Browser mit gültigem Code kann den Platz umgehen. Löscht jemand die Browserdaten, braucht er einen Reset.
+4. **Ohne Code (anonym / Gast):** „Ohne Code: als Gast anfragen“ schickt eine Freigabe-Anfrage an den Admin (wie bisher). Nach der Freigabe wählt die Person einen **Namen**
+   und hat einen Gast-Account (Rechte: Melden und Bestellen). Der Admin sieht Gäste in der Account-Liste und kann sie anpassen oder löschen.
+5. **Weiterleitung:** Am PC öffnet das Dashboard (mit dem Namen des Accounts), am Handy die Handyseite. Wer angemeldet bleibt, wird nicht erneut gefragt.
+6. **Profil:** Knopf mit dem Namen oben: Name ändern, Code ändern (alter Code nötig), Abmelden.
+7. **Admin:** „Admin-Anmeldung“ unter der Code-Eingabe (E-Mail und Passwort). Der Admin hat alle Rechte, verwaltet Accounts, Freigaben und Geräte.
 
-Codes liegen nur als Prüfwert (SHA-256) in der Datenbank. Das ist eine Kennung, kein starkes Passwort: Gegen Fremde schützt die Geräte-Freigabe, und die
-Rechte der Accounts (Handy-Rechte und `d_status`, `d_close`, `d_plan`, `d_orders`, `d_problems`, `d_send` am Dashboard) wirken in der Oberfläche, die Datenbank
-prüft sie nicht je Account. In `firebase-rules.json` dürfen freigegebene Geräte nur `codeHash`, `codeV`, `codeInit`, `name` und `prefs` eines Accounts schreiben.
-Persönliche Einstellungen (Ton, Tage, Karte) werden am Account gespeichert. Accounts aus der Zeit vor der Umstellung brauchen einmal neue Startcodes („Codes erzeugen“).
+**Sicherheit:** Codes liegen nur als Prüfwert (SHA-256) in der Datenbank. Ein **6-stelliger Code lässt sich von außen durchprobieren** (die Datenbank begrenzt Versuche nicht).
+Deshalb im Admin-Bereich einen **Anmelde-Code des Betriebs** setzen (`settings/regcode`): Ohne ihn kommt kein neues Gerät hinein, auch nicht mit gültigem Account-Code. Im QR-Link steckt er als `k`,
+am PC kann man ihn unter „Zugangscode des Betriebs“ eingeben. Die Rechte der Accounts wirken in der Oberfläche, die Datenbank prüft sie nicht einzeln
+(außer: Konten ändern nur ihre eigenen Felder `codeHash`, `codeV`, `codeInit`, `name`, `prefs`, Gäste dürfen sich nur selbst mit Melden/Bestellen anlegen).
+Persönliche Einstellungen (Ton, Tage, Karte) werden am Account gespeichert.
+
+**Regeln testen:** `tests/firebase-rules.test.js` prüft `firebase-rules.json` im Firebase-Emulator (`npm i firebase-tools @firebase/rules-unit-testing firebase`,
+dann `npx firebase emulators:exec --only database --project demo-dekr "node tests/firebase-rules.test.js"`, Java wird gebraucht).
 
 ## Designs
 

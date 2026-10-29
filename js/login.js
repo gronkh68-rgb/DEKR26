@@ -31,7 +31,7 @@
   document.body.appendChild(root);
   document.documentElement.classList.toggle('lgn-open', !root.hidden);
 
-  var step = '', adminMode = false, autoAsked = false, busy = false, leaving = false;
+  var step = '', guestName = false, adminMode = false, autoAsked = false, busy = false, leaving = false;
   function setStep(key, html, after) {
     if (step === key) return;
     step = key;
@@ -55,18 +55,8 @@
 
   // ---- Schritte ----
   function stepWait() { setStep('wait', '<div class="lgn-prompt">&gt; VERBINDUNG WIRD HERGESTELLT<span class="lgn-cur"></span></div><a href="#" id="lgnAdm" class="lgn-link">ADMIN-ANMELDUNG</a>', bindAdminLink); }
-  function stepDevice() {
-    setStep('device', '<div class="lgn-prompt">&gt; GERÄT NICHT FREIGEGEBEN</div>' +
-      '<p class="lgn-p">Dieses Gerät muss der Admin einmal freigeben. Danach geht es mit dem Code weiter. Gerätecode: <b>' + esc(Auth.code()) + '</b></p>' +
-      '<form id="lgnReqF" autocomplete="off"><input id="lgnReg" class="lgn-in" placeholder="Zugangscode (falls vorhanden)" autocomplete="off" value="' + esc(urlKey) + '">' +
-      '<button class="lgn-btn">FREIGABE ANFRAGEN</button></form><div class="lgn-err" id="lgnErr"></div><a href="#" id="lgnAdm" class="lgn-link">ADMIN-ANMELDUNG</a>', function () {
-        $('lgnReqF').onsubmit = function (e) {
-          e.preventDefault(); err('');
-          Store.requestAccess($('lgnReg').value).catch(function (x) { err(x && x.message === 'code' ? 'Zugangscode falsch oder fehlt.' : 'Keine Verbindung, bitte erneut versuchen.'); });
-        };
-        bindAdminLink();
-      });
-  }
+  var GUEST = 'dekr26_wantguest';
+  function stepDevice() { stepCode(Store.get()); }
   function stepPending() {
     setStep('pending', '<div class="lgn-prompt">&gt; ANFRAGE GESENDET<span class="lgn-cur"></span></div>' +
       '<p class="lgn-p">Der Admin gibt dieses Gerät frei. Diese Seite wartet und geht von selbst weiter. Gerätecode: <b>' + esc(Auth.code()) + '</b></p>' +
@@ -75,21 +65,47 @@
   function stepCode(state) {
     var acc = hint && state && state.qrs && state.qrs[hint];
     var who = acc && Account.usable(acc) ? acc.name : '';
-    var none = !Account.accounts(state).some(Account.usable);
-    setStep('code:' + who + ':' + none, '<div class="lgn-prompt">&gt; ' + (who ? 'KONTO: ' + esc(who.toUpperCase()) : 'ZUGANGSCODE') + '<span class="lgn-cur"></span></div>' +
+    var locked = Store.isLocked();
+    var none = !locked && !Account.accounts(state).some(Account.usable);
+    setStep('code:' + who + ':' + none + ':' + locked, '<div class="lgn-prompt">&gt; ' + (who ? 'KONTO: ' + esc(who.toUpperCase()) : 'ZUGANGSCODE') + '<span class="lgn-cur"></span></div>' +
       (none ? '<p class="lgn-p">Es gibt noch keine Accounts. Der Admin legt sie an.</p>' : '') +
       '<form id="lgnF" autocomplete="off"><input id="lgnCode" class="lgn-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="______" aria-label="Code">' +
-      '<button class="lgn-btn">ANMELDEN</button></form><div class="lgn-err" id="lgnErr"></div><a href="#" id="lgnAdm" class="lgn-link">ADMIN-ANMELDUNG</a>', function () {
+      '<input id="lgnZg" class="lgn-in" placeholder="Zugangscode des Betriebs" autocomplete="off" value="' + esc(urlKey) + '"' + (urlKey ? '' : ' hidden') + '>' +
+      '<button class="lgn-btn">ANMELDEN</button></form><div class="lgn-err" id="lgnErr"></div>' +
+      '<div class="lgn-links"><a href="#" id="lgnZgL" class="lgn-link"' + (urlKey ? ' hidden' : '') + '>ZUGANGSCODE DES BETRIEBS</a><a href="#" id="lgnGuest" class="lgn-link">OHNE CODE: ALS GAST ANFRAGEN</a><a href="#" id="lgnAdm" class="lgn-link">ADMIN-ANMELDUNG</a></div>', function () {
         $('lgnF').onsubmit = function (e) {
           e.preventDefault();
           if (busy) return;
           busy = true; err('');
-          Account.login(Store.get(), $('lgnCode').value, hint).then(function (a) { leaveOrPin(a); })
-            .catch(function (x) { err(x.message || 'Anmeldung fehlgeschlagen'); $('lgnCode').value = ''; shake(); })
+          Account.claim(Store.get(), $('lgnCode').value, $('lgnZg').value || urlKey).then(function (a) { leaveOrPin(a); })
+            .catch(function (x) { err(x.message || 'Anmeldung fehlgeschlagen'); $('lgnCode').value = ''; if (/Zugangscode/.test(x.message || '')) { $('lgnZg').hidden = false; } shake(); })
             .then(function () { busy = false; });
+        };
+        $('lgnZgL').onclick = function (e) { e.preventDefault(); $('lgnZg').hidden = false; $('lgnZg').focus(); };
+        $('lgnGuest').onclick = function (e) {
+          e.preventDefault(); err('');
+          try { localStorage.setItem(GUEST, '1'); } catch (x) { /* ignorieren */ }
+          if (!Store.isLocked()) { step = ''; guestName = true; update(Store.get()); return; }
+          Store.requestAccess($('lgnZg').value || urlKey).catch(function (x) { err(x && x.message === 'code' ? 'Zugangscode des Betriebs falsch oder fehlt.' : 'Keine Verbindung, bitte erneut versuchen.'); });
         };
         bindAdminLink();
         try { $('lgnCode').focus(); } catch (e) { /* ignorieren */ }
+      });
+  }
+  function stepName() {
+    setStep('name', '<div class="lgn-prompt">&gt; GERÄT FREIGEGEBEN<span class="lgn-cur"></span></div>' +
+      '<p class="lgn-p">Wie sollen wir dich nennen? Dein Name erscheint bei Meldungen und im Chat.</p>' +
+      '<form id="lgnNameF" autocomplete="off"><input id="lgnName" class="lgn-in" maxlength="40" placeholder="Dein Name" autocomplete="off" required>' +
+      '<button class="lgn-btn">WEITER</button></form><div class="lgn-err" id="lgnErr"></div>', function () {
+        $('lgnNameF').onsubmit = function (e) {
+          e.preventDefault();
+          if (busy) return;
+          busy = true; err('');
+          Account.becomeGuest(Store.get(), $('lgnName').value).then(function () { try { localStorage.removeItem(GUEST); } catch (x) { /* ignorieren */ } leave($('lgnName').value.trim()); })
+            .catch(function (x) { err(x.message || 'Speichern fehlgeschlagen'); shake(); })
+            .then(function () { busy = false; });
+        };
+        try { $('lgnName').focus(); } catch (e) { /* ignorieren */ }
       });
   }
   function leaveOrPin(a) {
@@ -159,11 +175,18 @@
     show(true);
     if (adminMode) { stepAdmin(); return; }
     if (Store.isLocked()) {
-      if (urlKey && !Store.isRequested() && !autoAsked) { autoAsked = true; Store.requestAccess(urlKey).catch(function () { /* der Schritt zeigt den Fehler */ }); }
-      if (Store.isRequested()) stepPending(); else stepDevice();
+      var wantGuest = false;
+      try { wantGuest = !!localStorage.getItem(GUEST); } catch (e) { /* ignorieren */ }
+      if (urlKey && wantGuest && !Store.isRequested() && !autoAsked) { autoAsked = true; Store.requestAccess(urlKey).catch(function () { /* der Schritt zeigt den Fehler */ }); }
+      if (Store.isRequested()) stepPending(); else stepCode(state);
       return;
     }
     if (!Store.isLoaded()) { stepWait(); return; }
+    // Freigegebenes Gerät ohne Anmeldung: eigener Gast-Account dieses Geräts, oder Namen wählen, oder Code eingeben
+    if (Account.resumeGuest(state)) { leave(((state.qrs || {})[Account.guestId()] || {}).name); return; }
+    var wg = false;
+    try { wg = !!localStorage.getItem(GUEST); } catch (e) { /* ignorieren */ }
+    if (guestName || wg) { stepName(); return; }
     stepCode(state);
   }
 
@@ -175,11 +198,11 @@
     if (pm) { pm.remove(); pm = null; }
     pm = document.createElement('div');
     pm.className = 'prf-wrap';
-    var name = admin ? Util.getName() : a.name, role = admin ? 'Admin · alle Rechte, Freigaben und Accounts' : (a.func || 'Account');
+    var name = admin ? Util.getName() : a.name, role = admin ? 'Admin · alle Rechte, Freigaben und Accounts' : a.guest ? 'Gast (ohne Code)' : (a.func || 'Account');
     pm.innerHTML = '<div class="prf"><div class="prf-head"><span class="prf-av">' + esc(String(name).trim().charAt(0).toUpperCase() || '?') + '</span>' +
       '<div><b>' + esc(name) + '</b><small>' + esc(role) + '</small></div><button type="button" class="btn-sm" id="prfClose">Schließen</button></div>' +
       '<div class="prf-sec"><div class="prf-t">Name</div><form id="prfName" class="prf-row"><input id="prfNameIn" maxlength="40" value="' + esc(name) + '" required><button class="btn-main">Speichern</button></form></div>' +
-      (admin ? '<div class="prf-sec"><div class="prf-t">Anmeldung</div><div class="empty">Der Admin meldet sich mit E-Mail und Passwort an. Geräte-Freigaben und Accounts verwaltest du unter „Admin“ und „Accounts“ oben.</div></div>' :
+      (a && a.guest ? '<div class="prf-sec"><div class="empty">Du bist als Gast angemeldet. Für einen eigenen Code und mehr Rechte wende dich an den Admin.</div></div>' : admin ? '<div class="prf-sec"><div class="prf-t">Anmeldung</div><div class="empty">Der Admin meldet sich mit E-Mail und Passwort an. Geräte-Freigaben und Accounts verwaltest du unter „Admin“ und „Accounts“ oben.</div></div>' :
         '<div class="prf-sec"><div class="prf-t">Eigenen Code ändern (6 Ziffern)</div><form id="prfCode" class="prf-col" autocomplete="off" novalidate>' +
         '<input id="prfOld" placeholder="Alter Code" autocomplete="off" required><input id="prfNew" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Neuer Code" autocomplete="off" required>' +
         '<input id="prfNew2" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Neuen Code wiederholen" autocomplete="off" required><button class="btn-main">Code speichern</button></form></div>') +
@@ -201,7 +224,7 @@
         Account.rename(a.id, n).then(function () { msg('✔ Name gespeichert.', true); }).catch(function (x) { msg(x.message || 'Speichern fehlgeschlagen'); });
       }
     };
-    if (!admin) {
+    if (!admin && !a.guest) {
       $('prfCode').onsubmit = function (e) {
         e.preventDefault();
         var n1 = $('prfNew').value.trim();

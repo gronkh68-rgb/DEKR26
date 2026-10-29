@@ -308,7 +308,7 @@ window.Store = (function () {
   function norm(s) {
     return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
       orders: (s && s.orders) || {}, problems: (s && s.problems) || {}, podests: (s && s.podests) || {},
-      settings: (s && s.settings) || {} };
+      settings: (s && s.settings) || {}, logins: (s && s.logins) || {} };
   }
   function emit() { subs.forEach(function (f) { f(state); }); }
   function loadLocal() {
@@ -503,6 +503,9 @@ window.Store = (function () {
   return {
     remote: remote,
     secure: remote && Auth.enabled,
+    // Rohzugriff auf die Datenbank mit der Anmeldung dieses Geräts (für die Anmeldung mit Account-Code)
+    raw: function (path, opts) { return api(path, opts); },
+    deviceInfo: deviceInfo,
     isLocked: function () { return locked; },
     isLoaded: function () { return loaded; },
     isRequested: function () { return requested; },

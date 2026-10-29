@@ -477,3 +477,6 @@ html:not([data-theme="cp"]) #cpBoot, html:not([data-theme="cp"]) #cpAlert, html:
 body.cp-sb .app { height: 100vh; }
 html[data-theme="cp"] body.cp-sb .app { height: calc(100vh - 24px); }
 .seg[hidden], #chats[hidden], #chatsDash[hidden], #chatsMe[hidden] { display: none !important; }
+.acct-devs { display: grid; gap: 4px; font-size: 12px; margin: 4px 0; }
+.acct-dev { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: var(--dim); }
+.acct-dev b { color: var(--text); }

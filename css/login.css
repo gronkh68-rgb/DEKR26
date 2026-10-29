@@ -59,3 +59,7 @@ html[data-theme="cp"] .lgn { --a: var(--accent, #fcee09); --c: var(--cyan, #00f0
 /* Knopf-Zustände der Anmeldung: die allgemeinen Knopfstile des Designs sollen sie nicht verändern */
 .lgn .lgn-btn:hover:not(:disabled) { background: var(--a); color: #000; border: 0; box-shadow: none; text-shadow: none; animation: none; }
 .lgn .lgn-btn:active { transform: scale(.97); }
+.lgn-links { display: grid; gap: 2px; justify-items: center; }
+.lgn-links .lgn-link[hidden] { display: none; }
+.lgn-links { display: grid; gap: 2px; justify-items: center; }
+.lgn-links .lgn-link[hidden] { display: none; }

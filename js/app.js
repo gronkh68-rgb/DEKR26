@@ -229,6 +229,10 @@
       if (Account.applyPrefs(a.prefs)) location.reload();   // gespeicherte Einstellungen (Ton, Ansicht, Karte) laden
     }
   }
+  var syncedLogins = false;
+  Store.subscribe(function (st) {
+    if (!syncedLogins && Account.isAdmin() && Store.isLoaded()) { syncedLogins = true; Account.syncLogins(st).catch(function () { syncedLogins = false; }); }
+  });
   setInterval(function () { var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id); }, 20000);
   window.addEventListener('pagehide', function () { var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id); });
   // Nicht erlaubte Bedienelemente reagieren nicht (zusätzlich zum Ausblenden)
@@ -1246,7 +1250,18 @@
     return u.href;
   }
   // Zustand des Anmeldecodes eines Accounts für die Admin-Karte
+  // Genutzte Geräte eines Accounts: vorgesehen sind ein PC und ein Handy
+  function devLines(q) {
+    if (q.guest) return '<div class="no-print acct-line">👤 Gast (anonym, ohne Code)</div>';
+    var d = q.dev || {};
+    return '<div class="no-print acct-devs">' + ['pc', 'mobile'].map(function (sl) {
+      var x = d[sl];
+      return '<div class="acct-dev"><span>' + (sl === 'pc' ? '🖥 PC' : '📱 Handy') + ': ' + (x ? '<b>' + esc(x.label || 'Gerät') + '</b> · seit ' + new Date(x.t || 0).toLocaleDateString('de-DE') : '<i>frei</i>') + '</span>' +
+        (x ? ' <button class="btn-sm btn-warn" data-devrm="' + esc(q.id) + '|' + sl + '">Zurücksetzen</button>' : '') + '</div>';
+    }).join('') + '</div>';
+  }
   function acctLine(q) {
+    if (q.guest) return '';
     var nc = Account.newCodes()[q.id];
     if (!Account.usable(q)) return '⚠ noch kein Code';
     if (q.codeInit) return '🔑 Startcode' + (nc ? ': <b>' + esc(nc) + '</b> (nur jetzt sichtbar)' : ' vergeben, wartet auf den eigenen Code');
@@ -1274,10 +1289,11 @@
         '<div class="perms no-print">' + PERM_LABELS.map(function (p) {
           return '<label><input type="checkbox" data-perm="' + p[0] + '"' + (pm[p[0]] ? ' checked' : '') + '>' + esc(p[1]) + '</label>';
         }).join('') + '</div>' +
-        qr.createSvgTag(4, 2) +
-        '<div class="no-print acct-line">' + acctLine(q) + ' <button class="btn-sm" data-gencode="' + esc(q.id) + '">' + (Account.usable(q) ? 'Neuen Startcode erzeugen' : 'Startcode erzeugen') + '</button></div>' +
-        '<div class="no-print qr-links"><a href="' + esc(scanUrl(q)) + '" target="_blank" rel="noopener">Seite am PC testen ↗</a> ' +
-        '<button class="btn-sm" data-card="' + esc(q.id) + '">Karte drucken</button> ' +
+        (q.guest ? '' : qr.createSvgTag(4, 2)) +
+        '<div class="no-print acct-line">' + acctLine(q) + (q.guest ? '' : ' <button class="btn-sm" data-gencode="' + esc(q.id) + '">' + (Account.usable(q) ? 'Neuen Startcode erzeugen' : 'Startcode erzeugen') + '</button>') + '</div>' +
+        devLines(q) +
+        '<div class="no-print qr-links">' + (q.guest ? '' : '<a href="' + esc(scanUrl(q)) + '" target="_blank" rel="noopener">Seite am PC testen ↗</a> ' +
+        '<button class="btn-sm" data-card="' + esc(q.id) + '">Karte drucken</button> ') +
         '<button class="btn-sm btn-warn" data-del="' + esc(q.id) + '">Löschen</button></div></div>';
     }).join('');
     renderPodestEdit(state);
@@ -1351,7 +1367,13 @@
   };
   $('qrGrid').onclick = function (e) {
     var b = e.target.closest('button[data-del]');
-    if (b && confirm('Account und QR-Code löschen?')) { Store.setQr(b.dataset.del, null).catch(function () { toast('Löschen fehlgeschlagen'); }); return; }
+    if (b && confirm('Account löschen? Seine Geräte verlieren den Zugang.')) { Account.remove(Store.get(), b.dataset.del).catch(function () { toast('Löschen fehlgeschlagen'); }); return; }
+    var dr = e.target.closest('button[data-devrm]');
+    if (dr) {
+      var pr = dr.dataset.devrm.split('|');
+      if (confirm('Dieses Gerät zurücksetzen? Es verliert den Zugang und muss sich neu mit dem Code anmelden.')) Account.removeDevice(Store.get(), pr[0], pr[1]).catch(function () { toast('Zurücksetzen fehlgeschlagen'); });
+      return;
+    }
     var g = e.target.closest('button[data-gencode]');
     if (g) {
       var q = Store.get().qrs[g.dataset.gencode];

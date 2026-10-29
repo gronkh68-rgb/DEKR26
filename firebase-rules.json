@@ -4,7 +4,13 @@
     "devices": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !data.exists() && newData.child('ok').val() !== true && (!root.child('settings').child('regcode').exists() || newData.child('code').val() === root.child('settings').child('regcode').val())))"
+        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()) || (auth.uid === $uid && !data.exists() && newData.child('ok').val() !== true && (!root.child('settings').child('regcode').exists() || newData.child('code').val() === root.child('settings').child('regcode').val())) || (auth.uid === $uid && newData.child('ok').val() === true && newData.child('acc').val() !== null && newData.child('lh').val() !== null && newData.child('acc').val() === root.child('logins').child(newData.child('lh').val()).child('id').val() && (newData.child('slot').val() === 'pc' || newData.child('slot').val() === 'mobile') && (!root.child('qrs').child(newData.child('acc').val()).child('dev').child(newData.child('slot').val()).exists() || root.child('qrs').child(newData.child('acc').val()).child('dev').child(newData.child('slot').val()).child('uid').val() === auth.uid) && (data.child('ok').val() === true || !root.child('settings').child('regcode').exists() || newData.child('code').val() === root.child('settings').child('regcode').val())))"
+      }
+    },
+    "logins": {
+      "$h": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (root.child('devices').child(auth.uid).child('ok').val() === true && ((newData.exists() && newData.child('id').val() === root.child('devices').child(auth.uid).child('acc').val()) || (!newData.exists() && data.child('id').val() === root.child('devices').child(auth.uid).child('acc').val()))))"
       }
     },
     "tasks": {
@@ -25,20 +31,34 @@
     "qrs": {
       ".write": "auth != null && auth.uid === 'ADMIN_UID'",
       "$qid": {
+        ".write": "auth != null && !data.exists() && $qid === 'g' + auth.uid && root.child('devices').child(auth.uid).child('ok').val() === true",
+        ".validate": "auth.uid === 'ADMIN_UID' || $qid !== 'g' + auth.uid || (newData.child('guest').val() === true && !newData.child('codeHash').exists())",
+        "perms": {
+          "$k": {
+            ".validate": "auth.uid === 'ADMIN_UID' || $k === 'report' || $k === 'order'"
+          }
+        },
         "codeHash": {
-          ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
+          ".write": "auth != null && (root.child('devices').child(auth.uid).child('acc').val() === $qid || $qid === 'g' + auth.uid) && root.child('devices').child(auth.uid).child('ok').val() === true"
         },
         "codeV": {
-          ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
+          ".write": "auth != null && (root.child('devices').child(auth.uid).child('acc').val() === $qid || $qid === 'g' + auth.uid) && root.child('devices').child(auth.uid).child('ok').val() === true"
         },
         "codeInit": {
-          ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
+          ".write": "auth != null && (root.child('devices').child(auth.uid).child('acc').val() === $qid || $qid === 'g' + auth.uid) && root.child('devices').child(auth.uid).child('ok').val() === true"
         },
         "name": {
-          ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
+          ".write": "auth != null && (root.child('devices').child(auth.uid).child('acc').val() === $qid || $qid === 'g' + auth.uid) && root.child('devices').child(auth.uid).child('ok').val() === true"
         },
         "prefs": {
-          ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
+          ".write": "auth != null && (root.child('devices').child(auth.uid).child('acc').val() === $qid || $qid === 'g' + auth.uid) && root.child('devices').child(auth.uid).child('ok').val() === true"
+        },
+        "dev": {
+          ".read": "auth != null",
+          "$slot": {
+            ".validate": "$slot === 'pc' || $slot === 'mobile'",
+            ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (newData.child('uid').val() === auth.uid && root.child('devices').child(auth.uid).child('ok').val() === true && root.child('devices').child(auth.uid).child('acc').val() === $qid && (!data.exists() || data.child('uid').val() === auth.uid)) || (!newData.exists() && data.child('uid').val() === auth.uid))"
+          }
         }
       }
     },

@@ -1,0 +1,78 @@
+const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
+const { ref, set, get, update, remove } = require('firebase/database');
+const fs = require('fs');
+let pass = 0, fail = 0;
+async function t(name, p, expectOk) {
+  try { await (expectOk ? assertSucceeds(p) : assertFails(p)); pass++; console.log('  ok  ', name); }
+  catch (e) { fail++; console.log('  FEHLER', name, '->', String(e.message).slice(0, 140)); }
+}
+(async () => {
+  const env = await initializeTestEnvironment({ projectId: 'demo-dekr', database: { host: '127.0.0.1', port: 9000, rules: fs.readFileSync(process.env.RULES || 'firebase-rules.json', 'utf8').replace(/ADMIN_UID/g, 'ADMIN1') } });
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.database();
+    await set(ref(db, 'qrs/acc1'), { name: 'Anna', perms: { report: 1 }, codeHash: 'H1', codeV: 2, codeInit: true, t: 1 });
+    await set(ref(db, 'qrs/acc2'), { name: 'Ben', perms: { report: 1 }, codeHash: 'H9', codeV: 2, t: 2 });
+    await set(ref(db, 'qrs/acc3'), { name: 'Cem', perms: { report: 1 }, codeHash: 'H3', codeV: 2, t: 3 });
+    await set(ref(db, 'logins/H1'), { id: 'acc1' });
+    await set(ref(db, 'logins/H9'), { id: 'acc2' });
+    await set(ref(db, 'logins/H3'), { id: 'acc3' });
+    await set(ref(db, 'tasks/x'), { kr: '1' });
+  });
+  const as = uid => env.authenticatedContext(uid).database();
+  const D1 = as('u1'), D2 = as('u2'), D3 = as('u3');
+  console.log('Neues Gerät, noch nicht freigegeben');
+  await t('Wurzel lesen verboten', get(ref(D1, '/')), false);
+  await t('Accounts lesen verboten', get(ref(D1, 'qrs/acc1')), false);
+  await t('logins/<Prüfwert> lesen erlaubt', get(ref(D1, 'logins/H1')), true);
+  await t('qrs/<id>/dev lesen erlaubt', get(ref(D1, 'qrs/acc1/dev')), true);
+  console.log('Eintritt mit Code (Platz PC)');
+  await t('mit falschem Prüfwert verboten', update(ref(D3, 'devices/u3'), { ok: true, acc: 'acc1', lh: 'FALSCH', slot: 'pc', code: '' }), false);
+  await t('mit Prüfwert eines anderen Accounts verboten', update(ref(D3, 'devices/u3'), { ok: true, acc: 'acc1', lh: 'H9', slot: 'pc', code: '' }), false);
+  await t('ohne Platz verboten', update(ref(D3, 'devices/u3'), { ok: true, acc: 'acc1', lh: 'H1', code: '' }), false);
+  await t('Selbst-Freigabe ohne Code verboten', update(ref(D3, 'devices/u3'), { ok: true }), false);
+  await t('mit gültigem Code erlaubt', update(ref(D1, 'devices/u1'), { ok: true, acc: 'acc1', lh: 'H1', slot: 'pc', code: '', ua: 'x' }), true);
+  await t('Platz belegen erlaubt', set(ref(D1, 'qrs/acc1/dev/pc'), { uid: 'u1', label: 'Windows · Edge', t: 1 }), true);
+  await t('danach Wurzel lesen erlaubt', get(ref(D1, '/')), true);
+  console.log('Zweites Gerät, gleicher Account');
+  await t('zweiter PC verboten (Platz belegt)', update(ref(D2, 'devices/u2'), { ok: true, acc: 'acc1', lh: 'H1', slot: 'pc', code: '' }), false);
+  await t('Handy erlaubt', update(ref(D2, 'devices/u2'), { ok: true, acc: 'acc1', lh: 'H1', slot: 'mobile', code: '' }), true);
+  await t('Handy-Platz belegen erlaubt', set(ref(D2, 'qrs/acc1/dev/mobile'), { uid: 'u2', label: 'Android', t: 1 }), true);
+  await t('fremden Platz überschreiben verboten', set(ref(D2, 'qrs/acc1/dev/pc'), { uid: 'u2', label: 'x', t: 1 }), false);
+  await t('Platz für anderen Account belegen verboten', set(ref(D2, 'qrs/acc2/dev/mobile'), { uid: 'u2', label: 'x', t: 1 }), false);
+  console.log('Eigenes Konto verwalten');
+  await t('eigenen Namen ändern erlaubt', set(ref(D1, 'qrs/acc1/name'), 'Anna B'), true);
+  await t('fremden Namen ändern verboten', set(ref(D1, 'qrs/acc2/name'), 'Hack'), false);
+  await t('eigene Rechte ändern verboten', set(ref(D1, 'qrs/acc1/perms/podest'), 1), false);
+  await t('Rechte-Kennzeichen eines anderen verboten', set(ref(D1, 'qrs/acc2/perms'), { podest: 1 }), false);
+  await t('eigenen Code ändern (alle Pfade zugleich) erlaubt', update(ref(D1, '/'), { 'logins/H2': { id: 'acc1' }, 'qrs/acc1/codeHash': 'H2', 'qrs/acc1/codeV': 2, 'qrs/acc1/codeInit': false, 'logins/H1': null }), true);
+  await t('Anmelde-Eintrag für anderen Account verboten', set(ref(D1, 'logins/H77'), { id: 'acc2' }), false);
+  await t('fremden Anmelde-Eintrag löschen verboten', remove(ref(D1, 'logins/H9')), false);
+  await t('Aufgaben schreiben (freigegeben) erlaubt', set(ref(D1, 'tasks/y'), { kr: '2' }), true);
+  await t('Einstellungen schreiben verboten', set(ref(D1, 'settings/regcode'), 'x'), false);
+  console.log('Admin');
+  const A = as('ADMIN1');
+  await t('Admin liest alles', get(ref(A, '/')), true);
+  await t('Admin setzt Platz zurück', remove(ref(A, 'qrs/acc1/dev/pc')), true);
+  await t('Admin setzt Zugangscode', set(ref(A, 'settings/regcode'), 'BETRIEB'), true);
+  console.log('Mit Zugangscode des Betriebs');
+  const D5 = as('u5');
+  await t('Eintritt ohne Zugangscode verboten', update(ref(D5, 'devices/u5'), { ok: true, acc: 'acc3', lh: 'H3', slot: 'pc', code: '' }), false);
+  await t('Eintritt mit falschem Zugangscode verboten', update(ref(D5, 'devices/u5'), { ok: true, acc: 'acc3', lh: 'H3', slot: 'pc', code: 'x' }), false);
+  await t('Eintritt mit Zugangscode erlaubt', update(ref(D5, 'devices/u5'), { ok: true, acc: 'acc3', lh: 'H3', slot: 'pc', code: 'BETRIEB' }), true);
+  console.log('Gast-Anfrage und Gast-Account');
+  const D7 = as('u7'), D8 = as('u8');
+  await t('Anfrage ohne Zugangscode verboten', set(ref(D7, 'devices/u7'), { t: 1, ua: 'x' }), false);
+  await t('Anfrage mit Zugangscode erlaubt', set(ref(D7, 'devices/u7'), { t: 1, ua: 'x', code: 'BETRIEB' }), true);
+  await t('Gast darf sich nicht selbst freigeben', update(ref(D7, 'devices/u7'), { ok: true }), false);
+  await t('Gast-Account vor Freigabe verboten', set(ref(D7, 'qrs/gu7'), { name: 'Gast', guest: true, perms: { report: 1 } }), false);
+  await t('Admin gibt Gerät frei', update(ref(A, 'devices/u7'), { ok: true, by: 'Admin' }), true);
+  await t('Gast-Account anlegen erlaubt', set(ref(D7, 'qrs/gu7'), { name: 'Gast', guest: true, t: 1, perms: { report: 1, order: 1 } }), true);
+  await t('Gast mit mehr Rechten verboten', set(ref(D7, 'qrs/gu7b'), { name: 'X', guest: true, perms: { podest: 1 } }), false);
+  await t('Gast-Account für anderes Gerät verboten', set(ref(D7, 'qrs/gu8'), { name: 'X', guest: true, perms: { report: 1 } }), false);
+  await t('Gast-Account mit Rechten-Erhöhung verboten', set(ref(D7, 'qrs/gu7/perms/podest'), 1), false);
+  await t('Gast ändert eigenen Namen erlaubt', set(ref(D7, 'qrs/gu7/name'), 'Gast 2'), true);
+  await t('Gast mit Code-Hash verboten', set(ref(D7, 'qrs/gu7x'), { name: 'X', guest: true, codeHash: 'H5' }), false);
+  await env.cleanup();
+  console.log('\nErgebnis:', pass, 'bestanden,', fail, 'Fehler');
+  process.exit(fail ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(2); });
