@@ -10,7 +10,7 @@ window.Account = (function () {
   var DPERMS = [['dashEdit', 'Dashboard bearbeiten (ohne Haken: nur ansehen)']];
   var GATES = ['d_status', 'd_close', 'd_plan', 'd_orders', 'd_problems', 'd_send'];   // Kennungen der geschützten Bedienelemente im Dashboard
   // Alles, was zur Person gehört und auf jedem Gerät gleich sein soll (Ton, Ansicht, Karte, Design, Farben, Filter, „Zuletzt“-Liste am Handy)
-  var PREF_KEYS = ['dekr26_soundcfg', 'dekr26_days', 'dekr26_showclosed', 'dekr26_mapfont', 'dekr26_mapzoom', 'dekr-theme', 'dekr-colors', 'dekr26_khide', 'dekr26_wake', 'dekr26_impmap'];
+  var PREF_KEYS = ['dekr26_soundcfg', 'dekr26_days', 'dekr26_showclosed', 'dekr26_mapfont', 'dekr26_mapzoom', 'dekr-theme', 'dekr-colors', 'dekr-lens', 'dekr-fxlow', 'dekr26_khide', 'dekr26_wake', 'dekr26_impmap'];
   function recentKey() { var s = session(); return s && s.id ? 'dekr26_recent_' + s.id : ''; }
 
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }

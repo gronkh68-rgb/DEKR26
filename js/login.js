@@ -77,7 +77,7 @@
           e.preventDefault();
           if (busy) return;
           busy = true; err('');
-          Account.claim(Store.get(), $('lgnCode').value, $('lgnZg').value || urlKey).then(function (a) { leaveOrPin(a); })
+          breach($('lgnCode').value, Account.claim(Store.get(), $('lgnCode').value, $('lgnZg').value || urlKey)).then(function (a) { leaveOrPin(a); })
             .catch(function (x) { err(x.message || 'Anmeldung fehlgeschlagen'); $('lgnCode').value = ''; if (/Zugangscode/.test(x.message || '')) { $('lgnZg').hidden = false; } shake(); })
             .then(function () { busy = false; });
         };
@@ -91,6 +91,30 @@
         bindAdminLink();
         try { $('lgnCode').focus(); } catch (e) { /* ignorieren */ }
       });
+  }
+  // Breach-Protocol: ein Raster aus Hex-Codes läuft durch, die Zeichen des Codes leuchten auf (mindestens ~1,2 s, solange die Prüfung läuft)
+  function breach(code, work) {
+    if (document.documentElement.classList.contains('fx-low')) return work;
+    var f = $('lgnF'), box = $('lgnBreach');
+    if (box) box.remove();
+    box = document.createElement('div'); box.id = 'lgnBreach'; box.className = 'lgn-breach'; f.appendChild(box);
+    var hex = ['1C', 'BD', '55', 'E9', '7A', 'FF'], h = '';
+    for (var i = 0; i < 28; i++) h += '<i>' + hex[Math.floor(Math.random() * hex.length)] + '</i>';
+    box.innerHTML = h;
+    var cells = box.children, chars = Account.norm(code).split('').slice(0, 8), k = 0, tick = 0;
+    var iv = setInterval(function () {
+      Array.prototype.forEach.call(cells, function (c) { c.classList.remove('scan'); });
+      var row = tick % 4; for (var j = 0; j < 7; j++) cells[row * 7 + j].classList.add('scan');
+      if (tick % 2 === 1 && k < chars.length) { var c = cells[Math.floor(Math.random() * 28)]; c.textContent = chars[k] + chars[k]; c.classList.add('hit'); k++; }
+      tick++;
+    }, 110);
+    var wait = new Promise(function (res) { setTimeout(res, 1300); });
+    function done(ok) { clearInterval(iv); Array.prototype.forEach.call(cells, function (c) { c.classList.remove('scan'); }); box.classList.add(ok ? 'good' : 'bad'); }
+    return Promise.all([work.then(function (v) { return { v: v }; }, function (e) { return { e: e }; }), wait]).then(function (r) {
+      done(!r[0].e);
+      if (r[0].e) { setTimeout(function () { if (box.parentNode) box.remove(); }, 900); throw r[0].e; }
+      return r[0].v;
+    });
   }
   function stepName() {
     setStep('name', '<div class="lgn-prompt">&gt; GERÄT FREIGEGEBEN<span class="lgn-cur"></span></div>' +

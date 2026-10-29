@@ -4,13 +4,15 @@
   var link = document.getElementById('cpCss');
   var THEMES = ['cp', 'plain'], NAMES = { cp: 'Design: Cyber', plain: 'Design: Schlicht' };
   var KEY = 'dekr-theme';
+  function flag(k) { try { return localStorage.getItem(k) === '1'; } catch (e) { return false; } }
+  function setFlag(k, v) { try { localStorage.setItem(k, v ? '1' : '0'); } catch (e) { /* nur für diese Sitzung */ } }
   function get() { try { var v = localStorage.getItem(KEY); return THEMES.indexOf(v) >= 0 ? v : 'cp'; } catch (e) { return 'cp'; } }
   // Farben des Cyber-Designs: Hauptfarbe (Akzent) und Nebenfarbe, als Vorlage oder frei gewählt (im Browser gemerkt)
   var CKEY = 'dekr-colors';
   var PRESETS = [
     ['gelb', 'Gelb · Cyan', '#fcee09', '#00f0ff'], ['cyan', 'Cyan · Magenta', '#00f0ff', '#ff2a9d'], ['magenta', 'Magenta · Cyan', '#ff2a9d', '#00f0ff'],
     ['gruen', 'Grün · Violett', '#39ff14', '#b14bff'], ['orange', 'Orange · Blau', '#ff7a1a', '#3ea0ff'], ['violett', 'Violett · Cyan', '#b14bff', '#00f0ff'],
-    ['rot', 'Rot · Gelb', '#ff2a55', '#fcee09']
+    ['rot', 'Rot · Gelb', '#ff2a55', '#fcee09'], ['offrot', 'Off-Rot (Spiel-HUD)', '#ff4d3a', '#ff9a8a'], ['eier', 'Eierschale (Upgrade-Menü)', '#e9e2c8', '#b9b196']
   ];
   function rgbOf(hex) {
     var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
@@ -30,13 +32,15 @@
     if (link) link.disabled = (t !== 'cp');
     document.documentElement.setAttribute('data-theme', t);
     applyColors(t === 'cp');
+    document.documentElement.classList.toggle('fx-low', !!flag('dekr-fxlow'));
+    document.documentElement.classList.toggle('lens-on', t === 'cp' && !!flag('dekr-lens'));
     var cb = document.getElementById('cpColor');
     if (cb) cb.hidden = (t !== 'cp');
     var pn = document.getElementById('cpColorPanel');
     if (pn && t !== 'cp') pn.hidden = true;
   }
   apply(get());
-  var bootDue = get() === 'cp' && !!document.documentElement && (function () {
+  var bootDue = get() === 'cp' && !flag('dekr-fxlow') && !!document.documentElement && (function () {
     try { return !sessionStorage.getItem('dekr-boot'); } catch (e) { return false; }
   })();
   if (bootDue) document.documentElement.classList.add('cp-boot');
@@ -64,13 +68,15 @@
     pn.innerHTML = '<div class="cc-title">Farben</div><div class="cc-grid">' + PRESETS.map(function (p) {
       return '<button type="button" class="cc-sw" data-a="' + p[2] + '" data-b="' + p[3] + '" title="' + p[1] + '"><i style="background:' + p[2] + '"></i><i style="background:' + p[3] + '"></i><span>' + p[1] + '</span></button>';
     }).join('') + '</div><div class="cc-own"><label>Hauptfarbe <input type="color" id="ccA"></label><label>Nebenfarbe <input type="color" id="ccB"></label></div>' +
+      '<label class="cc-chk"><input type="checkbox" id="ccLens"> Linseneffekt (Farbsäume, leichte Wölbung)</label>' +
+      '<label class="cc-chk"><input type="checkbox" id="ccFx"> Weniger Effekte (ruhiger, für schwache Geräte)</label>' +
       '<button type="button" class="cc-reset" id="ccReset">Zurücksetzen</button>';
     document.body.appendChild(pn);
     function save(a, b) {
       try { localStorage.setItem(CKEY, JSON.stringify({ a: a, b: b })); } catch (e) { /* nur für diese Sitzung */ }
       applyColors(get() === 'cp'); sync();
     }
-    function sync() { var c = getColors(); pn.querySelector('#ccA').value = c.a; pn.querySelector('#ccB').value = c.b; }
+    function sync() { var c = getColors(); pn.querySelector('#ccA').value = c.a; pn.querySelector('#ccB').value = c.b; pn.querySelector('#ccLens').checked = flag('dekr-lens'); pn.querySelector('#ccFx').checked = flag('dekr-fxlow'); }
     cb.onclick = function () { sync(); pn.hidden = !pn.hidden; };
     pn.addEventListener('click', function (e) {
       var sw = e.target.closest('.cc-sw');
@@ -78,6 +84,8 @@
       if (e.target.id === 'ccReset') save(PRESETS[0][2], PRESETS[0][3]);
     });
     pn.addEventListener('input', function (e) {
+      if (e.target.id === 'ccLens') { setFlag('dekr-lens', e.target.checked); apply(get()); }
+      if (e.target.id === 'ccFx') { setFlag('dekr-fxlow', e.target.checked); apply(get()); }
       if (e.target.id === 'ccA' || e.target.id === 'ccB') save(pn.querySelector('#ccA').value, pn.querySelector('#ccB').value);
     });
     document.addEventListener('pointerdown', function (e) {
@@ -98,7 +106,7 @@
   }, true);
 
   // ---- Gimmicks (nur bei aktivem CP-Design) ----
-  function on() { return get() === 'cp'; }
+  function on() { return get() === 'cp' && !flag('dekr-fxlow'); }
   function $(id) { return document.getElementById(id); }
 
   // 1: Boot-Sequenz
@@ -297,7 +305,123 @@
     setInterval(fit, 300);
   }
 
+  // 12: Überschriften entschlüsseln sich beim Laden
+  function decodeTitles() {
+    setTimeout(function () {
+      if (!on()) return;
+      Array.prototype.forEach.call(document.querySelectorAll('.top h1, #hallName, .col-title > span:first-child, .mobile h1'), function (el) {
+        var n = el.firstChild; if (n && n.nodeType === 3 && n.nodeValue.trim()) scramble(n);
+      });
+    }, 350);
+  }
+
+  // 10: Meldungen (Toast) tippen sich wie ein eingehender Anruf zeichenweise ein
+  function typedToast() {
+    var el = $('toast'); if (!el || !window.MutationObserver) return;
+    var mine = null, iv = null;
+    new MutationObserver(function () {
+      var txt = el.textContent;
+      if (txt === mine || !txt || !on()) return;   // eigene Änderung oder nichts zu tippen
+      clearInterval(iv); el.classList.add('typing');
+      var i = 0; mine = ''; el.textContent = '';
+      iv = setInterval(function () {
+        mine = txt.slice(0, ++i); el.textContent = mine;
+        if (i >= txt.length) { clearInterval(iv); el.classList.remove('typing'); }
+      }, 22);
+    }).observe(el, { childList: true, characterData: true, subtree: true });
+  }
+
+  // 4: Scanner – Strahl läuft zur gewählten Position, Hologramm-Label mit Linie zeigt die Daten
+  var scanEl = null, scanTimer = null;
+  function clearScan() { clearTimeout(scanTimer); if (scanEl && scanEl.parentNode) scanEl.parentNode.removeChild(scanEl); scanEl = null; }
+  function scanner() {
+    var map = $('map'); if (!map) return;
+    map.addEventListener('click', function (e) {
+      var g = e.target.closest('g[data-pos]');
+      if (!g) { clearScan(); return; }
+      var id = g.getAttribute('data-pos');
+      setTimeout(function () { if (on()) scan(id); }, 40);
+    });
+    document.addEventListener('pointerdown', function (e) { if (scanEl && !e.target.closest('#map')) clearScan(); });
+  }
+  function scan(id) {
+    clearScan();
+    var mapEl = $('map'), rect = mapEl.querySelector('g[data-pos="' + id + '"] rect'); if (!rect) return;
+    var r = rect.getBoundingClientRect(), mr = mapEl.getBoundingClientRect();
+    var tasks = window.Store ? Store.get().tasks : {}, k2 = 0, k5 = 0, krs = [], n = 0;
+    Object.keys(tasks).forEach(function (t) { var x = tasks[t]; if (x.pos === id) { krs.push('KR ' + x.kr); k2 += +x.k2 || 0; k5 += +x.k5 || 0; n++; } });
+    var line = document.querySelector('#detail .line > span:first-child');
+    var info = (line ? line.textContent.replace(/\s+/g, ' ').trim() : '') || krs.join(', ') || id;
+    var d = document.createElement('div'); d.id = 'scanFx'; d.setAttribute('aria-hidden', 'true');
+    var cxp = r.left + r.width / 2, cyp = r.top + r.height / 2;
+    var lw = 230, lx = cxp + 60 + lw > window.innerWidth - 8 ? cxp - 60 - lw : cxp + 60, ly = cyp - 70 < mr.top + 6 ? cyp + 36 : cyp - 70;
+    var lcx = lx + (lx > cxp ? 0 : lw), lcy = ly + 22, dx = lcx - cxp, dy = lcy - cyp;
+    d.innerHTML = '<i class="sf-beam" style="left:' + mr.left + 'px;width:' + mr.width + 'px;top:' + mr.top + 'px"></i>' +
+      '<i class="sf-ring" style="left:' + cxp + 'px;top:' + cyp + 'px"></i>' +
+      '<i class="sf-lead" style="left:' + cxp + 'px;top:' + cyp + 'px;width:' + Math.sqrt(dx * dx + dy * dy) + 'px;transform:rotate(' + Math.atan2(dy, dx) + 'rad)"></i>' +
+      '<div class="sf-holo" style="left:' + lx + 'px;top:' + ly + 'px;width:' + lw + 'px"><b>' + Util.esc(info) + '</b>' +
+      (n > 1 ? '<br>' + n + ' KR an dieser Position' : '') + ((k2 || k5) ? '<br>Kisten: K2 ' + k2 + ' · K5 ' + k5 : '') + '</div>';
+    document.body.appendChild(d); scanEl = d;
+    var beam = d.querySelector('.sf-beam');
+    if (beam.animate) beam.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(' + (cyp - mr.top) + 'px)', opacity: 1, offset: .85 }, { transform: 'translateY(' + (cyp - mr.top) + 'px)', opacity: 0 }], { duration: 650, easing: 'ease-out', fill: 'forwards' });
+    scanTimer = setTimeout(clearScan, 5000);
+  }
+
+  // 1: Quickhack-Kreismenü (Rechtsklick oder langes Tippen auf eine Position)
+  var radEl = null;
+  function closeRadial() { if (radEl && radEl.parentNode) radEl.parentNode.removeChild(radEl); radEl = null; }
+  function radial() {
+    var map = $('map'); if (!map) return;
+    function open(g, x, y) {
+      if (!on()) return;
+      g.dispatchEvent(new MouseEvent('click', { bubbles: true }));   // Position auswählen (zeigt die Details)
+      setTimeout(function () {
+        closeRadial(); clearScan();
+        var det = $('detail'), t1 = det && (det.querySelector('button[data-act="toggle"]') || det.querySelector('button[data-act="reopen"]')), t2 = det && det.querySelector('button[data-act="close"]');
+        var items = [
+          { l: t1 ? t1.textContent.trim() : '–', f: t1 ? function () { t1.click(); } : null, p: t1 && t1.dataset.p },
+          { l: 'Abschließen', f: t2 ? function () { t2.click(); } : null, p: 'd_close' },
+          { l: 'Details', f: function () {} },
+          { l: 'Chat', f: function () { var c = document.querySelector('[data-tab="chats"]'); if (c) c.click(); } }
+        ];
+        var w = document.createElement('div'); w.id = 'radialFx'; var cx0 = Math.max(90, Math.min(window.innerWidth - 90, x)), cy0 = Math.max(90, Math.min(window.innerHeight - 90, y));
+        w.style.left = cx0 + 'px'; w.style.top = cy0 + 'px';
+        w.innerHTML = '<u></u>' + items.map(function (it, i) {
+          var dis = !it.f || (it.p && document.body.classList.contains('deny-' + it.p));
+          return '<i class="rd rd' + i + (dis ? ' dis' : '') + '" data-i="' + i + '">' + Util.esc(it.l) + '</i>';
+        }).join('');
+        document.body.appendChild(w); radEl = w;
+        setTimeout(function () { w.classList.add('open'); }, 10);
+        w.addEventListener('click', function (ev) { var it = ev.target.closest('.rd'); if (!it || it.classList.contains('dis')) return; var a = items[+it.dataset.i]; closeRadial(); if (a.f) a.f(); });
+      }, 60);
+    }
+    map.addEventListener('contextmenu', function (e) { var g = e.target.closest('g[data-pos]'); if (!g) return; e.preventDefault(); open(g, e.clientX, e.clientY); });
+    var lp = null;   // langes Tippen
+    map.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'touch') return;
+      var g = e.target.closest('g[data-pos]'); if (!g) return;
+      var x = e.clientX, y = e.clientY; clearTimeout(lp); lp = setTimeout(function () { open(g, x, y); }, 550);
+    });
+    ['pointerup', 'pointermove', 'pointercancel'].forEach(function (ev) { map.addEventListener(ev, function () { clearTimeout(lp); }); });
+    document.addEventListener('pointerdown', function (e) { if (radEl && !e.target.closest('#radialFx')) closeRadial(); }, true);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeRadial(); });
+  }
+
+  // 11: Bedien-Töne (Hover, Klick, Bestätigen, Fehler) – ein/aus im Ton-Fenster
+  function uiSounds() {
+    var last = null;
+    document.addEventListener('mouseover', function (e) {
+      var b = e.target.closest && e.target.closest('button, .menu-btn, .chat-row'); if (!b || b === last) return; last = b;
+      if (window.Sound && Sound.blip) Sound.blip('hover');
+    });
+    document.addEventListener('mouseout', function (e) { if (!e.relatedTarget || !e.relatedTarget.closest || e.relatedTarget.closest('button, .menu-btn, .chat-row') !== last) last = null; });
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('button, .menu-btn, .chat-row'); if (!b || b.disabled || !window.Sound || !Sound.blip) return;
+      Sound.blip(b.classList.contains('btn-ok') ? 'ok' : b.classList.contains('btn-warn') ? 'err' : 'click');
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
-    boot(); watchMsgs(); countUp($('hallStat')); alertMode(); pings(); statusBar(); hud();
+    boot(); watchMsgs(); countUp($('hallStat')); alertMode(); pings(); statusBar(); hud(); decodeTitles(); typedToast(); scanner(); radial(); uiSounds();
   });
 })();

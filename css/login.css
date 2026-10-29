@@ -63,3 +63,10 @@ html[data-theme="cp"] .lgn { --a: var(--accent, #fcee09); --c: var(--cyan, #00f0
 .lgn-links .lgn-link[hidden] { display: none; }
 .lgn-links { display: grid; gap: 2px; justify-items: center; }
 .lgn-links .lgn-link[hidden] { display: none; }
+/* Breach-Raster beim Anmelden */
+.lgn-breach { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-top: 2px; }
+.lgn-breach i { font-style: normal; text-align: center; padding: 5px 0; background: #070a10; color: #4a6670; border: 1px solid #1c2630; font-size: 12px; transition: background .15s, color .15s; }
+.lgn-breach i.scan { color: var(--c); border-color: var(--c); } .lgn-breach i.hit { background: var(--a); color: #000; box-shadow: 0 0 10px var(--a); border-color: var(--a); }
+.lgn-breach.bad i.hit { background: var(--r); box-shadow: 0 0 10px var(--r); border-color: var(--r); color: #fff; }
+.lgn-breach.good i.hit { background: #2dffb3; box-shadow: 0 0 12px #2dffb3; border-color: #2dffb3; }
+html.fx-low .lgn-breach { display: none; }

@@ -358,6 +358,13 @@
     dt.forEach(function (t) { k2 += +t.k2 || 0; k5 += +t.k5 || 0; });
     return (k2 || k5) ? '<small class="kis" title="Kisten gesamt an diesem Tag">K2 ' + k2 + ' · K5 ' + k5 + '</small> ' : '';
   }
+  // Segment-Balken neben der Tageszahl (nur im Cyber-Design sichtbar)
+  function segHtml(done, total) {
+    if (!total) return '';
+    var n = Math.min(total, 12), f = Math.round(done / total * n), h = '';
+    for (var i = 0; i < n; i++) h += '<i' + (i < f ? ' class="on' + (f === n ? ' all' : '') + '" style="animation-delay:' + (i * 45) + 'ms"' : '') + '></i>';
+    return '<span class="segs" aria-hidden="true">' + h + '</span>';
+  }
   function renderWeek(tasks) {
     $('dayBar').hidden = allMode;
     $('krFilter').hidden = !allMode;
@@ -382,7 +389,7 @@
       var open = isOpen(d);
       html += '<div class="day' + (isToday ? ' today' : '') + '">' +
         '<div class="day-h orb" data-day="' + d + '"><span>' + (open ? '▾ ' : '▸ ') + Util.DAYS[d] + ' ' + Util.dayDate(viewWeek, d) + (isToday ? ' · heute' : '') +
-        '</span><span class="cnt">' + kistenTag(dt) + done + '/' + dt.length + '</span></div>';
+        '</span><span class="cnt">' + kistenTag(dt) + segHtml(done, dt.length) + done + '/' + dt.length + '</span></div>';
       if (!open) { html += '</div>'; continue; }
       if (!order.length) html += '<div class="empty">– keine KR –</div>';
       html += krCards(dt);

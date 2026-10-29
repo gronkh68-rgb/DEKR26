@@ -143,7 +143,7 @@ window.Auth = (function () {
 // Töne bei neuen Meldungen (mit dem Browser erzeugt, keine Dateien). Der Browser erlaubt Ton erst nach dem ersten Tippen/Klicken.
 window.Sound = (function () {
   var ctx = null, KEY = 'dekr26_soundcfg';
-  var cfg = { on: true, vol: 0.7, style: 'standard', kinds: { done: 1, problem: 1, order: 1, ding: 1 } };
+  var cfg = { on: true, ui: 0, vol: 0.7, style: 'standard', kinds: { done: 1, problem: 1, order: 1, ding: 1 } };
   try {
     var saved = JSON.parse(localStorage.getItem(KEY));
     if (saved) cfg = Object.assign(cfg, saved, { kinds: Object.assign(cfg.kinds, saved.kinds || {}) });
@@ -210,6 +210,19 @@ window.Sound = (function () {
       }).join('') + '</details>';
   }
 
+  // Kurze Blips für Bedienelemente (nur wenn im Ton-Fenster eingeschaltet)
+  function blip(kind) {
+    if (!cfg.ui) return;
+    var c = ac(); if (!c || c.state !== 'running') return;
+    var seq = kind === 'hover' ? [[1500, 0, .02, .5]] : kind === 'ok' ? [[880, 0, .06, 1], [1320, .07, .09, 1]] : kind === 'err' ? [[220, 0, .12, 1], [165, .1, .16, 1]] : [[560, 0, .05, 1], [420, .05, .05, 1]];
+    seq.forEach(function (n) {
+      var o = c.createOscillator(), g = c.createGain(), t = c.currentTime + n[1], peak = Math.min(.5, .12 * cfg.vol * n[3]);
+      o.type = 'square'; o.frequency.value = n[0];
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + .004); g.gain.exponentialRampToValueAtTime(.0001, t + n[2]);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + n[2] + .02);
+    });
+  }
+
   // Einstellungsfenster (wird bei Bedarf erzeugt)
   function panel() {
     var box = document.getElementById('soundPanel');
@@ -221,6 +234,7 @@ window.Sound = (function () {
     }
     var h = '<div class="modal-box" style="max-width:420px"><div class="col-title orb"><span>Töne</span><button type="button" class="btn-sm" id="spClose">Schließen</button></div>' +
       '<label class="chk"><input type="checkbox" id="spOn"' + (cfg.on ? ' checked' : '') + '> Ton bei neuen Meldungen</label>' +
+      '<label class="chk"><input type="checkbox" id="spUi"' + (cfg.ui ? ' checked' : '') + '> Bedien-Töne (Hover, Klick, Bestätigen, Fehler)</label>' +
       '<label class="chk" style="display:grid;gap:4px">Lautstärke <input type="range" id="spVol" min="0.1" max="1" step="0.05" value="' + cfg.vol + '"></label>' +
       '<label class="chk" style="display:grid;gap:4px">Klang <select id="spStyle">' + Object.keys(STYLES).map(function (k) {
         return '<option value="' + k + '"' + (cfg.style === k ? ' selected' : '') + '>' + STYLES[k].name + '</option>';
@@ -234,6 +248,7 @@ window.Sound = (function () {
     box.hidden = false;
     box.querySelector('#spClose').onclick = function () { box.hidden = true; };
     box.querySelector('#spOn').onchange = function (e) { cfg.on = e.target.checked; save(); if (cfg.on) play('ding'); };
+    box.querySelector('#spUi').onchange = function (e) { cfg.ui = e.target.checked ? 1 : 0; save(); if (cfg.ui) blip('click'); };
     box.querySelector('#spVol').onchange = function (e) { cfg.vol = +e.target.value; save(); play('ding', true); };
     box.querySelector('#spStyle').onchange = function (e) { cfg.style = e.target.value; save(); play('ding', true); };
     box.onchange = function (e) {
@@ -251,6 +266,7 @@ window.Sound = (function () {
   }
 
   return {
+    blip: blip,
     enabled: function () { return cfg.on; },
     label: function () { return cfg.on ? '🔔 Ton' : '🔕 Ton aus'; },
     set: function (v) { cfg.on = !!v; save(); if (cfg.on) play('ding'); },
