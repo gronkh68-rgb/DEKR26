@@ -175,12 +175,18 @@
   var kWeek = Util.isoWeek(), kDay = Math.min(5, Math.max(1, Util.todayIdx() || 1));
   var kHide = true;   // abgeschlossene KR ausblenden (im Browser gemerkt)
   try { kHide = localStorage.getItem('dekr26_khide') !== '0'; } catch (e) { /* ignorieren */ }
-  $('kHide').checked = kHide;
-  $('kHide').onchange = function () {
-    kHide = $('kHide').checked;
-    try { localStorage.setItem('dekr26_khide', kHide ? '1' : '0'); } catch (e) { /* ignorieren */ }
-    renderKisten(Store.get());
-  };
+  // Eine gemeinsame Einstellung für Kisten-Ansicht, Dashboard-Listen und KR-Vorschläge
+  function setKHide(v) {
+    kHide = v;
+    $('kHide').checked = v; $('allHide').checked = v;
+    try { localStorage.setItem('dekr26_khide', v ? '1' : '0'); } catch (e) { /* ignorieren */ }
+    lastKrHtml = '';
+    var st = Store.get();
+    fillKrList(st); renderKisten(st); renderAllList(st);
+  }
+  $('kHide').checked = kHide; $('allHide').checked = kHide;
+  $('kHide').onchange = function () { setKHide($('kHide').checked); };
+  $('allHide').onchange = function () { setKHide($('allHide').checked); };
   function dayTasks(state, week, day) {
     return Object.keys(state.tasks).map(function (id) { return Object.assign({ id: id }, state.tasks[id]); })
       .filter(function (t) { return t.week === week && t.day === day && !(kHide && t.closed); })
@@ -347,6 +353,7 @@
     var list = Object.keys(state.tasks).map(function (id) { return state.tasks[id]; }).filter(function (t) {
       // „Diese Woche“: nur die laufende Woche; „Alle KR“: vergangene Wochen ausgeblendet
       if (dashTab === 'week' ? t.week !== thisWeek : t.week < thisWeek) return false;
+      if (kHide && t.closed) return false;
       if (!q) return true;
       return (t.kr + ' ' + (t.pos ? Halls.label(t.hall, t.pos) : '') + ' ' + (t.scope || '') + (t.usa ? ' usa' : '')).toLowerCase().indexOf(q) >= 0;
     }).sort(function (a, b) { return a.week < b.week ? -1 : a.week > b.week ? 1 : a.day - b.day; });
@@ -397,7 +404,7 @@
     return Object.keys(ps).filter(function (id) { return ps[id].status === 'offen' && (!kr || ps[id].kr === kr); });
   }
   function fillKrList(state) {
-    var list = Object.keys(state.tasks).map(function (id) { return state.tasks[id]; });
+    var list = Object.keys(state.tasks).map(function (id) { return state.tasks[id]; }).filter(function (t) { return !(kHide && t.closed); });
     list.sort(function (a, b) { return a.week < b.week ? -1 : a.week > b.week ? 1 : a.day - b.day; });
     var html = list.slice(0, 500).map(function (t) {
       return '<option value="' + esc(t.kr) + '">KR ' + esc(t.kr) + (t.pos ? ' · ' + esc(Halls.label(t.hall, t.pos)) : '') +
