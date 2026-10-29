@@ -139,9 +139,9 @@
     function upd() {
       var n = parseInt(cp.textContent, 10) || 0;
       var open = document.querySelectorAll('#msgs .msg.problem.pulse').length;
-      var act = on() && (n > 0 || open > 0);
-      document.body.classList.toggle('cp-alert', act);
-      band.hidden = !act;
+      var act = n > 0 || open > 0;
+      document.body.classList.toggle('cp-alert', act);   // Seite färbt sich rot (in beiden Designs, stärker im CP-Design)
+      band.hidden = !(act && on());
       band.textContent = '⚠ ALERT · ' + (n || open) + ' OFFENE' + ((n || open) === 1 ? 'S PROBLEM' : ' PROBLEME');
     }
     new MutationObserver(upd).observe(cp, { childList: true, characterData: true, subtree: true });
@@ -162,7 +162,7 @@
       });
       if (seen && on()) {
         Object.keys(now).forEach(function (id) {
-          if (seen[id]) return;
+          if (seen[id] || now[id].classList.contains('wave')) return;
           var r = now[id], svg = r.ownerSVGElement;
           if (!svg) return;
           var cx = +r.getAttribute('x') + +r.getAttribute('width') / 2, cy = +r.getAttribute('y') + +r.getAttribute('height') / 2;

@@ -159,6 +159,7 @@
   }
 
   var openProb = {};   // KR -> offenes Problem vorhanden
+  var waveKr = {};     // KR -> unbestätigte „Beipack bereit“-Meldung (Position pulsiert mit Druckwellen)
   function badges(t) {
     var from = t.from ? ' <span class="badge">aus Halle ' + esc(t.from) + '</span>' : '';
     var fresh = t.chg && Date.now() - t.chgAt < 864e5;   // Vermerk 24 Stunden lang
@@ -326,10 +327,19 @@
       if (ts) {
         var act = ts.filter(function (t) { return !t.closed; });
         cls += !act.length ? ' closed' : act.every(function (t) { return t.done; }) ? ' done' : ' open';
+        if (act.some(function (t) { return openProb[t.kr]; })) cls += ' prob';
+        else if (act.some(function (t) { return waveKr[t.kr]; })) cls += ' wave';
       }
       if (sel && sel.hall === hall.id && sel.pos === p.id) cls += ' sel';
       svg += '<g data-pos="' + esc(p.id) + '"><rect class="' + cls + '" x="' + p.x + '" y="' + p.y +
         '" width="' + p.w + '" height="' + p.h + '" rx="2"><title>' + esc(Halls.label(hall.id, p.id)) + '</title></rect>';
+      if (/ (prob|wave)/.test(cls)) {
+        // Druckwellen: rot bei Problem, grün bei neuer „Beipack bereit“-Meldung (bis zur Bestätigung)
+        var rc = / prob/.test(cls) ? ' red' : '', cx = p.x + p.w / 2, cy = p.y + p.h / 2, rr = Math.min(p.w, p.h) / 2;
+        for (var wv = 0; wv < 3; wv++) {
+          svg += '<circle class="cp-ring' + rc + '" cx="' + cx + '" cy="' + cy + '" r="' + rr + '" style="animation-delay:' + (wv * 0.8) + 's"/>';
+        }
+      }
       if (ts) svg += '<text class="cell-t" style="font-size:' + (p.f * mapFont) + 'px" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2 + p.f * mapFont / 3) + '">' + esc(Halls.label('', p.id)) + '</text>';
       svg += '</g>';
     });
@@ -380,17 +390,24 @@
     var list = unack.concat(all.filter(function (m) { return !needsAck(m); }).slice(0, 70));
     $('cMsg').textContent = unack.length || '';
 
-    var fresh = {};
+    var fresh = {}, focusHall = '';
     if (seen) {
       list.forEach(function (m) {
         if (!seen[m.id]) {
           fresh[m.id] = 1;
           if (m.type === 'done' || m.type === 'problem') { toast(m.text); Sound.play(m.type); }
+          if (m.type === 'done' && m.kr && !editing) focusHall = m.kr;
         }
       });
     }
     seen = seen || {};
     list.forEach(function (m) { seen[m.id] = 1; });
+    // Neue „Beipack bereit“-Meldung: Karte wechselt in die Halle dieser Position
+    if (focusHall) {
+      var tk = Object.keys(state.tasks).map(function (id) { return state.tasks[id]; }).filter(function (t) { return t.kr === focusHall && t.hall; })[0];
+      var ix = tk ? Halls.all.findIndex(function (h) { return h.id === tk.hall; }) : -1;
+      if (ix >= 0 && ix !== hallIdx) { hallIdx = ix; sel = null; renderMap(mapTasks(weekTasks(state))); }
+    }
 
     $('msgs').innerHTML = list.length ? list.map(function (m) {
       var pulse = needsAck(m);
@@ -573,6 +590,9 @@
     p.catch(function () { toast('Speichern fehlgeschlagen'); });
   };
 
+  function mapTasks(tasks) {
+    return allMode ? tasks : tasks.filter(function (t) { return !dayPrefs.hidden[t.day]; });
+  }
   function render(state) {
     openProb = {};
     Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') openProb[state.problems[id].kr] = 1; });
@@ -585,10 +605,15 @@
     renderRecipients(state);
     renderDOrder(state);
     renderTabs();
+    waveKr = {};
+    Object.keys(state.msgs).forEach(function (id) {
+      var m = state.msgs[id];
+      if (m.type === 'done' && !m.ack && m.kr) waveKr[m.kr] = 1;
+    });
     var tasks = weekTasks(state);
     renderWeek(tasks);
     // Ausgeblendete Tage verschwinden auch von der Karte (in der Ansicht „Alle KR" gilt das nicht)
-    renderMap(allMode ? tasks : tasks.filter(function (t) { return !dayPrefs.hidden[t.day]; }));
+    renderMap(mapTasks(tasks));
     renderMsgs(state);
   }
 

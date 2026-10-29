@@ -387,3 +387,15 @@ a.btn-sm:hover { border-color: var(--accent); }
 .pcard.light { padding-bottom: 22px; }
 .pcard.light .pc-foot { padding-left: 34px; padding-right: 8px; margin-bottom: 4px; }
 .pcard.light .pc-top { padding-right: 20px; }
+
+/* Druckwellen um Positionen: grün = neue „Beipack bereit“-Meldung (bis bestätigt), rot = offenes Problem */
+.cp-ring { fill: none; stroke: var(--green); stroke-width: 3; opacity: 0; pointer-events: none; transform-box: fill-box; transform-origin: center; animation: ringWave 2.4s ease-out infinite; }
+.cp-ring.red { stroke: var(--red); }
+@keyframes ringWave { 0% { transform: scale(1); opacity: .95; stroke-width: 4; } 100% { transform: scale(7); opacity: 0; stroke-width: .5; } }
+svg.map .cell.wave { animation: cellWave 1s ease-in-out infinite alternate; }
+svg.map .cell.prob { fill: rgba(255, 70, 90, .55); stroke: var(--red); animation: cellProb .8s ease-in-out infinite alternate; }
+@keyframes cellWave { from { opacity: .65; } to { opacity: 1; } }
+@keyframes cellProb { from { opacity: .6; } to { opacity: 1; } }
+/* Offenes Problem: roter Rahmen um die ganze Seite */
+body.cp-alert::before { content: ''; position: fixed; inset: 0; z-index: 98; pointer-events: none; box-shadow: inset 0 0 70px rgba(255, 60, 80, .5); animation: pageAlert 1.2s ease-in-out infinite alternate; }
+@keyframes pageAlert { from { opacity: .45; } to { opacity: 1; } }

@@ -140,3 +140,20 @@ body.cp-sb .app { height: calc(100vh - 24px); }
 .item.prob { border-left: 3px solid var(--red); }
 a.btn-sm { border-radius: 0; border-color: #3a3d18; color: var(--accent); font-family: 'Rajdhani', sans-serif; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
 a.btn-sm:hover { border-color: var(--accent); box-shadow: inset 0 0 12px rgba(252,238,9,.3); }
+
+/* Offenes Problem: die ganze Seite wird rot (Akzent, Rahmen, Hintergrund) */
+body.cp-alert { --accent: #ff2a55; --line: #4a1d2b; --cyan: #ff6b8a;
+  background-image: radial-gradient(ellipse at 50% -10%, rgba(255,42,85,.28), transparent 60%), radial-gradient(ellipse at 100% 110%, rgba(255,42,85,.25), transparent 55%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px); }
+body.cp-alert::before { box-shadow: inset 0 0 120px rgba(255,42,85,.7), inset 0 0 0 3px rgba(255,42,85,.9); }
+body.cp-alert .top { background: linear-gradient(90deg, #1a0a10, #240d16); }
+body.cp-alert .top h1 { color: #fff; }
+body.cp-alert .card, body.cp-alert .map-box, body.cp-alert .msg:not(.problem) { border-color: rgba(255,42,85,.45); }
+body.cp-alert .map-box { box-shadow: inset 0 0 40px rgba(255,42,85,.18), 0 0 22px rgba(255,42,85,.25); }
+body.cp-alert .btn-main, body.cp-alert .tab.sel { color: #fff; }
+/* Zellen und Druckwellen im neon-Stil */
+.cp-ring { stroke: #2dffb3; filter: drop-shadow(0 0 4px #2dffb3); }
+.cp-ring.red { stroke: #ff2a55; filter: drop-shadow(0 0 5px #ff2a55); }
+svg.map.plan .cell.wave { fill: rgba(45,255,179,.55); stroke: #2dffb3; filter: drop-shadow(0 0 10px rgba(45,255,179,1)); }
+svg.map.plan .cell.prob { fill: rgba(255,42,85,.6); stroke: #ff2a55; filter: drop-shadow(0 0 10px rgba(255,42,85,1)); }
+body.cp-alert .top h1 { color: #fff !important; animation: none; }
