@@ -5,9 +5,35 @@
   var THEMES = ['cp', 'plain'], NAMES = { cp: 'Design: Cyber', plain: 'Design: Schlicht' };
   var KEY = 'dekr-theme';
   function get() { try { var v = localStorage.getItem(KEY); return THEMES.indexOf(v) >= 0 ? v : 'cp'; } catch (e) { return 'cp'; } }
+  // Farben des Cyber-Designs: Hauptfarbe (Akzent) und Nebenfarbe, als Vorlage oder frei gewählt (im Browser gemerkt)
+  var CKEY = 'dekr-colors';
+  var PRESETS = [
+    ['gelb', 'Gelb · Cyan', '#fcee09', '#00f0ff'], ['cyan', 'Cyan · Magenta', '#00f0ff', '#ff2a9d'], ['magenta', 'Magenta · Cyan', '#ff2a9d', '#00f0ff'],
+    ['gruen', 'Grün · Violett', '#39ff14', '#b14bff'], ['orange', 'Orange · Blau', '#ff7a1a', '#3ea0ff'], ['violett', 'Violett · Cyan', '#b14bff', '#00f0ff'],
+    ['rot', 'Rot · Gelb', '#ff2a55', '#fcee09']
+  ];
+  function rgbOf(hex) {
+    var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
+    return m ? parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) : '252,238,9';
+  }
+  function getColors() {
+    try { var c = JSON.parse(localStorage.getItem(CKEY)); if (c && /^#[0-9a-f]{6}$/i.test(c.a) && /^#[0-9a-f]{6}$/i.test(c.b)) return c; } catch (e) { /* Standard */ }
+    return { a: PRESETS[0][2], b: PRESETS[0][3] };
+  }
+  function applyColors(on) {
+    var st = document.documentElement.style, names = ['--accent', '--acc-rgb', '--cyan', '--cy-rgb'];
+    if (!on) { names.forEach(function (n) { st.removeProperty(n); }); return; }
+    var c = getColors();
+    st.setProperty('--accent', c.a); st.setProperty('--acc-rgb', rgbOf(c.a)); st.setProperty('--cyan', c.b); st.setProperty('--cy-rgb', rgbOf(c.b));
+  }
   function apply(t) {
     if (link) link.disabled = (t !== 'cp');
     document.documentElement.setAttribute('data-theme', t);
+    applyColors(t === 'cp');
+    var cb = document.getElementById('cpColor');
+    if (cb) cb.hidden = (t !== 'cp');
+    var pn = document.getElementById('cpColorPanel');
+    if (pn && t !== 'cp') pn.hidden = true;
   }
   apply(get());
   var bootDue = get() === 'cp' && !!document.documentElement && (function () {
@@ -28,6 +54,35 @@
       apply(t); label();
     };
     host.appendChild(b);
+    // Farb-Auswahl (nur im Cyber-Design sichtbar)
+    var cb = document.createElement('button');
+    cb.id = 'cpColor'; cb.type = 'button'; cb.className = 'btn-sm'; cb.textContent = 'Farben'; cb.title = 'Farben des Designs wählen';
+    cb.hidden = get() !== 'cp';
+    host.appendChild(cb);
+    var pn = document.createElement('div');
+    pn.id = 'cpColorPanel'; pn.hidden = true;
+    pn.innerHTML = '<div class="cc-title">Farben</div><div class="cc-grid">' + PRESETS.map(function (p) {
+      return '<button type="button" class="cc-sw" data-a="' + p[2] + '" data-b="' + p[3] + '" title="' + p[1] + '"><i style="background:' + p[2] + '"></i><i style="background:' + p[3] + '"></i><span>' + p[1] + '</span></button>';
+    }).join('') + '</div><div class="cc-own"><label>Hauptfarbe <input type="color" id="ccA"></label><label>Nebenfarbe <input type="color" id="ccB"></label></div>' +
+      '<button type="button" class="cc-reset" id="ccReset">Zurücksetzen</button>';
+    document.body.appendChild(pn);
+    function save(a, b) {
+      try { localStorage.setItem(CKEY, JSON.stringify({ a: a, b: b })); } catch (e) { /* nur für diese Sitzung */ }
+      applyColors(get() === 'cp'); sync();
+    }
+    function sync() { var c = getColors(); pn.querySelector('#ccA').value = c.a; pn.querySelector('#ccB').value = c.b; }
+    cb.onclick = function () { sync(); pn.hidden = !pn.hidden; };
+    pn.addEventListener('click', function (e) {
+      var sw = e.target.closest('.cc-sw');
+      if (sw) { save(sw.dataset.a, sw.dataset.b); return; }
+      if (e.target.id === 'ccReset') save(PRESETS[0][2], PRESETS[0][3]);
+    });
+    pn.addEventListener('input', function (e) {
+      if (e.target.id === 'ccA' || e.target.id === 'ccB') save(pn.querySelector('#ccA').value, pn.querySelector('#ccB').value);
+    });
+    document.addEventListener('pointerdown', function (e) {
+      if (!pn.hidden && !pn.contains(e.target) && e.target !== cb) pn.hidden = true;
+    }, true);
   });
   document.addEventListener('pointerdown', function (e) {
     if (get() === 'plain') return;

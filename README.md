@@ -96,4 +96,5 @@ Dashboard die Anmeldung (Admin ist ausgenommen). Der Account kann seinen Code se
 ## Designs
 
 Der Knopf „Design: …“ (Kopfzeile bzw. Handyseite) wechselt zwischen **Cyber** (Cyberpunk) und **Schlicht**. Die Wahl wird je Browser gespeichert.
+Im Cyber-Design wählt der Knopf „Farben“ Haupt- und Nebenfarbe (sieben Vorlagen oder frei); Statusfarben (nicht bereit gelb, bereit grün, Problem rot) bleiben fest.
 Dateien: `css/cyber.css`, `js/theme.js`.
