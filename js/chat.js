@@ -3,7 +3,7 @@
 // Das Dashboard hat die Kennung 'dash', jedes Handy die ID seines QR-Codes.
 window.Chat = (function () {
   'use strict';
-  var MAXAGE = 14 * 864e5;
+  var MAXAGE = 180 * 864e5;   // Chats bleiben im Profil sichtbar (auf jedem Gerät, auch nach dem Neuladen)
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
 
   function peerOf(m, me) {

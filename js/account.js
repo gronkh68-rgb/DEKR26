@@ -15,7 +15,9 @@ window.Account = (function () {
     ['d_problems', 'Dashboard: Probleme lösen'],
     ['d_send', 'Dashboard: Meldungen bestätigen/löschen, Nachrichten senden']
   ];
-  var PREF_KEYS = ['dekr26_soundcfg', 'dekr26_days', 'dekr26_showclosed', 'dekr26_mapfont', 'dekr26_mapzoom'];
+  // Alles, was zur Person gehört und auf jedem Gerät gleich sein soll (Ton, Ansicht, Karte, Design, Farben, Filter, „Zuletzt“-Liste am Handy)
+  var PREF_KEYS = ['dekr26_soundcfg', 'dekr26_days', 'dekr26_showclosed', 'dekr26_mapfont', 'dekr26_mapzoom', 'dekr-theme', 'dekr-colors', 'dekr26_khide', 'dekr26_wake', 'dekr26_impmap'];
+  function recentKey() { var s = session(); return s && s.id ? 'dekr26_recent_' + s.id : ''; }
 
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignorieren */ } }
@@ -215,10 +217,11 @@ window.Account = (function () {
   }
 
   // Persönliche Einstellungen: folgen dem Account auf jedes Gerät
-  var lastPrefs = '';
+  var lastPrefs = '', prefsApplied = false;   // erst nach dem Laden der Profil-Einstellungen wird hochgeladen, sonst überschreibt ein neues Gerät sie mit seinen Standardwerten
   function collectPrefs() {
-    var o = {};
+    var o = {}, rk = recentKey();
     PREF_KEYS.forEach(function (k) { var v = lsGet(k); if (v != null) o[k] = v; });
+    if (rk && lsGet(rk) != null) o['recent'] = lsGet(rk);
     return o;
   }
   function applyPrefs(prefs) {
@@ -226,12 +229,15 @@ window.Account = (function () {
     PREF_KEYS.forEach(function (k) {
       if (prefs && prefs[k] != null && lsGet(k) !== prefs[k]) { lsSet(k, prefs[k]); changed = true; }
     });
+    var rk = recentKey();
+    if (rk && prefs && prefs.recent != null && lsGet(rk) !== prefs.recent) { lsSet(rk, prefs.recent); changed = true; }
+    prefsApplied = true;
     lastPrefs = prefs ? JSON.stringify(collectPrefs()) : '';   // ohne gespeicherte Einstellungen: die dieses Geräts hochladen
     return changed;
   }
   function pushPrefs(id) {
     var now = JSON.stringify(collectPrefs());
-    if (!id || now === lastPrefs) return;
+    if (!id || !prefsApplied || now === lastPrefs) return;
     lastPrefs = now;
     Store.updateQr(id, { prefs: collectPrefs() }).catch(function () { lastPrefs = ''; });
   }

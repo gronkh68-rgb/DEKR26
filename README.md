@@ -100,7 +100,7 @@ Die Seite öffnet immer mit einer **Anmeldeseite** (Cyberpunk-Stil). **Der Accou
 Deshalb im Admin-Bereich einen **Anmelde-Code des Betriebs** setzen (`settings/regcode`): Ohne ihn kommt kein neues Gerät hinein, auch nicht mit gültigem Account-Code. Im QR-Link steckt er als `k`,
 am PC kann man ihn unter „Zugangscode des Betriebs“ eingeben. Die Rechte der Accounts wirken in der Oberfläche, die Datenbank prüft sie nicht einzeln
 (außer: Konten ändern nur ihre eigenen Felder `codeHash`, `codeV`, `codeInit`, `name`, `prefs`, Gäste dürfen sich nur selbst mit Melden/Bestellen anlegen).
-Persönliche Einstellungen (Ton, Tage, Karte) werden am Account gespeichert.
+Persönliche Daten (Ton, Tage, Karte, Design und Farben, Filter, „Zuletzt“-Liste am Handy, Importzuordnung) liegen im Profil (`qrs/<id>/prefs`) und laden sich auf jedem Gerät nach der Anmeldung; Änderungen gehen automatisch zurück. Chats bleiben 180 Tage im Profil, andere Meldungen 14 Tage.
 
 **Regeln testen:** `tests/firebase-rules.test.js` prüft `firebase-rules.json` im Firebase-Emulator (`npm i firebase-tools @firebase/rules-unit-testing firebase`,
 dann `npx firebase emulators:exec --only database --project demo-dekr "node tests/firebase-rules.test.js"`, Java wird gebraucht).

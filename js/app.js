@@ -1626,7 +1626,8 @@
     if (!Object.keys(state.tasks).length && !Object.keys(state.msgs).length) return;
     pruned = true;
     var now = Date.now(), day = 864e5, ops = [], cutoff = Util.addWeeks(WEEK, -8);
-    Object.keys(state.msgs).forEach(function (id) { if (now - state.msgs[id].t > 14 * day) ops.push({ coll: 'msgs', id: id, val: null }); });
+    // Chat-Nachrichten gehören zum Profil und bleiben 180 Tage, alle anderen Meldungen 14 Tage
+    Object.keys(state.msgs).forEach(function (id) { if (now - state.msgs[id].t > (state.msgs[id].type === 'chat' ? 180 : 14) * day) ops.push({ coll: 'msgs', id: id, val: null }); });
     Object.keys(state.orders).forEach(function (id) {
       var o = state.orders[id];
       if (o.status === 'erledigt' && now - (o.statusAt || o.t) > 30 * day) ops.push({ coll: 'orders', id: id, val: null });

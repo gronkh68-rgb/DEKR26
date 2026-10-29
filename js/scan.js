@@ -4,7 +4,7 @@
   var esc = Util.esc;
   var WEEK = Util.isoWeek();
   var params = new URLSearchParams(location.search);
-  var RECENT_KEY = 'dekr26_recent_' + (new URLSearchParams(location.search).get('q') || 'x');
+  var RECENT_KEY = 'dekr26_recent_' + ((Account.session() || {}).id || new URLSearchParams(location.search).get('q') || 'x');
   var recent = [];
   try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { recent = []; }
   var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash', 'ueber', 'kisten'];
@@ -693,6 +693,9 @@
   };
 
   // ---------- Start ----------
+  var prefsFor = '';
+  setInterval(function () { var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id); }, 20000);
+  window.addEventListener('pagehide', function () { var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id); });
   function apply(state) {
     $('lockCover').hidden = !Store.isLocked();
     if (Store.isLocked()) {
@@ -713,6 +716,12 @@
     if (!ok && Store.isOffline()) {
       $('note').textContent = 'Keine Verbindung – bitte Internet prüfen und die Seite neu laden.';
       return;
+    }
+    // Persönliche Daten (Ton, Design, Farben, Filter, „Zuletzt“) aus dem Profil laden; Änderungen gehen automatisch ins Profil zurück
+    var meAcc = Account.me(state);
+    if (meAcc && prefsFor !== meAcc.id) {
+      prefsFor = meAcc.id;
+      if (Account.applyPrefs(meAcc.prefs)) { location.reload(); return; }
     }
     $('whoName').textContent = ok ? qr.name : '';
     $('who').textContent = ok && qr.func ? qr.func : '';
