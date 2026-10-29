@@ -99,3 +99,20 @@ body.cp-alert .top, body.cp-alert .map-box { box-shadow: 0 6px 30px rgba(224,48,
 .mobile { background: rgba(255,255,255,.55); backdrop-filter: blur(5px); border-radius: 28px; margin: 8px; padding: 12px 14px; }
 #arcRift { width: 440px; height: 440px; right: -130px; bottom: -130px; opacity: .8; }
 body.cp-alert::before { box-shadow: inset 0 0 90px rgba(224,48,95,.35); }
+
+/* Organische Schalterformen: jede Form ist leicht anders und unregelmäßig (keine Pillen), beim Hover „atmet“ sie */
+button, .tag, .chip, .badge, .tab, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select { --b: 56% 44% 60% 40% / 48% 58% 42% 52%; border-radius: var(--b); }
+button:nth-child(2n), .tag:nth-child(2n), .chip:nth-child(2n), .tab:nth-child(2n) { --b: 42% 58% 46% 54% / 58% 42% 56% 44%; }
+button:nth-child(3n), .tag:nth-child(3n), .chip:nth-child(3n), .tab:nth-child(3n) { --b: 60% 40% 52% 48% / 44% 60% 40% 56%; }
+button:nth-child(5n), .chip:nth-child(5n), .tab:nth-child(5n) { --b: 48% 52% 38% 62% / 56% 44% 62% 38%; }
+button:nth-child(7n), .chip:nth-child(7n) { --b: 52% 48% 62% 38% / 40% 62% 38% 60%; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select { --b: 28px 18px 30px 16px / 22px 28px 18px 26px; }
+textarea { border-radius: 28px 18px 32px 20px / 24px 30px 20px 28px; }
+.menu-btn { border-radius: 38% 62% 44% 56% / 54% 40% 60% 46%; }
+.menu-btn:nth-child(2n) { border-radius: 58% 42% 56% 44% / 44% 58% 42% 56%; }
+.menu-btn:nth-child(3n) { border-radius: 46% 54% 38% 62% / 60% 42% 58% 40%; }
+button:hover:not(:disabled), .menu-btn:hover { animation: anoBlob 1.6s ease-in-out infinite alternate; }
+@keyframes anoBlob { 0% { border-radius: 56% 44% 60% 40% / 48% 58% 42% 52%; } 50% { border-radius: 44% 56% 42% 58% / 58% 42% 56% 44%; } 100% { border-radius: 60% 40% 50% 50% / 42% 60% 40% 58%; } }
+.btn-sm { padding-left: 12px; padding-right: 12px; }
+.chat-input .btn-main { border-radius: 52% 48% 58% 42% / 46% 56% 44% 54%; }
+.day.today .day-h { border-radius: 40px 22px 44px 24px / 24px 40px 22px 44px; }
