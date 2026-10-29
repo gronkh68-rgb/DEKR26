@@ -157,3 +157,13 @@ body.cp-alert .btn-main, body.cp-alert .tab.sel { color: #fff; }
 svg.map.plan .cell.wave { fill: rgba(45,255,179,.55); stroke: #2dffb3; filter: drop-shadow(0 0 10px rgba(45,255,179,1)); }
 svg.map.plan .cell.prob { fill: rgba(255,42,85,.6); stroke: #ff2a55; filter: drop-shadow(0 0 10px rgba(255,42,85,1)); }
 body.cp-alert .top h1 { color: #fff !important; animation: none; }
+/* Messenger im Cyberpunk-Stil */
+.chat-row { clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); border-radius: 0; }
+.chat-av { border-radius: 0; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); font-family: 'Rajdhani', sans-serif; }
+.chat-badge { border-radius: 0; background: var(--green); box-shadow: 0 0 10px rgba(45,255,179,.7); }
+.chat-b { border-radius: 0; font-family: 'Share Tech Mono', monospace; font-size: 13px; }
+.chat-b.other { background: #0e1520; border-left: 3px solid var(--cyan); clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%); }
+.chat-b.own { background: #1a2410; border-right: 3px solid var(--accent); clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px); }
+.chat-day { border-radius: 0; font-family: 'Rajdhani', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--cyan); }
+.chat-m .tk.seen { color: var(--cyan); text-shadow: 0 0 6px var(--cyan); }
+.chat-head { border-bottom-color: rgba(0,240,255,.35); }

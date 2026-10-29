@@ -117,8 +117,7 @@
     $('me').value = $('mName').value.trim();
     var to = $('mTo').value, msg;
     if (to) {
-      var who = to === 'all' ? 'alle QR-Besitzer' : $('mTo').options[$('mTo').selectedIndex].text.replace(/^An /, '');
-      msg = { type: 'dm', by: name, to: to, text: 'An ' + who + ': ' + text };
+      msg = { type: 'chat', from: 'dash', to: to, by: name, text: text };   // landet im Chat mit diesem Empfänger
     } else {
       msg = { type: 'msg', by: name, text: text };
     }
@@ -130,6 +129,38 @@
     }).catch(function () { toast('Senden fehlgeschlagen'); });
     $('mText').value = '';
   };
+
+  // ---------- Chats (Messenger mit den QR-Besitzern) ----------
+  var chatUi = Chat.mount($('chats'), {
+    me: 'dash',
+    state: function () { return Store.get(); },
+    contacts: function (state) {
+      var qs = Object.keys(state.qrs).map(function (id) { return { id: id, name: state.qrs[id].name, sub: state.qrs[id].func || '', t: state.qrs[id].t }; })
+        .sort(function (a, b) { return a.t - b.t; });
+      return [{ id: 'all', name: 'Alle QR-Besitzer', sub: 'Gruppenchat' }].concat(qs);
+    },
+    send: function (text, to) {
+      var name = $('me').value.trim() || 'Deufol';
+      return Store.addMsg({ type: 'chat', from: 'dash', to: to, by: name, text: text }).then(function () {
+        var qrs = Store.get().qrs, targets = to === 'all' ? Object.keys(qrs) : [to];
+        targets.forEach(function (id) { Push.toQr(id, 'Nachricht von ' + name, text); });
+      }).catch(function (e) { toast('Senden fehlgeschlagen'); throw e; });
+    },
+    read: function (ids) {
+      var name = $('me').value.trim() || 'Deufol';
+      ids.forEach(function (id) {
+        var f = {}; f['reads/dash'] = { by: name, t: Date.now() };
+        Store.updateMsg(id, f).catch(function () { /* Lesebestätigung ist optional */ });
+      });
+    }
+  });
+  function chatAlerts(state) {
+    Chat.newIncoming(state, 'dash').forEach(function (m) {
+      if (tab === 'chats' && chatUi.isOpen() === Chat.peerOf(m, 'dash') && document.visibilityState === 'visible') return;
+      toast('Nachricht von ' + m.by + ': ' + (m.text.length > 60 ? m.text.slice(0, 60) + '…' : m.text));
+      Sound.play('ding');
+    });
+  }
 
   $('allToggle').onclick = function () { allMode = !allMode; sel = null; render(Store.get()); };
   $('krFilter').oninput = function () { krFilter = $('krFilter').value; renderAllKr(weekTasks(Store.get())); };
@@ -387,6 +418,12 @@
   }
 
   // ---------- Nachrichten ----------
+  // Chat-Nachrichten stehen im Verlauf mit Absender und Ziel
+  function feedText(m) {
+    if (m.type !== 'chat') return m.text;
+    var q = Store.get().qrs, to = m.to === 'dash' ? 'Dashboard' : m.to === 'all' ? 'alle QR-Besitzer' : (q[m.to] ? q[m.to].name : '?');
+    return m.by + ' → ' + to + ': ' + m.text;
+  }
   function renderMsgs(state) {
     if (Store.isLocked()) return;   // noch keine Daten: nichts vormerken, sonst gelten später alle als neu
     var all = Object.keys(state.msgs).map(function (id) {
@@ -420,8 +457,8 @@
 
     $('msgs').innerHTML = list.length ? list.map(function (m) {
       var pulse = needsAck(m);
-      return '<div class="msg ' + esc(m.type) + (pulse ? ' pulse' : '') + (fresh[m.id] ? ' fresh' : '') + '">' + esc(m.text) +
-        '<small>' + Util.time(m.t) + ' · ' + esc(m.by || '') + (m.ack ? ' · ✔ bestätigt von ' + esc(m.ack.by) : '') + (m.type === 'dm' && m.reads ? ' · ✔ gelesen von ' + Object.keys(m.reads).map(function (k) { return esc(m.reads[k].by); }).join(', ') : '') + '</small>' +
+      return '<div class="msg ' + esc(m.type) + (pulse ? ' pulse' : '') + (fresh[m.id] ? ' fresh' : '') + '">' + esc(feedText(m)) +
+        '<small>' + Util.time(m.t) + ' · ' + esc(m.by || '') + (m.ack ? ' · ✔ bestätigt von ' + esc(m.ack.by) : '') + ((m.type === 'dm' || m.type === 'chat') && m.reads ? ' · ✔ gelesen von ' + Object.keys(m.reads).map(function (k) { return esc(m.reads[k].by); }).join(', ') : '') + '</small>' +
         '<span class="acts">' + (pulse ? '<button class="btn-sm btn-ok" data-ack="' + esc(m.id) + '">Bestätigen</button>' : '') +
         '<button class="btn-sm btn-warn" data-delmsg="' + esc(m.id) + '">Löschen</button></span></div>';
     }).join('') : '<div class="empty">Keine Nachrichten.</div>';
@@ -569,11 +606,12 @@
   var dOrderId = null;
 
   function renderTabs() {
-    var ids = { msgs: 'msgs', orders: 'orders', ueber: 'uebs', probs: 'probs' };
+    var ids = { msgs: 'msgs', chats: 'chats', orders: 'orders', ueber: 'uebs', probs: 'probs' };
     Object.keys(ids).forEach(function (k) { $(ids[k]).hidden = k !== tab; });
     $('send').hidden = tab !== 'msgs';
     $('dOrder').hidden = tab !== 'orders';
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) { b.classList.toggle('sel', b.dataset.tab === tab); });
+    if (tab === 'chats') chatUi.render(Store.get());
   }
   document.querySelector('.tabs').onclick = function (e) {
     var b = e.target.closest('.tab');
@@ -614,6 +652,8 @@
     renderRecipients(state);
     renderDOrder(state);
     renderTabs();
+    $('cChat').textContent = Chat.unreadCount(state, 'dash') || '';
+    chatAlerts(state);
     waveKr = {};
     Object.keys(state.msgs).forEach(function (id) {
       var m = state.msgs[id];

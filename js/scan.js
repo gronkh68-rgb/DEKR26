@@ -140,138 +140,50 @@
     if (changed) { try { localStorage.setItem('dekr26_probseen', JSON.stringify(seenP)); } catch (e) { /* ignorieren */ } }
   }
 
-  // ---------- Nachrichten vom Dashboard (Posteingang) ----------
-  var inboxSeen = null;
-  function readSet() {
-    try { return JSON.parse(localStorage.getItem('dekr26_dmread')) || {}; } catch (e) { return {}; }
-  }
-  function renderInbox(state) {
-    var rd = readSet();
-    var ms = Object.keys(state.msgs).map(function (id) { return Object.assign({ id: id }, state.msgs[id]); })
-      .filter(function (m) { return m.type === 'dm' && (m.to === 'all' || (qid && m.to === qid)) && !(qid && m.fq === qid) && Date.now() - m.t < 1728e5 && !rd[m.id]; })
-      .sort(function (a, b) { return b.t - a.t; });
-    if (inboxSeen) {
-      ms.forEach(function (m) { if (!inboxSeen[m.id]) { toast('Nachricht von ' + m.by); notify('Nachricht von ' + m.by, m.text.replace(/^An [^:]*: /, ''), m.id); } });
-    }
-    inboxSeen = inboxSeen || {};
-    ms.forEach(function (m) { inboxSeen[m.id] = 1; });
-    $('inbox').innerHTML = ms.map(function (m) {
-      return '<div class="item dm"><b>Nachricht von ' + esc(m.by) + '</b><span>' + esc(m.text.replace(/^An [^:]*: /, '')) + '</span>' +
-        '<span class="meta">' + Util.time(m.t) + '</span><span class="acts"><button class="btn-ok" data-dm="' + m.id + '">Gelesen</button></span></div>';
-    }).join('');
-  }
-  $('inbox').onclick = function (e) {
-    var b = e.target.closest('button[data-dm]');
-    var m = b && Store.get().msgs[b.dataset.dm];
-    if (!m) return;
-    var rd = readSet(); rd[b.dataset.dm] = 1;
-    try { localStorage.setItem('dekr26_dmread', JSON.stringify(rd)); } catch (err) { /* ignorieren */ }
-    var rf = {}; rf['reads/' + (qid || 'x')] = { by: qr.name, t: Date.now() };
-    Store.updateMsg(b.dataset.dm, rf).catch(function () { /* Lesebestätigung ist optional */ });
-    renderInbox(Store.get());
-  };
-
-  // ---------- Kisten je KR (K2 / K5) ----------
-  var kWeek = Util.isoWeek(), kDay = Math.min(5, Math.max(1, Util.todayIdx() || 1));
-  var kHide = true;   // abgeschlossene KR ausblenden (im Browser gemerkt)
-  try { kHide = localStorage.getItem('dekr26_khide') !== '0'; } catch (e) { /* ignorieren */ }
-  // Eine gemeinsame Einstellung für Kisten-Ansicht, Dashboard-Listen und KR-Vorschläge
-  function setKHide(v) {
-    kHide = v;
-    $('kHide').checked = v; $('allHide').checked = v;
-    try { localStorage.setItem('dekr26_khide', v ? '1' : '0'); } catch (e) { /* ignorieren */ }
-    lastKrHtml = '';
-    var st = Store.get();
-    fillKrList(st); renderKisten(st); renderAllList(st);
-  }
-  $('kHide').checked = kHide; $('allHide').checked = kHide;
-  $('kHide').onchange = function () { setKHide($('kHide').checked); };
-  $('allHide').onchange = function () { setKHide($('allHide').checked); };
-  function dayTasks(state, week, day) {
-    return Object.keys(state.tasks).map(function (id) { return Object.assign({ id: id }, state.tasks[id]); })
-      .filter(function (t) { return t.week === week && t.day === day && !(kHide && t.closed); })
-      .sort(function (a, b) { return a.kr < b.kr ? -1 : a.kr > b.kr ? 1 : 0; });
-  }
-  function renderKisten(state) {
-    var now = Util.isoWeek();
-    $('kWeek').textContent = 'KW ' + kWeek.split('-W')[1] + (kWeek === now ? ' · diese Woche' : '') + ' · ' + Util.dayDate(kWeek, 1) + '–' + Util.dayDate(kWeek, 5);
-    $('kDays').innerHTML = [1, 2, 3, 4, 5].map(function (d) {
-      var ts = dayTasks(state, kWeek, d), k2 = 0, k5 = 0;
-      ts.forEach(function (t) { k2 += +t.k2 || 0; k5 += +t.k5 || 0; });
-      return '<button type="button" class="menu-btn' + (d === kDay ? ' sel' : '') + '" data-kday="' + d + '"><b>' + esc(Util.DAYS[d]) + ' ' + esc(Util.dayDate(kWeek, d)) +
-        (kWeek === now && d === Util.todayIdx() ? ' · heute' : '') + '</b><small>' + ts.length + ' KR · K2 ' + k2 + ' · K5 ' + k5 + '</small></button>';
-    }).join('');
-    var list = dayTasks(state, kWeek, kDay);
-    $('kList').innerHTML = list.length ? list.map(function (t) {
-      return '<div class="kitem' + (t.closed ? ' closed' : '') + '"><div class="khead"><b>KR ' + esc(t.kr) + '</b><span class="kpos">' +
-        (t.pos ? esc(Halls.label(t.hall, t.pos)) : t.from ? 'Lieferung Halle ' + esc(t.from) : 'ohne Position') + '</span></div>' +
-        (t.scope || t.closed ? '<div class="kmeta">' + (t.scope ? esc(t.scope) : '') + (t.closed ? ' · abgeschlossen' : '') + '</div>' : '') +
-        ['k2', 'k5'].map(function (f) {
-          return '<div class="kcount"><b>' + f.toUpperCase() + '</b><button type="button" class="big-gray" data-tid="' + esc(t.id) + '" data-kf="' + f + '" data-kd="-1">−</button>' +
-            '<span class="kn">' + (t[f] || 0) + '</span><button type="button" class="btn-ok big" data-tid="' + esc(t.id) + '" data-kf="' + f + '" data-kd="1">+</button></div>';
-        }).join('') + '</div>';
-    }).join('') : '<div class="empty">Für diesen Tag gibt es keine KR.</div>';
-  }
-  $('v-kisten').addEventListener('click', function (e) {
-    var w = e.target.closest('button[data-d]'), d = e.target.closest('button[data-kday]'), c = e.target.closest('button[data-kf]');
-    if (w) { kWeek = Util.addWeeks(kWeek, +w.dataset.d); renderKisten(Store.get()); return; }
-    if (d) { kDay = +d.dataset.kday; renderKisten(Store.get()); return; }
-    if (c) {
-      c.disabled = true;
-      Store.addTaskKisten(c.dataset.tid, c.dataset.kf, +c.dataset.kd).catch(fail).then(function () { c.disabled = false; });
-    }
-  });
-
   // ---------- Messenger (für alle QR-Codes immer aktiv) ----------
-  // Empfänger: Dashboard, alle QR-Besitzer oder ein bestimmter QR-Code. Nachrichten an Codes sind type 'dm' (fq = Absender-Code).
-  function isMine(m) { return qid ? m.fq === qid : !!qr && m.by === qr.name && !m.to; }   // ohne QR-ID (Demo) nach Namen
-  function chatTitle(m) { return (m.text || '').replace(/^An [^:]*: /, ''); }
-  function renderChat(state) {
-    if (view !== 'chat') return;
-    var cur = $('chTo').value;
-    var qs = Object.keys(state.qrs).filter(function (id) { return id !== qid; })
-      .map(function (id) { return { id: id, name: state.qrs[id].name, t: state.qrs[id].t }; }).sort(function (a, b) { return a.t - b.t; });
-    var opts = '<option value="">An das Dashboard</option>' + (qs.length ? '<option value="all">An alle QR-Besitzer</option>' : '') +
-      qs.map(function (q) { return '<option value="' + esc(q.id) + '">An ' + esc(q.name) + '</option>'; }).join('');
-    if ($('chTo').dataset.o !== opts) {
-      $('chTo').innerHTML = opts; $('chTo').dataset.o = opts;
-      if ([].some.call($('chTo').options, function (o) { return o.value === cur; })) $('chTo').value = cur;
-    }
-    var mine = qr ? qr.name : '';
-    var ms = Object.keys(state.msgs).map(function (id) { return Object.assign({ id: id }, state.msgs[id]); }).filter(function (m) {
-      if (Date.now() - m.t > 1728e5) return false;
-      if (isMine(m)) return m.type === 'dm' || m.type === 'msg';
-      return m.type === 'dm' && (m.to === 'all' || (qid && m.to === qid));
-    }).sort(function (a, b) { return b.t - a.t; }).slice(0, 40);
-    $('chList').innerHTML = ms.length ? ms.map(function (m) {
-      var out = isMine(m);
-      return '<div class="item' + (out ? ' ok' : ' dm') + '"><b>' + (out ? 'Du' + (m.type === 'msg' ? ' → Dashboard' : '') + (m.type === 'dm' && m.text.indexOf('An ') === 0 ? ' → ' + esc(m.text.slice(3, m.text.indexOf(':'))) : '') : esc(m.by)) + '</b><span>' + esc(chatTitle(m)) + '</span>' +
-        '<span class="meta">' + Util.time(m.t) + (m.reads ? ' · ✔ gelesen von ' + Object.keys(m.reads).map(function (k) { return esc(m.reads[k].by); }).join(', ') : '') + '</span></div>';
-    }).join('') : '<div class="empty">Noch keine Nachrichten.</div>';
+  var chatUi = null;
+  function chatContacts(state) {
+    var l = [{ id: 'dash', name: 'Dashboard', sub: 'Büro / Leitstand' }];
+    var others = Object.keys(state.qrs).filter(function (id) { return id !== qid; })
+      .map(function (id) { return { id: id, name: state.qrs[id].name, sub: state.qrs[id].func || '', t: state.qrs[id].t }; })
+      .sort(function (a, b) { return a.t - b.t; });
+    if (others.length) l.push({ id: 'all', name: 'Alle QR-Besitzer', sub: 'Gruppenchat' });
+    return l.concat(others);
   }
-  $('chGo').onclick = function () {
-    var text = $('chText').value.trim(), to = $('chTo').value;
-    if (!text || !qr) return;
-    var msg;
-    if (to) {
-      var qs = Store.get().qrs, who = to === 'all' ? 'alle QR-Besitzer' : (qs[to] ? qs[to].name : '?');
-      msg = { type: 'dm', by: qr.name, to: to, fq: qid, text: 'An ' + who + ': ' + text };
-    } else {
-      msg = { type: 'msg', by: qr.name, fq: qid, text: text };
-    }
-    $('chGo').disabled = true;
-    Store.addMsg(msg).then(function () {
-      $('chText').value = '';
-      toast('Gesendet');
-      if (to) {
-        var all = Store.get().qrs, targets = to === 'all' ? Object.keys(all).filter(function (id) { return id !== qid; }) : [to];
-        targets.forEach(function (id) { Push.toQr(id, 'Nachricht von ' + qr.name, text); });
-      } else {
-        Push.send('', 'Nachricht von ' + qr.name, text, 3, ['speech_balloon']);
+  function setupChat() {
+    if (chatUi || !qid) return;
+    chatUi = Chat.mount($('chatRoot'), {
+      me: qid,
+      state: function () { return Store.get(); },
+      contacts: chatContacts,
+      send: function (text, to) {
+        var msg = { type: 'chat', from: qid, to: to, by: qr.name, text: text };
+        return Store.addMsg(msg).then(function () {
+          var all = Store.get().qrs, targets = to === 'all' ? Object.keys(all).filter(function (id) { return id !== qid; }) : to === 'dash' ? [] : [to];
+          targets.forEach(function (id) { Push.toQr(id, 'Nachricht von ' + qr.name, text); });
+          if (to === 'dash') Push.send('', 'Nachricht von ' + qr.name, text, 3, ['speech_balloon']);
+        }).catch(function (e) { fail(); throw e; });
+      },
+      read: function (ids) {
+        ids.forEach(function (id) {
+          var f = {}; f['reads/' + qid] = { by: qr.name, t: Date.now() };
+          Store.updateMsg(id, f).catch(function () { /* Lesebestätigung ist optional */ });
+        });
       }
-      renderChat(Store.get());
-    }).catch(fail).then(function () { $('chGo').disabled = false; });
-  };
+    });
+  }
+
+  // Neue Chat-Nachrichten melden (Hinweis + Ton), die Anzeige selbst macht der Messenger
+  function renderInbox(state) {
+    $('inbox').innerHTML = '';
+    if (!qid) return;
+    Chat.newIncoming(state, qid).forEach(function (m) {
+      var open = chatUi && chatUi.isOpen() === Chat.peerOf(m, qid) && view === 'chat' && document.visibilityState === 'visible';
+      if (open) return;   // gerade im Chat: kein zusätzlicher Hinweis
+      toast('Nachricht von ' + m.by + ': ' + (m.text.length > 60 ? m.text.slice(0, 60) + '…' : m.text));
+      notify('Nachricht von ' + m.by, m.text, m.id);
+    });
+  }
 
   // ---------- Mobiles Dashboard ----------
   var notifSeen = null;   // bereits gesehene Fertig-Meldungen (für neue Benachrichtigungen)
@@ -467,7 +379,7 @@
       view = v.some(function (x) { return x[0] === pref; }) ? pref : v.length ? v[0][0] : '';
     }
     $('menu').innerHTML = v.map(function (x) {
-      var cnt = x[0] === 'orders' ? ord : x[0] === 'problems' ? pr : 0;
+      var cnt = x[0] === 'orders' ? ord : x[0] === 'problems' ? pr : x[0] === 'chat' && qid ? Chat.unreadCount(Store.get(), qid) : 0;
       return '<button type="button" class="menu-btn' + (x[0] === view ? ' sel' : '') + '" data-view="' + x[0] + '">' +
         esc(x[1]) + (cnt ? '<span class="cnt">' + cnt + '</span>' : '') + '</button>';
     }).join('');
@@ -482,7 +394,8 @@
     var b = e.target.closest('button[data-view]');
     if (!b) return;
     view = b.dataset.view;
-    renderMenu(); renderLists(); renderChat(Store.get());
+    renderMenu(); renderLists();
+    if (chatUi && view === 'chat') chatUi.render(Store.get());
   };
 
   // ---------- Beipack ----------
@@ -768,7 +681,8 @@
     renderMyUeber(state);
     watchOrders(state);
     renderInbox(state);
-    renderChat(state);
+    setupChat();
+    if (chatUi && view === 'chat') chatUi.render(state);
     renderDash(state);
     watchDone(state);
     checkAcks(state);
