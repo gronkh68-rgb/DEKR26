@@ -103,9 +103,25 @@ svg.map.plan .cell:hover { fill: rgba(var(--cy-rgb),.5); stroke: var(--cyan); fi
 html:not([data-theme="cp"]) #cpBoot, html:not([data-theme="cp"]) #cpAlert, html:not([data-theme="cp"]) #cpBar, html:not([data-theme="cp"]) #cpHud { display: none !important; }
 /* 1 Boot */
 html.cp-boot body > *:not(#cpBoot) { visibility: hidden; }
-#cpBoot { position: fixed; inset: 0; z-index: 200; background: #05060b; color: var(--accent); font-family: 'Share Tech Mono', monospace; font-size: 15px; padding: 12vh 8vw; line-height: 1.9; letter-spacing: .08em; transition: opacity .45s; }
-#cpBoot.out { opacity: 0; pointer-events: none; }
-#cpBoot div:last-child::after { content: '█'; margin-left: 6px; animation: cpBlink .7s steps(1) infinite; }
+#cpBoot { position: fixed; inset: 0; z-index: 400; background: #030409; color: var(--accent); font-family: 'Share Tech Mono', monospace; overflow: hidden; transition: opacity .5s, filter .5s; }
+#cpBoot.out { opacity: 0; filter: blur(6px) brightness(2); pointer-events: none; }
+#cpBoot canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#cpBoot::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.85)); }
+.bt-term { position: absolute; left: 4vw; top: 7vh; width: min(520px, 62vw); padding: 14px 16px; font-size: 13px; line-height: 1.75; letter-spacing: .05em; background: rgba(3,4,9,.82); border: 1px solid var(--accent); box-shadow: 0 0 24px rgba(var(--acc-rgb), .3); clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); z-index: 2; min-height: 120px; }
+.bt-term div { white-space: nowrap; overflow: hidden; animation: btLine .12s steps(6) backwards; } .bt-term div:last-child::after { content: '█'; margin-left: 5px; animation: cpBlink .5s steps(1) infinite; }
+@keyframes btLine { from { width: 0; } }
+.bt-hex { position: absolute; right: 4vw; top: 7vh; height: 60vh; overflow: hidden; font-size: 12px; line-height: 1.6; color: var(--cyan); opacity: .75; text-align: right; z-index: 2; display: flex; flex-direction: column; justify-content: flex-end; text-shadow: 0 0 6px var(--cyan); }
+.bt-mid { position: absolute; left: 50%; bottom: 14vh; transform: translateX(-50%); width: min(560px, 88vw); text-align: center; z-index: 3; }
+.bt-lbl { font-family: 'Orbitron', sans-serif; font-weight: 700; letter-spacing: .3em; font-size: clamp(12px, 3.4vw, 18px); color: var(--accent); text-shadow: 0 0 14px var(--accent); }
+.bt-pct { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(54px, 15vw, 120px); line-height: 1.1; color: #fff; text-shadow: 3px 0 var(--red), -3px 0 var(--cyan); animation: cpGlitch 3s steps(1) infinite; }
+.bt-bar { height: 10px; border: 1px solid var(--accent); background: rgba(0,0,0,.6); clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); } .bt-bar i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(-45deg, var(--accent) 0 6px, #0a0a0a 6px 10px); box-shadow: 0 0 14px var(--accent); }
+.bt-foot { position: absolute; left: 4vw; right: 4vw; bottom: 3vh; display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .25em; color: #6f8794; z-index: 3; }
+#cpBoot.granted .bt-lbl { color: var(--green); text-shadow: 0 0 20px var(--green), 3px 0 var(--red), -3px 0 var(--cyan); animation: btShake .35s steps(2) 3; }
+#cpBoot.granted .bt-pct { color: var(--green); } #cpBoot.granted .bt-bar { border-color: var(--green); } #cpBoot.granted .bt-bar i { background: var(--green); box-shadow: 0 0 18px var(--green); }
+#cpBoot.granted::before { content: ''; position: absolute; inset: 0; background: rgba(45,255,179,.12); animation: btFlash .5s ease-out; z-index: 1; pointer-events: none; }
+@keyframes btShake { 0% { transform: translate(-4px, 0) skewX(-6deg); } 50% { transform: translate(4px, 1px) skewX(5deg); } 100% { transform: none; } }
+@keyframes btFlash { from { opacity: 1; } to { opacity: 0; } }
+@media (max-width: 700px) { .bt-hex { display: none; } .bt-term { width: 92vw; font-size: 11px; top: 4vh; } }
 @keyframes cpBlink { 50% { opacity: 0; } }
 /* 4 Alarm */
 #cpAlert { background: repeating-linear-gradient(-45deg, #ff2a55 0 14px, #8a0f2a 14px 28px); color: #fff; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 12px; letter-spacing: .25em; text-align: center; padding: 4px; text-shadow: 0 1px 3px #000; animation: cpAlert 1s ease-in-out infinite alternate; }
