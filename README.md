@@ -96,4 +96,4 @@ Dashboard die Anmeldung (Admin ist ausgenommen). Der Account kann seinen Code se
 ## Designs
 
 Der Knopf „Design: …“ (Kopfzeile bzw. Handyseite) wechselt zwischen **Cyber** (Cyberpunk), **Bio** (biologischer Horror: Gewebe, Adern, violette Augen, die dem
-Mauszeiger folgen und blinzeln), **Arcane** (Hextech-Anomalie: Messing, Türkis, Sechsecke, Magenta-Schimmer, schwebende Funken, Licht am Mauszeiger) und **Schlicht**. Die Wahl wird je Browser gespeichert. Dateien: `css/cyber.css`, `css/bio.css`, `css/arcane.css`, `js/theme.js`.
+Mauszeiger folgen und blinzeln), **Anomalie** (Arcane Staffel 2: schwarzer Riss mit Violett und Magenta, gesplittertes Glas, scharfe Kanten, drehender Wirbel, schwebende Splitter, Licht am Mauszeiger, Zeitverzerrung an Titeln und Knöpfen) und **Schlicht**. Die Wahl wird je Browser gespeichert. Dateien: `css/cyber.css`, `css/bio.css`, `css/arcane.css`, `js/theme.js`.

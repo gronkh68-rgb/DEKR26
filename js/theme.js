@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var link = document.getElementById('cpCss'), bioLink = document.getElementById('bioCss'), arcLink = document.getElementById('arcCss');
-  var THEMES = ['cp', 'bio', 'arc', 'plain'], NAMES = { cp: 'Design: Cyber', bio: 'Design: Bio', arc: 'Design: Arcane', plain: 'Design: Schlicht' };
+  var THEMES = ['cp', 'bio', 'arc', 'plain'], NAMES = { cp: 'Design: Cyber', bio: 'Design: Bio', arc: 'Design: Anomalie', plain: 'Design: Schlicht' };
   var KEY = 'dekr-theme';
   function get() { try { var v = localStorage.getItem(KEY); return THEMES.indexOf(v) >= 0 ? v : 'cp'; } catch (e) { return 'cp'; } }
   function apply(t) {
@@ -12,7 +12,7 @@
     document.documentElement.setAttribute('data-theme', t);
     if (document.body) { bioEyes(t === 'bio'); arcFx(t === 'arc'); }
   }
-  // Arcane-Design: schwebende Sechsecke (Hextech-Funken) und ein Licht, das dem Mauszeiger folgt
+  // Anomalie-Design (Arcane Staffel 2): schwebende Splitter, ein drehender Wirbel und ein Licht, das dem Mauszeiger folgt
   var fxBox = null, fxMove = null, fxQueued = false;
   function arcFx(on) {
     if (!on) {
@@ -25,11 +25,12 @@
     fxBox = document.createElement('div');
     fxBox.id = 'arcFx';
     fxBox.setAttribute('aria-hidden', 'true');
-    var cols = ['#3be8d8', '#3be8d8', '#e8c77a', '#ff3dc8'], h = '';
+    var cols = ['#c04bff', '#ff4fd8', '#6a12b8', '#f0d9ff'], shapes = ['polygon(50% 0,100% 100%,0 80%)', 'polygon(20% 0,100% 30%,70% 100%,0 70%)', 'polygon(0 20%,60% 0,100% 60%,40% 100%)'];
+    var h = '<b class="rift"></b>';
     for (var i = 0; i < 16; i++) {
-      var s = 8 + Math.round(Math.random() * 22);
-      h += '<i style="left:' + Math.round(Math.random() * 100) + '%;width:' + s + 'px;height:' + Math.round(s * 1.1) + 'px;background:' + cols[i % cols.length] +
-        ';animation-duration:' + (14 + Math.round(Math.random() * 16)) + 's;animation-delay:-' + Math.round(Math.random() * 28) + 's"></i>';
+      var s = 8 + Math.round(Math.random() * 26);
+      h += '<i style="left:' + Math.round(Math.random() * 100) + '%;width:' + s + 'px;height:' + Math.round(s * (.8 + Math.random() * .8)) + 'px;background:' + cols[i % cols.length] +
+        ';clip-path:' + shapes[i % shapes.length] + ';animation-duration:' + (12 + Math.round(Math.random() * 16)) + 's;animation-delay:-' + Math.round(Math.random() * 26) + 's"></i>';
     }
     fxBox.innerHTML = h;
     document.body.appendChild(fxBox);
