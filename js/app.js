@@ -1261,6 +1261,14 @@
     Promise.all(jobs).catch(function () { toast('Speichern fehlgeschlagen'); });
     $('pdName').value = '';
   };
+  // Ersetzt die gespeicherte Auswahl durch die Standardliste aus js/config.js
+  $('pdReset').onclick = function () {
+    if (!window.confirm('Podest-Auswahl auf die Standardliste zurücksetzen? Die bisherige Liste wird ersetzt.')) return;
+    var st = Store.get().podests, defs = (window.DEKR_CONFIG || {}).podests || [];
+    var jobs = Object.keys(st).map(function (id) { return Store.setPodest(id, null); });
+    defs.forEach(function (n, i) { jobs.push(Store.setPodest('d' + i, { name: n, t: i })); });
+    Promise.all(jobs).then(function () { toast('Standardliste geladen'); }).catch(function () { toast('Speichern fehlgeschlagen'); });
+  };
   $('pdEdit').onclick = function (e) {
     var b = e.target.closest('button[data-pname]');
     if (!b) return;
