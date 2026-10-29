@@ -74,3 +74,8 @@ das Lesezeichen den Text in die Zwischenablage (dann im Import mit Strg+V einfü
 - iPhone: in Safari „Teilen“ → „Zum Home-Bildschirm“ (Push nur in der installierten App, ab iOS 16.4).
 - Die Meldeseite (`manifest.json`) startet immer mit dem zuletzt geöffneten QR-Link dieses Geräts; das Dashboard hat ein eigenes
   Manifest (`manifest-dash.json`). Symbole liegen in `icons/`. Updates kommen wie bei der Webseite, ohne Neuinstallation.
+
+## 3D-Druck: Hülle für die QR-Karte
+
+Ordner `3d/`: `qr-huelle.stl` (fertig zum Slicen), `qr-huelle.scad` (parametrisch, in OpenSCAD änderbar), `make_stl.py` (erzeugt die STL
+aus den Maßen). Flach drucken, Rückseite aufs Bett, ohne Stützen. Kartenmaße (`card_w`, `card_h`, `card_t`) vor dem Druck an die echte Karte anpassen.
