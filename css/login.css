@@ -1,0 +1,61 @@
+/* Anmeldeseite und Profil. Die Anmeldung ist immer im Cyberpunk-Stil, folgt aber den gewählten Farben. */
+html.lgn-open, html.lgn-open body { overflow: hidden; }
+.lgn { --a: #fcee09; --c: #00f0ff; --r: #ff2a55; position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; background: #030409; color: #e8f9ff; font-family: 'Share Tech Mono', monospace; overflow: hidden; }
+html[data-theme="cp"] .lgn { --a: var(--accent, #fcee09); --c: var(--cyan, #00f0ff); }
+.lgn[hidden] { display: none; }
+.lgn-grid { position: absolute; inset: -50% -20% -20% -20%; transform: perspective(520px) rotateX(62deg); transform-origin: 50% 100%;
+  background-image: linear-gradient(var(--c) 1px, transparent 1px), linear-gradient(90deg, var(--c) 1px, transparent 1px); background-size: 52px 52px; opacity: .18; animation: lgnGrid 6s linear infinite;
+  -webkit-mask: linear-gradient(transparent, #000 40%); mask: linear-gradient(transparent, #000 40%); }
+@keyframes lgnGrid { to { background-position: 0 52px; } }
+.lgn::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 38%, rgba(0,240,255,.10), transparent 55%), radial-gradient(ellipse at 90% 110%, rgba(255,42,85,.16), transparent 50%); }
+.lgn::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.75)); }
+.lgn-scan { position: absolute; left: 0; right: 0; top: 0; height: 90px; background: linear-gradient(180deg, transparent, rgba(0,240,255,.07) 70%, rgba(0,240,255,.35)); border-bottom: 1px solid rgba(0,240,255,.5); animation: lgnScan 5.5s linear infinite; pointer-events: none; }
+@keyframes lgnScan { from { transform: translateY(-100px); } to { transform: translateY(100vh); } }
+.lgn-box { position: relative; z-index: 2; width: min(92vw, 460px); padding: 0 26px 22px; background: linear-gradient(160deg, rgba(14,17,27,.94), rgba(7,9,15,.96)); border: 1px solid var(--a);
+  box-shadow: 0 0 40px rgba(0,240,255,.18), inset 0 0 40px rgba(0,0,0,.6); clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px)); }
+.lgn-haz { height: 12px; margin: 0 -26px 22px; background: repeating-linear-gradient(-45deg, var(--a) 0 10px, #0a0a0a 10px 20px); }
+.lgn-logo { text-align: center; margin-bottom: 16px; }
+.lgn-logo b { display: block; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(30px, 9vw, 46px); letter-spacing: .12em; color: #fff; position: relative; text-shadow: 3px 0 var(--r), -3px 0 var(--c); animation: lgnGl 6s steps(1) infinite; }
+@keyframes lgnGl { 0%, 92%, 100% { transform: none; } 93% { transform: translate(-4px, 0) skewX(-8deg); } 94% { transform: translate(5px, 1px); } 95% { transform: none; } 97% { transform: translate(-2px, -1px); } 98% { transform: none; } }
+.lgn-logo small { display: block; margin-top: 6px; font-size: 11px; letter-spacing: .28em; color: var(--c); }
+.lgn-step { min-height: 190px; display: grid; gap: 12px; align-content: start; }
+.lgn-prompt { font-size: 14px; letter-spacing: .14em; color: var(--a); text-transform: uppercase; }
+.lgn-cur { display: inline-block; width: 9px; height: 15px; margin-left: 6px; vertical-align: -2px; background: var(--a); animation: lgnBlink .9s steps(1) infinite; }
+@keyframes lgnBlink { 50% { opacity: 0; } }
+.lgn-p { font-size: 13px; color: #9fb4c2; line-height: 1.5; }
+.lgn-p b { color: var(--c); letter-spacing: .1em; }
+.lgn form { display: grid; gap: 12px; margin: 0; }
+.lgn-in, .lgn-code { width: 100%; background: #060810; color: #fff; border: 1px solid #2c3a44; border-radius: 0; padding: 12px 14px; font: inherit; font-size: 15px; letter-spacing: .06em; outline: none; }
+.lgn-code { text-align: center; font-size: 30px; letter-spacing: .38em; padding: 14px 8px 14px 18px; border-color: var(--c); color: var(--a); text-transform: uppercase; caret-color: var(--a); box-shadow: inset 0 0 18px rgba(0,240,255,.10); }
+.lgn-in:focus, .lgn-code:focus { border-color: var(--a); box-shadow: 0 0 18px rgba(252,238,9,.25), inset 0 0 18px rgba(0,240,255,.12); }
+.lgn-code::placeholder { color: #2f4048; letter-spacing: .3em; }
+.lgn-btn { position: relative; overflow: hidden; width: 100%; border: 0; border-radius: 0; padding: 13px; cursor: pointer; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: .22em;
+  background: var(--a); color: #000; clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); transition: filter .15s, transform .1s; }
+.lgn-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%); transform: translateX(-130%); }
+.lgn-btn:hover::before { transform: translateX(130%); transition: transform .55s; }
+.lgn-btn:hover { filter: brightness(1.12) drop-shadow(0 0 10px var(--a)); } .lgn-btn:active { transform: scale(.97); }
+.lgn-link { justify-self: center; font-size: 11px; letter-spacing: .2em; color: #6f8794; text-decoration: none; padding: 4px 8px; }
+.lgn-link:hover { color: var(--c); text-shadow: 0 0 8px var(--c); }
+.lgn-err { min-height: 18px; color: var(--r); font-size: 12px; letter-spacing: .06em; text-align: center; }
+.lgn-foot { display: flex; justify-content: space-between; margin-top: 16px; padding-top: 10px; border-top: 1px dashed #26343c; font-size: 10px; letter-spacing: .2em; color: #546a76; }
+.lgn-foot .good { color: #2dffb3; } .lgn-foot .bad { color: var(--r); }
+.lgn-c { position: absolute; width: 14px; height: 14px; border: 0 solid var(--c); }
+.lgn-c.c1 { left: 6px; bottom: 6px; border-width: 0 0 2px 2px; } .lgn-c.c2 { right: 6px; bottom: 6px; border-width: 0 2px 2px 0; }
+.lgn-c.c3 { left: 6px; top: 22px; border-width: 2px 0 0 2px; } .lgn-c.c4 { right: 6px; top: 22px; border-width: 2px 2px 0 0; }
+.lgn-shake { animation: lgnShake .4s; }
+@keyframes lgnShake { 0%, 100% { transform: none; } 20% { transform: translateX(-9px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
+.lgn-ok { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; gap: 8px; text-align: center; background: rgba(3,4,9,.9); animation: lgnOk .9s ease-out; }
+.lgn-ok[hidden] { display: none; }
+.lgn-ok b { font-family: 'Orbitron', sans-serif; font-size: clamp(22px, 6vw, 40px); letter-spacing: .2em; color: #2dffb3; text-shadow: 0 0 22px #2dffb3, 3px 0 var(--r), -3px 0 var(--c); }
+.lgn-ok small { color: var(--a); letter-spacing: .3em; font-size: 14px; }
+@keyframes lgnOk { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+/* Profil */
+.prf-wrap { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.72); display: grid; place-items: start center; padding: 24px 12px; overflow-y: auto; }
+.prf { width: min(100%, 440px); background: var(--bg, #0b0d14); border: 1px solid var(--accent, #fcee09); padding: 14px; display: grid; gap: 12px; box-shadow: 0 0 30px rgba(0,0,0,.6); }
+.prf-head { display: flex; align-items: center; gap: 12px; } .prf-head > div { flex: 1; display: grid; } .prf-head small { color: var(--dim, #8a93a0); }
+.prf-av { width: 46px; height: 46px; display: grid; place-items: center; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 22px; background: var(--accent, #fcee09); color: #000; clip-path: polygon(20% 0, 100% 0, 80% 100%, 0 100%); }
+.prf-sec { display: grid; gap: 6px; } .prf-t { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim, #8a93a0); }
+.prf-row { display: flex; gap: 8px; } .prf-row input { flex: 1; } .prf-col { display: grid; gap: 8px; }
+/* Knopf-Zustände der Anmeldung: die allgemeinen Knopfstile des Designs sollen sie nicht verändern */
+.lgn .lgn-btn:hover:not(:disabled) { background: var(--a); color: #000; border: 0; box-shadow: none; text-shadow: none; animation: none; }
+.lgn .lgn-btn:active { transform: scale(.97); }

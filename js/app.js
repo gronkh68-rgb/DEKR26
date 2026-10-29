@@ -212,21 +212,17 @@
     });
   }
 
-  // ---------- Account-Anmeldung am Dashboard ----------
+  // ---------- Rechte des angemeldeten Accounts (die Anmeldeseite selbst steht in js/login.js) ----------
   var prefsFor = '';
-  function allowed(state, p) { return p === 'admin' ? (Account.isAdmin() || !Account.hasCodes(state)) : Account.can(state, p); }
+  function allowed(state, p) { return p === 'admin' ? Account.isAdmin() : Account.can(state, p); }
   function renderAccount(state) {
-    var loaded = Store.isLoaded() && !Store.isLocked();
-    var has = Account.hasCodes(state), admin = Account.isAdmin(), a = has ? Account.me(state) : null;
-    $('acctCover').hidden = !(loaded && has && !admin && !a);
-    $('acctTag').hidden = $('acctOut').hidden = $('acctCode').hidden = !a;
+    var admin = Account.isAdmin(), a = admin ? null : Account.me(state);
     if (a) {
-      $('acctTag').textContent = '👤 ' + a.name + (a.func ? ' · ' + a.func : '');
-      $('me').value = a.name; $('mName').value = a.name; Util.setName(a.name);
+      $('me').value = a.name; $('mName').value = a.name; Util.setName(a.name);   // Meldungen laufen unter dem Account-Namen
     }
     $('me').readOnly = !!a; $('mName').readOnly = !!a;
     Account.DPERMS.forEach(function (d) { document.body.classList.toggle('deny-' + d[0], !Account.can(state, d[0])); });
-    document.body.classList.toggle('deny-admin', has && !admin);
+    document.body.classList.toggle('deny-admin', !admin);
     setupChatMe(a);
     if (a && prefsFor !== a.id) {
       prefsFor = a.id;
@@ -242,30 +238,6 @@
       if (el && !allowed(Store.get(), el.dataset.p)) { e.stopPropagation(); e.preventDefault(); }
     }, true);
   });
-  $('acctForm').onsubmit = function (e) {
-    e.preventDefault();
-    $('acctErr').textContent = '';
-    Account.login(Store.get(), $('acctIn').value).then(function () {
-      $('acctIn').value = '';
-      render(Store.get());
-    }).catch(function (err) { $('acctErr').textContent = err.message || 'Anmeldung fehlgeschlagen'; });
-  };
-  $('acctAdmin').onclick = function (e) { e.preventDefault(); $('admOpen').click(); };
-  $('acctOut').onclick = function () {
-    var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id);
-    Account.logout(); prefsFor = ''; render(Store.get());
-  };
-  $('acctCode').onclick = function () { $('codeMsg').textContent = ''; $('codeForm').reset(); $('codeModal').hidden = false; };
-  $('codeClose').onclick = function () { $('codeModal').hidden = true; };
-  $('codeForm').onsubmit = function (e) {
-    e.preventDefault();
-    var a = Account.me(Store.get());
-    if (!a) return;
-    Account.changeCode(Store.get(), a.id, $('codeOld').value, $('codeNew').value).then(function () {
-      $('codeMsg').textContent = '✔ Code geändert. Dieses Gerät bleibt angemeldet, auf anderen Geräten gilt der neue Code.';
-      $('codeForm').reset();
-    }).catch(function (err) { $('codeMsg').textContent = err.message || 'Speichern fehlgeschlagen'; });
-  };
 
   $('allToggle').onclick = function () { allMode = !allMode; sel = null; render(Store.get()); };
   $('krFilter').oninput = function () { krFilter = $('krFilter').value; renderAllKr(weekTasks(Store.get())); };
@@ -1265,15 +1237,20 @@
   ];
   function permsOf(q) { return q.perms && Object.keys(q.perms).length ? q.perms : { report: 1, order: 1 }; }
   // n/f/p sind nur ein Rückfall, falls das Handy die QR-Daten nicht aus der Datenbank laden kann
+  // Der QR-Code führt zur Anmeldeseite mit diesem Profil (?p=ID). Der Anmelde-Code der Geräte-Freigabe (k) wird mitgegeben.
   function scanUrl(q) {
-    var u = new URL('scan.html', location.href);
-    u.searchParams.set('q', q.id);
-    u.searchParams.set('n', q.name);
-    if (q.func) u.searchParams.set('f', q.func);
-    u.searchParams.set('p', Object.keys(permsOf(q)).join(','));
-    var k = (Store.get().settings || {}).regcode;   // Anmelde-Code: neue Handys melden sich damit automatisch an
+    var u = new URL('index.html', location.href);
+    u.searchParams.set('p', q.id);
+    var k = (Store.get().settings || {}).regcode;   // Zugangscode für neue Geräte: Anfrage geht dann automatisch raus
     if (k) u.searchParams.set('k', k);
     return u.href;
+  }
+  // Zustand des Anmeldecodes eines Accounts für die Admin-Karte
+  function acctLine(q) {
+    var nc = Account.newCodes()[q.id];
+    if (!Account.usable(q)) return '⚠ noch kein Code';
+    if (q.codeInit) return '🔑 Startcode' + (nc ? ': <b>' + esc(nc) + '</b> (nur jetzt sichtbar)' : ' vergeben, wartet auf den eigenen Code');
+    return '🔑 eigener Code gesetzt';
   }
   function presetOptions(sel) {
     return PRESETS.map(function (p) { return '<option value="' + p[0] + '"' + (p[0] === sel ? ' selected' : '') + '>' + esc(p[1]) + '</option>'; }).join('');
@@ -1298,7 +1275,7 @@
           return '<label><input type="checkbox" data-perm="' + p[0] + '"' + (pm[p[0]] ? ' checked' : '') + '>' + esc(p[1]) + '</label>';
         }).join('') + '</div>' +
         qr.createSvgTag(4, 2) +
-        '<div class="no-print acct-line">' + (q.codeHash ? '🔑 Code gesetzt' + (Account.newCodes()[q.id] ? ': <b>' + esc(Account.newCodes()[q.id]) + '</b>' : '') : '⚠ noch kein Code') + ' <button class="btn-sm" data-gencode="' + esc(q.id) + '">' + (q.codeHash ? 'Neuen Code erzeugen' : 'Code erzeugen') + '</button></div>' +
+        '<div class="no-print acct-line">' + acctLine(q) + ' <button class="btn-sm" data-gencode="' + esc(q.id) + '">' + (Account.usable(q) ? 'Neuen Startcode erzeugen' : 'Startcode erzeugen') + '</button></div>' +
         '<div class="no-print qr-links"><a href="' + esc(scanUrl(q)) + '" target="_blank" rel="noopener">Seite am PC testen ↗</a> ' +
         '<button class="btn-sm" data-card="' + esc(q.id) + '">Karte drucken</button> ' +
         '<button class="btn-sm btn-warn" data-del="' + esc(q.id) + '">Löschen</button></div></div>';
@@ -1321,7 +1298,7 @@
       (q.func ? '<div class="pc-func">' + esc(q.func) + '</div>' : '<div class="pc-func">&nbsp;</div>') +
       '<div class="pc-qr">' + qr.createSvgTag(4, 2) + '</div>' +
       '<div class="pc-scan">&#9654; MIT DER HANDY-KAMERA SCANNEN</div>' +
-      (Account.newCodes()[q.id] ? '<div class="pc-code">PC-CODE <b>' + esc(Account.newCodes()[q.id]) + '</b></div>' : '') +
+      (Account.newCodes()[q.id] && q.codeInit ? '<div class="pc-code">STARTCODE <b>' + esc(Account.newCodes()[q.id]) + '</b></div>' : '') +
       (dos ? '<ul class="pc-do">' + dos + '</ul>' : '') +
       '<div class="pc-bar"></div>' +
       '<div class="pc-foot"><span>ID-' + esc(String(q.id || '').slice(-6).toUpperCase()) + '</span><span>' + esc(location.host) + '</span></div>' +
@@ -1363,11 +1340,11 @@
     var pre = PRESETS.filter(function (p) { return p[0] === $('qrPreset').value; })[0];
     var func = $('qrFunc').value.trim() || pre[2];
     var id = Util.uid(), code = Account.gen();
-    Account.hash(id, code).then(function (h) {
-      return Store.setQr(id, { name: name, func: func, t: Date.now(), perms: Object.assign({}, pre[3]), codeHash: h });
+    Store.setQr(id, { name: name, func: func, t: Date.now(), perms: Object.assign({}, pre[3]) }).then(function () {
+      return Account.setStartCode(id, code);
     }).then(function () {
       Account.rememberCode(id, code);
-      toast('Account angelegt, Code: ' + code);
+      toast('Account angelegt, Startcode: ' + code);
       renderQr(Store.get());
     }).catch(function () { toast('Speichern fehlgeschlagen'); });
     $('qrName').value = ''; $('qrFunc').value = '';
@@ -1378,25 +1355,25 @@
     var g = e.target.closest('button[data-gencode]');
     if (g) {
       var q = Store.get().qrs[g.dataset.gencode];
-      if (q && q.codeHash && !confirm('Neuen Code erzeugen? Der alte Code gilt dann nicht mehr, angemeldete Geräte müssen sich neu anmelden.')) return;
+      if (q && Account.usable(q) && !confirm('Neuen Startcode erzeugen? Der bisherige Code gilt dann nicht mehr. Die Person legt beim nächsten Anmelden einen neuen eigenen Code fest.')) return;
       var code = Account.gen();
-      Account.setCode(g.dataset.gencode, code).then(function () {
+      Account.setStartCode(g.dataset.gencode, code).then(function () {
         Account.rememberCode(g.dataset.gencode, code);
-        toast('Neuer Code: ' + code);
+        toast('Neuer Startcode: ' + code);
         renderQr(Store.get());
       }).catch(function () { toast('Speichern fehlgeschlagen'); });
     }
   };
   // Codes für alle Accounts ohne Code erzeugen (einmalig anzeigen)
   $('qrCodesAll').onclick = function () {
-    var st = Store.get(), todo = Object.keys(st.qrs).filter(function (id) { return !st.qrs[id].codeHash; });
+    var st = Store.get(), todo = Object.keys(st.qrs).filter(function (id) { return !Account.usable(st.qrs[id]); });
     if (!todo.length) { toast('Alle Accounts haben schon einen Code'); return; }
     Promise.all(todo.map(function (id) {
       var code = Account.gen();
-      return Account.setCode(id, code).then(function () { Account.rememberCode(id, code); return st.qrs[id].name + ': ' + code; });
+      return Account.setStartCode(id, code).then(function () { Account.rememberCode(id, code); return st.qrs[id].name + ': ' + code; });
     })).then(function (lines) {
       renderQr(Store.get());
-      window.alert('Neue Codes (nur jetzt sichtbar, auch auf den Karten beim Drucken):\n\n' + lines.join('\n'));
+      window.alert('Startcodes (nur jetzt sichtbar, auch auf den Karten beim Drucken):\n\n' + lines.join('\n'));
     }).catch(function () { toast('Speichern fehlgeschlagen'); });
   };
   $('qrGrid').onchange = function (e) {

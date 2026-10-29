@@ -12,7 +12,9 @@
 
   // Name, Funktion und Rechte kommen vom QR-Code (?q=ID, im Dashboard gepflegt).
   // n/f/p im Link sind nur Rückfall, falls die Daten nicht aus der Datenbank kommen.
-  var qid = params.get('q');
+  // Wer angemeldet ist (Code), nutzt sein Profil; ?q=ID bleibt nur für alte QR-Links. Der Admin hat alle Rechte.
+  var qid = (Account.session() || {}).id || params.get('q') || '';
+  if (!qid && Account.isAdmin()) qid = 'admin';
   var urlName = (params.get('n') || '').trim();
   // Rückfall nur ohne gemeinsame Datenbank (Demo): sonst muss ein gelöschter QR-Code ungültig werden
   var urlQr = urlName && !Store.remote ? { name: urlName, func: (params.get('f') || '').trim(), perms: toPerms(params.get('p')) } : null;
@@ -274,16 +276,6 @@
   }
   // Ton an/aus und Bildschirm anlassen (Wake Lock)
   function soundLabel() { $('soundBtn').textContent = Sound.label(); }
-  // Eigenen Account-Code ändern (gilt für die Anmeldung am PC)
-  $('acctCode').onclick = function () { $('codeMsg').textContent = ''; $('codeForm').reset(); $('codeModal').hidden = false; };
-  $('codeClose').onclick = function () { $('codeModal').hidden = true; };
-  $('codeForm').onsubmit = function (e) {
-    e.preventDefault();
-    if (!qid) return;
-    Account.changeCode(Store.get(), qid, $('codeOld').value, $('codeNew').value).then(function () {
-      $('codeMsg').textContent = '✔ Code geändert.'; $('codeForm').reset();
-    }).catch(function (err) { $('codeMsg').textContent = err.message || 'Speichern fehlgeschlagen'; });
-  };
   window.DEKR_NTFY = function () {
     var l = [], p = perms();
     if (qid) l.push({ label: 'Rückmeldungen und Nachrichten an dieses Handy', sub: 'q' + qid });
@@ -716,14 +708,13 @@
       VIEWS.forEach(function (k) { $('v-' + k).hidden = true; });
       return;
     }
-    qr = (qid && state.qrs[qid]) || urlQr;
+    qr = (qid && state.qrs[qid]) || urlQr || (Auth.isAdmin() ? { name: Util.getName(), func: 'Admin', perms: toPerms(PERM_KEYS.join(',')) } : null);
     var ok = !!qr;
     if (!ok && Store.isOffline()) {
       $('note').textContent = 'Keine Verbindung – bitte Internet prüfen und die Seite neu laden.';
       return;
     }
     $('whoName').textContent = ok ? qr.name : '';
-    $('acctCode').hidden = !(ok && qid && qr.codeHash);   // nur wenn der Admin dem Account schon einen Code gegeben hat
     $('who').textContent = ok && qr.func ? qr.func : '';
     $('who').hidden = !(ok && qr.func);
     if (!ok) {

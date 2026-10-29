@@ -17,6 +17,7 @@
 <title>DEUKRO26 · Beipack-Abholung</title>
 <link rel="stylesheet" href="css/fonts.css?v=725b74a">
 <link rel="stylesheet" href="css/style.css?v=e49d461">
+<link rel="stylesheet" href="css/login.css?v=1">
 <link rel="stylesheet" href="css/cyber.css?v=3b93bbd" id="cpCss">
 <script src="js/theme.js?v=3b93bbd"></script>
 </head>
@@ -26,12 +27,12 @@
     <h1>DEUKRO26 · Beipack-Abholung</h1>
     <span class="weeknav"><button class="btn-sm" id="weekPrev" title="Vorherige Woche">‹</button><span class="tag" id="week"></span><button class="btn-sm" id="weekNext" title="Nächste Woche">›</button></span>
     <span class="sp"></span>
-    <span class="tag" id="acctTag" hidden></span> <button class="btn-sm" id="acctOut" hidden title="Vom Account abmelden">Abmelden</button> <button class="btn-sm" id="acctCode" hidden title="Eigenen Code ändern">Code ändern</button>
+    <button class="btn-sm" id="profileBtn" title="Profil: Name, Code, Abmelden" hidden></button>
     <input id="me" class="me" placeholder="Dein Name" maxlength="30" title="Mit diesem Namen werden Bestätigungen und Änderungen im Dashboard gezeichnet">
     <button class="btn-sm" id="soundBtn" title="Ton bei neuen Meldungen"></button>
     <span class="tag" id="mode"></span>
     <button class="btn-sm" id="installBtn" hidden>App installieren</button>
-    <button class="btn-sm" data-p="admin" id="qrOpen">QR-Codes</button>
+    <button class="btn-sm" data-p="admin" id="qrOpen">Accounts</button>
     <button class="btn-sm" data-p="admin" id="admOpen" hidden>Admin</button>
     <span class="orb" id="clock" style="color:var(--accent)"></span>
   </header>
@@ -125,29 +126,6 @@
       </form>
     </section>
   </main>
-</div>
-<div class="lockcover acct-cover" id="acctCover" hidden>
-  <div class="modal-box" style="max-width:440px">
-    <div class="col-title orb"><span>Anmelden</span></div>
-    <div class="empty">Account-Code eingeben (steht auf deiner Karte, Format XXXX-XXXX).</div>
-    <form id="acctForm" class="plan" autocomplete="off">
-      <input id="acctIn" placeholder="Account-Code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20" required>
-      <button class="btn-main">Anmelden</button>
-    </form>
-    <div class="note" id="acctErr"></div>
-    <div class="empty"><a href="#" id="acctAdmin">Admin-Anmeldung</a></div>
-  </div>
-</div>
-<div class="modal" id="codeModal" hidden>
-  <div class="modal-box" style="max-width:420px">
-    <div class="col-title orb"><span>Code ändern</span><button class="btn-sm" id="codeClose">Schließen</button></div>
-    <form id="codeForm" class="plan" autocomplete="off">
-      <input id="codeOld" placeholder="Alter Code" autocomplete="off" required>
-      <input id="codeNew" placeholder="Neuer Code (mind. 4 Zeichen)" autocomplete="off" maxlength="20" required>
-      <button class="btn-main">Code speichern</button>
-    </form>
-    <div class="note" id="codeMsg"></div>
-  </div>
 </div>
 <div class="lockcover" id="lockModal" hidden>
   <div class="modal-box" style="max-width:440px">
@@ -245,6 +223,7 @@
 <script src="js/qrcode.js?v=cd3e493"></script>
 <script src="js/account.js?v=708171a"></script>
 <script src="js/chat.js?v=708171a"></script>
+<script src="js/login.js?v=1"></script>
 <script src="js/app.js?v=708171a"></script>
 </body>
 </html>

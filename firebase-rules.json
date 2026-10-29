@@ -28,6 +28,15 @@
         "codeHash": {
           ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
         },
+        "codeV": {
+          ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
+        },
+        "codeInit": {
+          ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
+        },
+        "name": {
+          ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
+        },
         "prefs": {
           ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
         }

@@ -1,9 +1,9 @@
-// Accounts: jeder QR-Code ist ein Account (Name, Funktion, Rechte). Am Desktop meldet man sich mit dem Account-Code an.
-// Der Code wird nur als Prüfwert (SHA-256 aus Account-ID und Code) in der Datenbank abgelegt. Das ist eine Kennung, kein starkes Passwort:
-// Gegen Fremde schützt weiter die Geräte-Freigabe. Die Rechte (d_*) wirken in der Oberfläche, die Datenbank prüft sie nicht je Account.
+// Accounts: Der Admin legt Accounts an. Jeder Account bekommt einen Startcode (Format XXXX-XXXX) und einen QR-Code zum Profil.
+// Beim ersten Anmelden legt die Person einen eigenen 6-stelligen Code fest. Der Code wird nur als Prüfwert (SHA-256) gespeichert.
+// Das ist eine Kennung, kein starkes Passwort: Gegen Fremde schützt die Geräte-Freigabe, Admin-Zugang läuft über E-Mail und Passwort.
 window.Account = (function () {
   'use strict';
-  var SESSION = 'dekr26_account', NEWCODES = 'dekr26_newcodes', FAILS = 'dekr26_loginfails';
+  var SESSION = 'dekr26_account', NEWCODES = 'dekr26_newcodes', FAILS = 'dekr26_loginfails', CODEV = 2;
   var ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // ohne 0/O/1/I/L
 
   // Rechte am Dashboard (zusätzlich zu den Handy-Rechten des Accounts)
@@ -28,9 +28,10 @@ window.Account = (function () {
     for (var i = 0; i < 8; i++) out += ALPHA.charAt(a[i] % ALPHA.length);
     return format(out);
   }
-  function hash(id, code) {
+  // Prüfwert des Codes. Gleiche Codes ergeben gleiche Werte; deshalb ist jeder Code nur einmal vergebbar.
+  function hash(code) {
     if (!window.crypto || !crypto.subtle) return Promise.reject(new Error('Dieser Browser kann keine sichere Anmeldung.'));
-    var bytes = new TextEncoder().encode(id + ':' + norm(code));
+    var bytes = new TextEncoder().encode('dekr26|' + norm(code));
     return crypto.subtle.digest('SHA-256', bytes).then(function (buf) {
       return Array.prototype.map.call(new Uint8Array(buf), function (b) { return (b < 16 ? '0' : '') + b.toString(16); }).join('');
     });
@@ -38,13 +39,13 @@ window.Account = (function () {
 
   function session() { try { return JSON.parse(lsGet(SESSION)) || null; } catch (e) { return null; } }
   function accounts(state) {
-    return Object.keys(state.qrs || {}).map(function (id) { return Object.assign({ id: id }, state.qrs[id]); });
+    return Object.keys((state && state.qrs) || {}).map(function (id) { return Object.assign({ id: id }, state.qrs[id]); });
   }
-  function hasCodes(state) { return accounts(state).some(function (a) { return a.codeHash; }); }
+  function usable(a) { return !!(a && a.codeHash && a.codeV === CODEV); }
   // Angemeldeter Account (nur gültig, solange sein Code unverändert ist)
   function me(state) {
-    var s = session(), q = s && state.qrs && state.qrs[s.id];
-    if (!q || !q.codeHash || q.codeHash !== s.h) return null;
+    var s = session(), q = s && state && state.qrs && state.qrs[s.id];
+    if (!usable(q) || q.codeHash !== s.h) return null;
     return Object.assign({ id: s.id }, q);
   }
   function dperms(a) {
@@ -55,7 +56,7 @@ window.Account = (function () {
   }
   function isAdmin() { return !!(window.Auth && Auth.isAdmin && Auth.isAdmin()); }
   function can(state, perm) {
-    if (isAdmin() || !hasCodes(state)) return true;   // ohne Account-Codes ist das Dashboard offen wie bisher
+    if (isAdmin()) return true;
     var a = me(state);
     return !!(a && dperms(a)[perm]);
   }
@@ -65,18 +66,13 @@ window.Account = (function () {
     var f = null; try { f = JSON.parse(lsGet(FAILS)); } catch (e) { f = null; }
     return f && f.n >= 5 && Date.now() - f.t < 30000 ? Math.ceil((30000 - (Date.now() - f.t)) / 1000) : 0;
   }
-  function login(state, code) {
+  // hintId: der Account aus dem QR-Code (optional), dann zählt nur dessen Code
+  function login(state, code, hintId) {
     var w = wait();
     if (w) return Promise.reject(new Error('Zu viele Versuche, bitte ' + w + ' s warten.'));
-    var list = accounts(state).filter(function (a) { return a.codeHash; });
-    return Promise.all(list.map(function (a) { return hash(a.id, code); })).then(function (hs) {
-      for (var i = 0; i < list.length; i++) {
-        if (hs[i] === list[i].codeHash) {
-          lsSet(SESSION, JSON.stringify({ id: list[i].id, h: hs[i] }));
-          lsSet(FAILS, '');
-          return list[i].id;
-        }
-      }
+    return hash(code).then(function (h) {
+      var a = accounts(state).filter(function (x) { return usable(x) && x.codeHash === h && (!hintId || x.id === hintId); })[0];
+      if (a) { lsSet(SESSION, JSON.stringify({ id: a.id, h: h })); lsSet(FAILS, ''); return a; }
       var f = null; try { f = JSON.parse(lsGet(FAILS)); } catch (e) { f = null; }
       lsSet(FAILS, JSON.stringify({ n: ((f && Date.now() - f.t < 60000) ? f.n : 0) + 1, t: Date.now() }));
       throw new Error('Code nicht gefunden.');
@@ -84,26 +80,39 @@ window.Account = (function () {
   }
   function logout() { lsSet(SESSION, ''); }
 
-  // Code setzen/ändern (Admin: ohne alten Code; Account selbst: mit altem Code)
-  function setCode(id, code) {
-    return hash(id, code).then(function (h) {
-      return Store.updateQr(id, { codeHash: h }).then(function () { return h; });
+  // Admin: Startcode setzen (Person muss ihn beim ersten Anmelden durch einen eigenen ersetzen)
+  function setStartCode(id, code) {
+    return hash(code).then(function (h) {
+      return Store.updateQr(id, { codeHash: h, codeV: CODEV, codeInit: true }).then(function () { return h; });
     });
   }
-  function changeCode(state, id, oldCode, newCode) {
-    var q = state.qrs[id];
-    if (norm(newCode).length < 4) return Promise.reject(new Error('Der neue Code braucht mindestens 4 Zeichen oder Ziffern.'));
-    return hash(id, oldCode).then(function (h) {
-      if (q && q.codeHash && h !== q.codeHash) throw new Error('Der alte Code stimmt nicht.');
-      return hash(id, newCode).then(function (nh) {
-        // Diese Anmeldung bleibt gültig: zuerst merken, dann speichern (sonst würde die Änderung kurz abmelden)
-        var s = session(); if (s && s.id === id) lsSet(SESSION, JSON.stringify({ id: id, h: nh }));
-        return Store.updateQr(id, { codeHash: nh }).then(function () { return nh; });
-      });
+  function validPin(pin) { return /^\d{6}$/.test(String(pin || '')); }
+  function taken(state, h, exceptId) {
+    return accounts(state).some(function (a) { return a.id !== exceptId && a.codeHash === h; });
+  }
+  // Eigenen 6-stelligen Code festlegen (Ziffern). Jeder Code ist nur einmal vergebbar.
+  function setPin(state, id, pin) {
+    if (!validPin(pin)) return Promise.reject(new Error('Der Code braucht genau 6 Ziffern.'));
+    return hash(pin).then(function (h) {
+      if (taken(state, h, id)) throw new Error('Dieser Code ist schon vergeben, bitte einen anderen wählen.');
+      var s = session(); if (s && s.id === id) lsSet(SESSION, JSON.stringify({ id: id, h: h }));   // Anmeldung bleibt gültig
+      return Store.updateQr(id, { codeHash: h, codeV: CODEV, codeInit: false }).then(function () { return h; });
     });
+  }
+  function changePin(state, id, oldCode, newPin) {
+    var q = state.qrs[id];
+    return hash(oldCode).then(function (h) {
+      if (!q || q.codeHash !== h) throw new Error('Der alte Code stimmt nicht.');
+      return setPin(state, id, newPin);
+    });
+  }
+  function rename(id, name) {
+    name = String(name || '').trim().slice(0, 40);
+    if (!name) return Promise.reject(new Error('Der Name darf nicht leer sein.'));
+    return Store.updateQr(id, { name: name });
   }
 
-  // Frisch erzeugte Codes merkt sich nur der Admin-Browser (für Karte und Liste); in der Datenbank steht nur der Prüfwert
+  // Frisch erzeugte Startcodes merkt sich nur der Admin-Browser (Karte und Liste); in der Datenbank steht nur der Prüfwert
   function newCodes() { try { return JSON.parse(sessionStorage.getItem(NEWCODES)) || {}; } catch (e) { return {}; } }
   function rememberCode(id, code) {
     var m = newCodes(); m[id] = code;
@@ -132,7 +141,7 @@ window.Account = (function () {
     Store.updateQr(id, { prefs: collectPrefs() }).catch(function () { lastPrefs = ''; });
   }
 
-  return { DPERMS: DPERMS, norm: norm, format: format, gen: gen, hash: hash, accounts: accounts, hasCodes: hasCodes, me: me, dperms: dperms,
-    can: can, isAdmin: isAdmin, login: login, logout: logout, setCode: setCode, changeCode: changeCode, newCodes: newCodes,
-    rememberCode: rememberCode, applyPrefs: applyPrefs, pushPrefs: pushPrefs, wait: wait };
+  return { DPERMS: DPERMS, CODEV: CODEV, norm: norm, format: format, gen: gen, hash: hash, accounts: accounts, usable: usable, me: me, session: session,
+    dperms: dperms, can: can, isAdmin: isAdmin, login: login, logout: logout, setStartCode: setStartCode, setPin: setPin, changePin: changePin,
+    rename: rename, validPin: validPin, newCodes: newCodes, rememberCode: rememberCode, applyPrefs: applyPrefs, pushPrefs: pushPrefs, wait: wait };
 })();

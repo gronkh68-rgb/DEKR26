@@ -80,18 +80,22 @@ das Lesezeichen den Text in die Zwischenablage (dann im Import mit Strg+V einfü
 Ordner `3d/`: `qr-huelle.stl` (fertig zum Slicen), `qr-huelle.scad` (parametrisch, in OpenSCAD änderbar), `make_stl.py` (erzeugt die STL
 aus den Maßen). Flach drucken, Rückseite aufs Bett, ohne Stützen. Kartenmaße (`card_w`, `card_h`, `card_t`) vor dem Druck an die echte Karte anpassen.
 
-## Accounts mit Code (Dashboard-Anmeldung)
+## Accounts und Anmeldung
 
-Jeder QR-Code ist ein Account (Name, Funktion, Rechte). Beim Anlegen entsteht ein Code (Format `XXXX-XXXX`), der nur einmal sichtbar ist
-(Karte drucken zeigt ihn dann mit). In der Datenbank steht nur ein Prüfwert (SHA-256 aus Account-ID und Code). „Neuen Code erzeugen“ und
-„Codes erzeugen“ (für alle ohne Code) gibt es im Admin-Fenster „Accounts und QR-Codes“. Sobald ein Account einen Code hat, verlangt das
-Dashboard die Anmeldung (Admin ist ausgenommen). Der Account kann seinen Code selbst ändern (Dashboard und Handy).
+Die Seite öffnet immer mit einer **Anmeldeseite** (Cyberpunk-Stil). Ablauf:
 
-- **Rechte am Dashboard:** `d_status`, `d_close`, `d_plan`, `d_orders`, `d_problems`, `d_send` je Account. Ältere Accounts ohne diese Rechte
-  bekommen sie aus den Handy-Rechten (`report` → Bereit setzen, `podest` → Bestellungen, `solve` → Probleme).
-- **Persönliche Einstellungen** (Ton, Tage, Karte) werden am Account gespeichert und auf jedes Gerät geladen.
-- **Sicherheit:** Der Code ist eine Kennung, kein starkes Passwort. Die Rechte wirken in der Oberfläche, die Datenbank prüft sie nicht je Account.
-  Gegen Fremde schützt weiter die Geräte-Freigabe. In `firebase-rules.json` dürfen freigegebene Geräte nur `codeHash` und `prefs` eines Accounts schreiben.
+1. **Gerät freigeben:** Ein neues Gerät fragt die Freigabe an (wie bisher, Admin gibt unter „Admin“ frei).
+2. **Code eingeben:** Der Admin legt unter **„Accounts“** Accounts an. Jeder Account bekommt einen **Startcode** (`XXXX-XXXX`, nur einmal sichtbar) und
+   einen **QR-Code zum Profil** (`index.html?p=ID`, optional mit Zugangscode `k` für die Geräte-Freigabe). Die Karte „Karte drucken“ zeigt beides.
+3. **Eigener Code:** Beim ersten Anmelden legt die Person einen **eigenen 6-stelligen Code (Ziffern)** fest. Jeder Code ist nur einmal vergebbar.
+4. **Weiterleitung:** Am PC öffnet das Dashboard (mit dem Namen des Accounts), am Handy die Handyseite. Wer angemeldet bleibt, wird nicht erneut gefragt.
+5. **Profil:** Knopf mit dem Namen oben: Name ändern, Code ändern (alter Code nötig), Abmelden.
+6. **Admin:** Unter der Code-Eingabe „Admin-Anmeldung“ (E-Mail und Passwort). Der Admin hat alle Rechte, verwaltet Accounts und Freigaben.
+
+Codes liegen nur als Prüfwert (SHA-256) in der Datenbank. Das ist eine Kennung, kein starkes Passwort: Gegen Fremde schützt die Geräte-Freigabe, und die
+Rechte der Accounts (Handy-Rechte und `d_status`, `d_close`, `d_plan`, `d_orders`, `d_problems`, `d_send` am Dashboard) wirken in der Oberfläche, die Datenbank
+prüft sie nicht je Account. In `firebase-rules.json` dürfen freigegebene Geräte nur `codeHash`, `codeV`, `codeInit`, `name` und `prefs` eines Accounts schreiben.
+Persönliche Einstellungen (Ton, Tage, Karte) werden am Account gespeichert. Accounts aus der Zeit vor der Umstellung brauchen einmal neue Startcodes („Codes erzeugen“).
 
 ## Designs
 
