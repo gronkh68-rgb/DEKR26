@@ -79,3 +79,16 @@ das Lesezeichen den Text in die Zwischenablage (dann im Import mit Strg+V einfü
 
 Ordner `3d/`: `qr-huelle.stl` (fertig zum Slicen), `qr-huelle.scad` (parametrisch, in OpenSCAD änderbar), `make_stl.py` (erzeugt die STL
 aus den Maßen). Flach drucken, Rückseite aufs Bett, ohne Stützen. Kartenmaße (`card_w`, `card_h`, `card_t`) vor dem Druck an die echte Karte anpassen.
+
+## Accounts mit Code (Dashboard-Anmeldung)
+
+Jeder QR-Code ist ein Account (Name, Funktion, Rechte). Beim Anlegen entsteht ein Code (Format `XXXX-XXXX`), der nur einmal sichtbar ist
+(Karte drucken zeigt ihn dann mit). In der Datenbank steht nur ein Prüfwert (SHA-256 aus Account-ID und Code). „Neuen Code erzeugen“ und
+„Codes erzeugen“ (für alle ohne Code) gibt es im Admin-Fenster „Accounts und QR-Codes“. Sobald ein Account einen Code hat, verlangt das
+Dashboard die Anmeldung (Admin ist ausgenommen). Der Account kann seinen Code selbst ändern (Dashboard und Handy).
+
+- **Rechte am Dashboard:** `d_status`, `d_close`, `d_plan`, `d_orders`, `d_problems`, `d_send` je Account. Ältere Accounts ohne diese Rechte
+  bekommen sie aus den Handy-Rechten (`report` → Bereit setzen, `podest` → Bestellungen, `solve` → Probleme).
+- **Persönliche Einstellungen** (Ton, Tage, Karte) werden am Account gespeichert und auf jedes Gerät geladen.
+- **Sicherheit:** Der Code ist eine Kennung, kein starkes Passwort. Die Rechte wirken in der Oberfläche, die Datenbank prüft sie nicht je Account.
+  Gegen Fremde schützt weiter die Geräte-Freigabe. In `firebase-rules.json` dürfen freigegebene Geräte nur `codeHash` und `prefs` eines Accounts schreiben.

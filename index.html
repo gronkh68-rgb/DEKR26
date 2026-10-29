@@ -26,17 +26,18 @@
     <h1>DEUKRO26 · Beipack-Abholung</h1>
     <span class="weeknav"><button class="btn-sm" id="weekPrev" title="Vorherige Woche">‹</button><span class="tag" id="week"></span><button class="btn-sm" id="weekNext" title="Nächste Woche">›</button></span>
     <span class="sp"></span>
+    <span class="tag" id="acctTag" hidden></span> <button class="btn-sm" id="acctOut" hidden title="Vom Account abmelden">Abmelden</button> <button class="btn-sm" id="acctCode" hidden title="Eigenen Code ändern">Code ändern</button>
     <input id="me" class="me" placeholder="Dein Name" maxlength="30" title="Mit diesem Namen werden Bestätigungen und Änderungen im Dashboard gezeichnet">
     <button class="btn-sm" id="soundBtn" title="Ton bei neuen Meldungen"></button>
     <span class="tag" id="mode"></span>
     <button class="btn-sm" id="installBtn" hidden>App installieren</button>
-    <button class="btn-sm" id="qrOpen">QR-Codes</button>
-    <button class="btn-sm" id="admOpen" hidden>Admin</button>
+    <button class="btn-sm" data-p="admin" id="qrOpen">QR-Codes</button>
+    <button class="btn-sm" data-p="admin" id="admOpen" hidden>Admin</button>
     <span class="orb" id="clock" style="color:var(--accent)"></span>
   </header>
   <main class="cols">
     <section class="col">
-      <div class="col-title orb"><span>KR / Woche</span><span><button class="btn-sm" id="allToggle">Alle KR</button> <button class="btn-sm" id="impOpen">Import</button> <button class="btn-sm" id="planToggle">+ KR</button></span></div>
+      <div class="col-title orb"><span>KR / Woche</span><span><button class="btn-sm" id="allToggle">Alle KR</button> <button class="btn-sm" data-p="d_plan" id="impOpen">Import</button> <button class="btn-sm" data-p="d_plan" id="planToggle">+ KR</button></span></div>
       <form class="card plan" id="plan" hidden>
         <div class="kr-in"><span>KR</span><input id="pKr" autocapitalize="characters" placeholder="Nummer" required></div>
         <div class="row">
@@ -55,7 +56,7 @@
       <div class="map-head">
         <div><h2 id="hallName" style="display:inline"></h2><span class="stat" id="hallStat"></span></div>
         <div class="btns">
-          <button id="editToggle">Admin-Modus</button>
+          <button data-p="d_plan" id="editToggle">Admin-Modus</button>
           <span class="halltabs" id="hallSwitch"></span>
         </div>
       </div>
@@ -97,11 +98,15 @@
         <button class="tab" data-tab="probs">Probleme<span class="cnt" id="cProb"></span></button>
       </div>
       <div class="scroll" id="msgs"></div>
-      <div class="scroll" id="chats" hidden></div>
+      <div class="scroll" id="chats" hidden>
+        <div class="seg" id="chatSeg" hidden><button type="button" class="sel" data-cs="dash">Leitstand</button><button type="button" data-cs="me">Mein Chat</button></div>
+        <div id="chatsDash"></div>
+        <div id="chatsMe" hidden></div>
+      </div>
       <div class="scroll" id="orders" hidden></div>
       <div class="scroll" id="uebs" hidden></div>
       <div class="scroll" id="probs" hidden></div>
-      <form class="card dorder" id="dOrder" hidden>
+      <form class="card dorder" data-p="d_orders" id="dOrder" hidden>
         <div class="empty">Podest bestellen</div>
         <div class="chips" id="dPdList"></div>
         <input id="dPdText" maxlength="100" placeholder="Oder eigener Text">
@@ -112,7 +117,7 @@
         <datalist id="dKrList"></datalist>
         <button class="btn-main">Bestellen</button>
       </form>
-      <form class="card send" id="send">
+      <form class="card send" data-p="d_send" id="send">
         <select id="mTo" title="Empfänger"></select>
         <input id="mName" placeholder="Name" maxlength="30">
         <textarea id="mText" placeholder="Nachricht..." maxlength="300" required></textarea>
@@ -120,6 +125,29 @@
       </form>
     </section>
   </main>
+</div>
+<div class="lockcover acct-cover" id="acctCover" hidden>
+  <div class="modal-box" style="max-width:440px">
+    <div class="col-title orb"><span>Anmelden</span></div>
+    <div class="empty">Account-Code eingeben (steht auf deiner Karte, Format XXXX-XXXX).</div>
+    <form id="acctForm" class="plan" autocomplete="off">
+      <input id="acctIn" placeholder="Account-Code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20" required>
+      <button class="btn-main">Anmelden</button>
+    </form>
+    <div class="note" id="acctErr"></div>
+    <div class="empty"><a href="#" id="acctAdmin">Admin-Anmeldung</a></div>
+  </div>
+</div>
+<div class="modal" id="codeModal" hidden>
+  <div class="modal-box" style="max-width:420px">
+    <div class="col-title orb"><span>Code ändern</span><button class="btn-sm" id="codeClose">Schließen</button></div>
+    <form id="codeForm" class="plan" autocomplete="off">
+      <input id="codeOld" placeholder="Alter Code" autocomplete="off" required>
+      <input id="codeNew" placeholder="Neuer Code (mind. 4 Zeichen)" autocomplete="off" maxlength="20" required>
+      <button class="btn-main">Code speichern</button>
+    </form>
+    <div class="note" id="codeMsg"></div>
+  </div>
 </div>
 <div class="lockcover" id="lockModal" hidden>
   <div class="modal-box" style="max-width:440px">
@@ -180,13 +208,14 @@
 </div>
 <div class="modal" id="qrModal" hidden>
   <div class="modal-box">
-    <div class="col-title orb"><span>QR-Codes für die Meldeseite</span><button class="btn-sm no-print" id="qrClose">Schließen</button></div>
+    <div class="col-title orb"><span>Accounts und QR-Codes</span><button class="btn-sm no-print" id="qrClose">Schließen</button></div>
     <form class="qr-add no-print" id="qrForm">
       <input id="qrName" placeholder="Name, z.B. Platz 3" maxlength="40" required>
       <input id="qrFunc" placeholder="Funktion (optional)" maxlength="40">
       <select id="qrPreset" title="Vorlage für die Rechte"></select>
       <button class="btn-main">Hinzufügen</button>
       <button type="button" id="qrPrint">Drucken</button>
+      <button type="button" id="qrCodesAll" title="Codes für alle Accounts ohne Code erzeugen">Codes erzeugen</button>
     </form>
     <div class="note no-print" id="qrWarn" hidden>Lokal-Demo-Modus: Die Codes funktionieren nur mit gemeinsamer Datenbank (Firebase). Meldungen vom Handy erreichen das Dashboard sonst nicht.</div>
     <div class="empty no-print" id="qrHint"></div>
@@ -214,6 +243,7 @@
 <script src="js/halls.js?v=1921e79"></script>
 <script src="js/core.js?v=54a4b4c"></script>
 <script src="js/qrcode.js?v=cd3e493"></script>
+<script src="js/account.js"></script>
 <script src="js/chat.js?v=54a4b4c"></script>
 <script src="js/app.js?v=54a4b4c"></script>
 </body>

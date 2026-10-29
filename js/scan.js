@@ -140,6 +140,57 @@
     if (changed) { try { localStorage.setItem('dekr26_probseen', JSON.stringify(seenP)); } catch (e) { /* ignorieren */ } }
   }
 
+  // ---------- Kisten je KR (K2 / K5) ----------
+  var kWeek = Util.isoWeek(), kDay = Math.min(5, Math.max(1, Util.todayIdx() || 1));
+  var kHide = true;   // abgeschlossene KR ausblenden (im Browser gemerkt)
+  try { kHide = localStorage.getItem('dekr26_khide') !== '0'; } catch (e) { /* ignorieren */ }
+  // Eine gemeinsame Einstellung für Kisten-Ansicht, Dashboard-Listen und KR-Vorschläge
+  function setKHide(v) {
+    kHide = v;
+    $('kHide').checked = v; $('allHide').checked = v;
+    try { localStorage.setItem('dekr26_khide', v ? '1' : '0'); } catch (e) { /* ignorieren */ }
+    lastKrHtml = '';
+    var st = Store.get();
+    fillKrList(st); renderKisten(st); renderAllList(st);
+  }
+  $('kHide').checked = kHide; $('allHide').checked = kHide;
+  $('kHide').onchange = function () { setKHide($('kHide').checked); };
+  $('allHide').onchange = function () { setKHide($('allHide').checked); };
+  function dayTasks(state, week, day) {
+    return Object.keys(state.tasks).map(function (id) { return Object.assign({ id: id }, state.tasks[id]); })
+      .filter(function (t) { return t.week === week && t.day === day && !(kHide && t.closed); })
+      .sort(function (a, b) { return a.kr < b.kr ? -1 : a.kr > b.kr ? 1 : 0; });
+  }
+  function renderKisten(state) {
+    var now = Util.isoWeek();
+    $('kWeek').textContent = 'KW ' + kWeek.split('-W')[1] + (kWeek === now ? ' · diese Woche' : '') + ' · ' + Util.dayDate(kWeek, 1) + '–' + Util.dayDate(kWeek, 5);
+    $('kDays').innerHTML = [1, 2, 3, 4, 5].map(function (d) {
+      var ts = dayTasks(state, kWeek, d), k2 = 0, k5 = 0;
+      ts.forEach(function (t) { k2 += +t.k2 || 0; k5 += +t.k5 || 0; });
+      return '<button type="button" class="menu-btn' + (d === kDay ? ' sel' : '') + '" data-kday="' + d + '"><b>' + esc(Util.DAYS[d]) + ' ' + esc(Util.dayDate(kWeek, d)) +
+        (kWeek === now && d === Util.todayIdx() ? ' · heute' : '') + '</b><small>' + ts.length + ' KR · K2 ' + k2 + ' · K5 ' + k5 + '</small></button>';
+    }).join('');
+    var list = dayTasks(state, kWeek, kDay);
+    $('kList').innerHTML = list.length ? list.map(function (t) {
+      return '<div class="kitem' + (t.closed ? ' closed' : '') + '"><div class="khead"><b>KR ' + esc(t.kr) + '</b><span class="kpos">' +
+        (t.pos ? esc(Halls.label(t.hall, t.pos)) : t.from ? 'Lieferung Halle ' + esc(t.from) : 'ohne Position') + '</span></div>' +
+        (t.scope || t.closed ? '<div class="kmeta">' + (t.scope ? esc(t.scope) : '') + (t.closed ? ' · abgeschlossen' : '') + '</div>' : '') +
+        ['k2', 'k5'].map(function (f) {
+          return '<div class="kcount"><b>' + f.toUpperCase() + '</b><button type="button" class="big-gray" data-tid="' + esc(t.id) + '" data-kf="' + f + '" data-kd="-1">−</button>' +
+            '<span class="kn">' + (t[f] || 0) + '</span><button type="button" class="btn-ok big" data-tid="' + esc(t.id) + '" data-kf="' + f + '" data-kd="1">+</button></div>';
+        }).join('') + '</div>';
+    }).join('') : '<div class="empty">Für diesen Tag gibt es keine KR.</div>';
+  }
+  $('v-kisten').addEventListener('click', function (e) {
+    var w = e.target.closest('button[data-d]'), d = e.target.closest('button[data-kday]'), c = e.target.closest('button[data-kf]');
+    if (w) { kWeek = Util.addWeeks(kWeek, +w.dataset.d); renderKisten(Store.get()); return; }
+    if (d) { kDay = +d.dataset.kday; renderKisten(Store.get()); return; }
+    if (c) {
+      c.disabled = true;
+      Store.addTaskKisten(c.dataset.tid, c.dataset.kf, +c.dataset.kd).catch(fail).then(function () { c.disabled = false; });
+    }
+  });
+
   // ---------- Messenger (für alle QR-Codes immer aktiv) ----------
   var chatUi = null;
   function chatContacts(state) {
@@ -223,6 +274,16 @@
   }
   // Ton an/aus und Bildschirm anlassen (Wake Lock)
   function soundLabel() { $('soundBtn').textContent = Sound.label(); }
+  // Eigenen Account-Code ändern (gilt für die Anmeldung am PC)
+  $('acctCode').onclick = function () { $('codeMsg').textContent = ''; $('codeForm').reset(); $('codeModal').hidden = false; };
+  $('codeClose').onclick = function () { $('codeModal').hidden = true; };
+  $('codeForm').onsubmit = function (e) {
+    e.preventDefault();
+    if (!qid) return;
+    Account.changeCode(Store.get(), qid, $('codeOld').value, $('codeNew').value).then(function () {
+      $('codeMsg').textContent = '✔ Code geändert.'; $('codeForm').reset();
+    }).catch(function (err) { $('codeMsg').textContent = err.message || 'Speichern fehlgeschlagen'; });
+  };
   window.DEKR_NTFY = function () {
     var l = [], p = perms();
     if (qid) l.push({ label: 'Rückmeldungen und Nachrichten an dieses Handy', sub: 'q' + qid });
@@ -662,6 +723,7 @@
       return;
     }
     $('whoName').textContent = ok ? qr.name : '';
+    $('acctCode').hidden = !(ok && qid && qr.codeHash);   // nur wenn der Admin dem Account schon einen Code gegeben hat
     $('who').textContent = ok && qr.func ? qr.func : '';
     $('who').hidden = !(ok && qr.func);
     if (!ok) {

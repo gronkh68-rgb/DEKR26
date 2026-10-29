@@ -131,7 +131,7 @@
   };
 
   // ---------- Chats (Messenger mit den QR-Besitzern) ----------
-  var chatUi = Chat.mount($('chats'), {
+  var chatUi = Chat.mount($('chatsDash'), {
     me: 'dash',
     state: function () { return Store.get(); },
     contacts: function (state) {
@@ -154,13 +154,118 @@
       });
     }
   });
-  function chatAlerts(state) {
-    Chat.newIncoming(state, 'dash').forEach(function (m) {
-      if (tab === 'chats' && chatUi.isOpen() === Chat.peerOf(m, 'dash') && document.visibilityState === 'visible') return;
-      toast('Nachricht von ' + m.by + ': ' + (m.text.length > 60 ? m.text.slice(0, 60) + '…' : m.text));
-      Sound.play('ding');
+  var chatMe = null, chatMeId = '', chatView = 'dash';   // Mein Chat: Account-Chat (wie am Handy)
+  function setupChatMe(a) {
+    if (!a) { chatMe = null; chatMeId = ''; $('chatsMe').innerHTML = ''; return; }
+    if (chatMeId === a.id) return;
+    chatMeId = a.id; $('chatsMe').innerHTML = '';
+    chatMe = Chat.mount($('chatsMe'), {
+      me: a.id,
+      state: function () { return Store.get(); },
+      contacts: function (state) {
+        var qs = Object.keys(state.qrs).filter(function (id) { return id !== a.id; })
+          .map(function (id) { return { id: id, name: state.qrs[id].name, sub: state.qrs[id].func || '', t: state.qrs[id].t }; })
+          .sort(function (x, y) { return x.t - y.t; });
+        return [{ id: 'dash', name: 'Leitstand', sub: 'Dashboard' }, { id: 'all', name: 'Alle QR-Besitzer', sub: 'Gruppenchat' }].concat(qs);
+      },
+      send: function (text, to) {
+        var name = (Store.get().qrs[a.id] || a).name;
+        return Store.addMsg({ type: 'chat', from: a.id, to: to, by: name, text: text }).then(function () {
+          var qrs = Store.get().qrs, targets = to === 'all' ? Object.keys(qrs).filter(function (id) { return id !== a.id; }) : to === 'dash' ? [] : [to];
+          targets.forEach(function (id) { Push.toQr(id, 'Nachricht von ' + name, text); });
+          if (to === 'dash') Push.send('', 'Nachricht von ' + name, text, 3, ['speech_balloon']);
+        }).catch(function (e) { toast('Senden fehlgeschlagen'); throw e; });
+      },
+      read: function (ids) {
+        var name = (Store.get().qrs[a.id] || a).name;
+        ids.forEach(function (id) {
+          var f = {}; f['reads/' + a.id] = { by: name, t: Date.now() };
+          Store.updateMsg(id, f).catch(function () { /* optional */ });
+        });
+      }
     });
   }
+  function renderChats(state) {
+    $('chatSeg').hidden = !chatMe;
+    if (!chatMe) chatView = 'dash';
+    $('chatsDash').hidden = chatView !== 'dash';
+    $('chatsMe').hidden = chatView !== 'me';
+    Array.prototype.forEach.call($('chatSeg').querySelectorAll('button'), function (b) { b.classList.toggle('sel', b.dataset.cs === chatView); });
+    if (chatView === 'me' && chatMe) chatMe.render(state); else chatUi.render(state);
+  }
+  $('chatSeg').onclick = function (e) {
+    var b = e.target.closest('button[data-cs]');
+    if (b) { chatView = b.dataset.cs; renderChats(Store.get()); }
+  };
+  function chatUnread(state) {
+    return Chat.unreadCount(state, 'dash') + (chatMeId ? Chat.unreadCount(state, chatMeId) : 0);
+  }
+  function chatAlerts(state) {
+    var ids = ['dash'].concat(chatMeId ? [chatMeId] : []);
+    ids.forEach(function (me) {
+      Chat.newIncoming(state, me).forEach(function (m) {
+        var ui = me === 'dash' ? chatUi : chatMe;
+        if (tab === 'chats' && ui && ui.isOpen() === Chat.peerOf(m, me) && (me === 'dash') === (chatView === 'dash') && document.visibilityState === 'visible') return;
+        toast('Nachricht von ' + m.by + ': ' + (m.text.length > 60 ? m.text.slice(0, 60) + '…' : m.text));
+        Sound.play('ding');
+      });
+    });
+  }
+
+  // ---------- Account-Anmeldung am Dashboard ----------
+  var prefsFor = '';
+  function allowed(state, p) { return p === 'admin' ? (Account.isAdmin() || !Account.hasCodes(state)) : Account.can(state, p); }
+  function renderAccount(state) {
+    var loaded = Store.isLoaded() && !Store.isLocked();
+    var has = Account.hasCodes(state), admin = Account.isAdmin(), a = has ? Account.me(state) : null;
+    $('acctCover').hidden = !(loaded && has && !admin && !a);
+    $('acctTag').hidden = $('acctOut').hidden = $('acctCode').hidden = !a;
+    if (a) {
+      $('acctTag').textContent = '👤 ' + a.name + (a.func ? ' · ' + a.func : '');
+      $('me').value = a.name; $('mName').value = a.name; Util.setName(a.name);
+    }
+    $('me').readOnly = !!a; $('mName').readOnly = !!a;
+    Account.DPERMS.forEach(function (d) { document.body.classList.toggle('deny-' + d[0], !Account.can(state, d[0])); });
+    document.body.classList.toggle('deny-admin', has && !admin);
+    setupChatMe(a);
+    if (a && prefsFor !== a.id) {
+      prefsFor = a.id;
+      if (Account.applyPrefs(a.prefs)) location.reload();   // gespeicherte Einstellungen (Ton, Ansicht, Karte) laden
+    }
+  }
+  setInterval(function () { var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id); }, 20000);
+  window.addEventListener('pagehide', function () { var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id); });
+  // Nicht erlaubte Bedienelemente reagieren nicht (zusätzlich zum Ausblenden)
+  ['click', 'submit'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      var el = e.target.closest && e.target.closest('[data-p]');
+      if (el && !allowed(Store.get(), el.dataset.p)) { e.stopPropagation(); e.preventDefault(); }
+    }, true);
+  });
+  $('acctForm').onsubmit = function (e) {
+    e.preventDefault();
+    $('acctErr').textContent = '';
+    Account.login(Store.get(), $('acctIn').value).then(function () {
+      $('acctIn').value = '';
+      render(Store.get());
+    }).catch(function (err) { $('acctErr').textContent = err.message || 'Anmeldung fehlgeschlagen'; });
+  };
+  $('acctAdmin').onclick = function (e) { e.preventDefault(); $('admOpen').click(); };
+  $('acctOut').onclick = function () {
+    var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id);
+    Account.logout(); prefsFor = ''; render(Store.get());
+  };
+  $('acctCode').onclick = function () { $('codeMsg').textContent = ''; $('codeForm').reset(); $('codeModal').hidden = false; };
+  $('codeClose').onclick = function () { $('codeModal').hidden = true; };
+  $('codeForm').onsubmit = function (e) {
+    e.preventDefault();
+    var a = Account.me(Store.get());
+    if (!a) return;
+    Account.changeCode(Store.get(), a.id, $('codeOld').value, $('codeNew').value).then(function () {
+      $('codeMsg').textContent = '✔ Code geändert. Dieses Gerät bleibt angemeldet, auf anderen Geräten gilt der neue Code.';
+      $('codeForm').reset();
+    }).catch(function (err) { $('codeMsg').textContent = err.message || 'Speichern fehlgeschlagen'; });
+  };
 
   $('allToggle').onclick = function () { allMode = !allMode; sel = null; render(Store.get()); };
   $('krFilter').oninput = function () { krFilter = $('krFilter').value; renderAllKr(weekTasks(Store.get())); };
@@ -403,10 +508,10 @@
           (t.closed ? 'var(--dim)' : t.done ? 'var(--green)' : 'var(--orange)') + '">' + esc(stOf(t)) + '</b>' +
           (t.closed && t.closedBy ? ' <span class="meta">von ' + esc(t.closedBy) + '</span>' : '') + '</span><span>' +
           (t.closed
-            ? '<button class="btn-sm" data-act="reopen" data-id="' + esc(t.id) + '">Wieder öffnen</button> '
-            : '<button class="btn-sm" data-act="toggle" data-id="' + esc(t.id) + '">' + (t.done ? 'Nicht bereit' : 'Bereit') + '</button> ' +
-              '<button class="btn-sm btn-ok" data-act="close" data-id="' + esc(t.id) + '">Abschließen</button> ') +
-          '<button class="btn-sm btn-warn" data-act="del" data-id="' + esc(t.id) + '">Löschen</button></span></div>';
+            ? '<button class="btn-sm" data-p="d_close" data-act="reopen" data-id="' + esc(t.id) + '">Wieder öffnen</button> '
+            : '<button class="btn-sm" data-p="d_status" data-act="toggle" data-id="' + esc(t.id) + '">' + (t.done ? 'Nicht bereit' : 'Bereit') + '</button> ' +
+              '<button class="btn-sm btn-ok" data-p="d_close" data-act="close" data-id="' + esc(t.id) + '">Abschließen</button> ') +
+          '<button class="btn-sm btn-warn" data-p="d_close" data-act="del" data-id="' + esc(t.id) + '">Löschen</button></span></div>';
       });
     } else {
       html += '<div class="empty">Position auf der Karte oder in der Liste anklicken.</div>';
@@ -459,8 +564,8 @@
       var pulse = needsAck(m);
       return '<div class="msg ' + esc(m.type) + (pulse ? ' pulse' : '') + (fresh[m.id] ? ' fresh' : '') + '">' + esc(feedText(m)) +
         '<small>' + Util.time(m.t) + ' · ' + esc(m.by || '') + (m.ack ? ' · ✔ bestätigt von ' + esc(m.ack.by) : '') + ((m.type === 'dm' || m.type === 'chat') && m.reads ? ' · ✔ gelesen von ' + Object.keys(m.reads).map(function (k) { return esc(m.reads[k].by); }).join(', ') : '') + '</small>' +
-        '<span class="acts">' + (pulse ? '<button class="btn-sm btn-ok" data-ack="' + esc(m.id) + '">Bestätigen</button>' : '') +
-        '<button class="btn-sm btn-warn" data-delmsg="' + esc(m.id) + '">Löschen</button></span></div>';
+        '<span class="acts">' + (pulse ? '<button class="btn-sm btn-ok" data-p="d_send" data-ack="' + esc(m.id) + '">Bestätigen</button>' : '') +
+        '<button class="btn-sm btn-warn" data-p="d_send" data-delmsg="' + esc(m.id) + '">Löschen</button></span></div>';
     }).join('') : '<div class="empty">Keine Nachrichten.</div>';
   }
   $('msgs').onclick = function (e) {
@@ -499,9 +604,9 @@
       var o = state.orders[id], fin = o.status === 'erledigt';
       return '<div class="item' + (fin ? ' ok' : '') + '"><b>' + esc(o.items.join(', ')) + '</b><span>' + esc(o.where) + '</span>' +
         '<span class="meta">' + Util.time(o.t) + ' · ' + esc(o.by) + ' · <b>' + esc(o.status) + '</b>' + (o.statusBy ? ' von ' + esc(o.statusBy) : '') + '</span>' +
-        '<span class="acts">' + (fin ? '' : (o.status === 'offen' ? '<button class="btn-sm" data-oid="' + id + '" data-st="angenommen">Annehmen</button>' : '') +
-          '<button class="btn-sm btn-ok" data-oid="' + id + '" data-st="erledigt">Erledigt</button>') +
-        '<button class="btn-sm btn-warn" data-oid="' + id + '" data-st="del">Löschen</button></span></div>';
+        '<span class="acts">' + (fin ? '' : (o.status === 'offen' ? '<button class="btn-sm" data-p="d_orders" data-oid="' + id + '" data-st="angenommen">Annehmen</button>' : '') +
+          '<button class="btn-sm btn-ok" data-p="d_orders" data-oid="' + id + '" data-st="erledigt">Erledigt</button>') +
+        '<button class="btn-sm btn-warn" data-p="d_orders" data-oid="' + id + '" data-st="del">Löschen</button></span></div>';
     }).join('') : '<div class="empty">Keine Podest-Bestellungen.</div>';
   }
   // Anfragen „Überspielen": annehmen, als fertig melden, löschen
@@ -524,9 +629,9 @@
       var o = state.orders[id], fin = o.status === 'erledigt';
       return '<div class="item' + (fin ? ' ok' : '') + '"><b>Überspielen · ' + esc(o.where) + '</b>' + (o.note ? '<span>' + esc(o.note) + '</span>' : '') +
         '<span class="meta">' + Util.time(o.t) + ' · ' + esc(o.by) + (o.func ? ' (' + esc(o.func) + ')' : '') + ' · <b>' + esc(fin ? 'fertig' : o.status) + '</b>' + (o.statusBy ? ' von ' + esc(o.statusBy) : '') + '</span>' +
-        '<span class="acts">' + (fin ? '' : (o.status === 'offen' ? '<button class="btn-sm" data-oid="' + id + '" data-st="angenommen">Annehmen</button>' : '') +
-          '<button class="btn-sm btn-ok" data-oid="' + id + '" data-st="erledigt">Fertig melden</button>') +
-        '<button class="btn-sm btn-warn" data-oid="' + id + '" data-st="del">Löschen</button></span></div>';
+        '<span class="acts">' + (fin ? '' : (o.status === 'offen' ? '<button class="btn-sm" data-p="d_orders" data-oid="' + id + '" data-st="angenommen">Annehmen</button>' : '') +
+          '<button class="btn-sm btn-ok" data-p="d_orders" data-oid="' + id + '" data-st="erledigt">Fertig melden</button>') +
+        '<button class="btn-sm btn-warn" data-p="d_orders" data-oid="' + id + '" data-st="del">Löschen</button></span></div>';
     }).join('') : '<div class="empty">Keine Anfragen Überspielen.</div>';
   }
   function renderProbs(state) {
@@ -536,8 +641,8 @@
       var p = state.problems[id], open = p.status === 'offen';
       return '<div class="item ' + (open ? 'prob' : 'ok') + '"><b>KR ' + esc(p.kr) + (p.where ? ' · ' + esc(p.where) : '') + '</b><span>' + esc(p.text) + '</span>' +
         '<span class="meta">' + Util.time(p.t) + ' · ' + esc(p.by) + (p.func ? ' (' + esc(p.func) + ')' : '') + ' · <b>' + esc(p.status) + '</b>' + (p.solvedBy ? ' von ' + esc(p.solvedBy) : '') + '</span>' +
-        '<span class="acts">' + (open ? '<button class="btn-sm btn-ok" data-pid="' + id + '" data-st="solve">Gelöst</button>' : '') +
-        '<button class="btn-sm btn-warn" data-pid="' + id + '" data-st="del">Löschen</button></span></div>';
+        '<span class="acts">' + (open ? '<button class="btn-sm btn-ok" data-p="d_problems" data-pid="' + id + '" data-st="solve">Gelöst</button>' : '') +
+        '<button class="btn-sm btn-warn" data-p="d_problems" data-pid="' + id + '" data-st="del">Löschen</button></span></div>';
     }).join('') : '<div class="empty">Keine Probleme.</div>';
   }
   // ---- Podest vom Dashboard bestellen ----
@@ -611,7 +716,7 @@
     $('send').hidden = tab !== 'msgs';
     $('dOrder').hidden = tab !== 'orders';
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) { b.classList.toggle('sel', b.dataset.tab === tab); });
-    if (tab === 'chats') chatUi.render(Store.get());
+    if (tab === 'chats') renderChats(Store.get());
   }
   document.querySelector('.tabs').onclick = function (e) {
     var b = e.target.closest('.tab');
@@ -641,6 +746,7 @@
     return allMode ? tasks : tasks.filter(function (t) { return !dayPrefs.hidden[t.day]; });
   }
   function render(state) {
+    renderAccount(state);
     openProb = {};
     Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') openProb[state.problems[id].kr] = 1; });
     $('cOrd').textContent = openOrderIds(state).length || '';
@@ -652,7 +758,7 @@
     renderRecipients(state);
     renderDOrder(state);
     renderTabs();
-    $('cChat').textContent = Chat.unreadCount(state, 'dash') || '';
+    $('cChat').textContent = chatUnread(state) || '';
     chatAlerts(state);
     waveKr = {};
     Object.keys(state.msgs).forEach(function (id) {
@@ -1144,9 +1250,9 @@
   // ---------- QR-Codes ----------
   // Der Code enthält nur die ID (?q=...). Name, Funktion und Rechte lassen sich daher jederzeit ändern,
   // ohne dass ausgedruckte Codes ungültig werden.
-  var PERM_LABELS = [['report', 'Beipack melden (bereit/Problem)'], ['order', 'Podest bestellen'], ['kisten', 'Kisten je KR eintragen (K2/K5)'],
+  var PERM_LABELS = [['report', 'Beipack melden (bereit/Problem)'], ['order', 'Podest bestellen'], ['kisten', 'Kisten je KR eintragen (K2/K5)'].concat([]),
     ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Bereit/Nicht bereit setzen'],
-    ['dash', 'Mobiles Dashboard'], ['ueber', 'Anfrage Überspielen']];
+    ['dash', 'Mobiles Dashboard'], ['ueber', 'Anfrage Überspielen']].concat(Account.DPERMS);
   var PRESETS = [
     ['standard', 'Standard (melden + bestellen)', '', { report: 1, order: 1 }],
     ['kisten', 'Kisten K2/K5 eintragen', '', { report: 1, kisten: 1 }],
@@ -1154,7 +1260,8 @@
     ['elektriker', 'Elektriker', 'Elektriker', { report: 1, status: 1 }],
     ['ueber', 'Anfrage Überspielen', '', { report: 1, ueber: 1 }],
     ['mobil', 'Mobiles Dashboard (Push)', 'Dashboard mobil', { dash: 1 }],
-    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1, kisten: 1 }]
+    ['leitstand', 'Leitstand (Dashboard komplett)', 'Leitstand', { dash: 1, d_status: 1, d_close: 1, d_plan: 1, d_orders: 1, d_problems: 1, d_send: 1 }],
+    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1, kisten: 1, d_status: 1, d_close: 1, d_plan: 1, d_orders: 1, d_problems: 1, d_send: 1 }]
   ];
   function permsOf(q) { return q.perms && Object.keys(q.perms).length ? q.perms : { report: 1, order: 1 }; }
   // n/f/p sind nur ein Rückfall, falls das Handy die QR-Daten nicht aus der Datenbank laden kann
@@ -1191,6 +1298,7 @@
           return '<label><input type="checkbox" data-perm="' + p[0] + '"' + (pm[p[0]] ? ' checked' : '') + '>' + esc(p[1]) + '</label>';
         }).join('') + '</div>' +
         qr.createSvgTag(4, 2) +
+        '<div class="no-print acct-line">' + (q.codeHash ? '🔑 Code gesetzt' + (Account.newCodes()[q.id] ? ': <b>' + esc(Account.newCodes()[q.id]) + '</b>' : '') : '⚠ noch kein Code') + ' <button class="btn-sm" data-gencode="' + esc(q.id) + '">' + (q.codeHash ? 'Neuen Code erzeugen' : 'Code erzeugen') + '</button></div>' +
         '<div class="no-print qr-links"><a href="' + esc(scanUrl(q)) + '" target="_blank" rel="noopener">Seite am PC testen ↗</a> ' +
         '<button class="btn-sm" data-card="' + esc(q.id) + '">Karte drucken</button> ' +
         '<button class="btn-sm btn-warn" data-del="' + esc(q.id) + '">Löschen</button></div></div>';
@@ -1213,6 +1321,7 @@
       (q.func ? '<div class="pc-func">' + esc(q.func) + '</div>' : '<div class="pc-func">&nbsp;</div>') +
       '<div class="pc-qr">' + qr.createSvgTag(4, 2) + '</div>' +
       '<div class="pc-scan">&#9654; MIT DER HANDY-KAMERA SCANNEN</div>' +
+      (Account.newCodes()[q.id] ? '<div class="pc-code">PC-CODE <b>' + esc(Account.newCodes()[q.id]) + '</b></div>' : '') +
       (dos ? '<ul class="pc-do">' + dos + '</ul>' : '') +
       '<div class="pc-bar"></div>' +
       '<div class="pc-foot"><span>ID-' + esc(String(q.id || '').slice(-6).toUpperCase()) + '</span><span>' + esc(location.host) + '</span></div>' +
@@ -1253,19 +1362,48 @@
     if (!name) return;
     var pre = PRESETS.filter(function (p) { return p[0] === $('qrPreset').value; })[0];
     var func = $('qrFunc').value.trim() || pre[2];
-    Store.setQr(Util.uid(), { name: name, func: func, t: Date.now(), perms: Object.assign({}, pre[3]) })
-      .catch(function () { toast('Speichern fehlgeschlagen'); });
+    var id = Util.uid(), code = Account.gen();
+    Account.hash(id, code).then(function (h) {
+      return Store.setQr(id, { name: name, func: func, t: Date.now(), perms: Object.assign({}, pre[3]), codeHash: h });
+    }).then(function () {
+      Account.rememberCode(id, code);
+      toast('Account angelegt, Code: ' + code);
+      renderQr(Store.get());
+    }).catch(function () { toast('Speichern fehlgeschlagen'); });
     $('qrName').value = ''; $('qrFunc').value = '';
   };
   $('qrGrid').onclick = function (e) {
     var b = e.target.closest('button[data-del]');
-    if (b && confirm('QR-Code löschen?')) Store.setQr(b.dataset.del, null).catch(function () { toast('Löschen fehlgeschlagen'); });
+    if (b && confirm('Account und QR-Code löschen?')) { Store.setQr(b.dataset.del, null).catch(function () { toast('Löschen fehlgeschlagen'); }); return; }
+    var g = e.target.closest('button[data-gencode]');
+    if (g) {
+      var q = Store.get().qrs[g.dataset.gencode];
+      if (q && q.codeHash && !confirm('Neuen Code erzeugen? Der alte Code gilt dann nicht mehr, angemeldete Geräte müssen sich neu anmelden.')) return;
+      var code = Account.gen();
+      Account.setCode(g.dataset.gencode, code).then(function () {
+        Account.rememberCode(g.dataset.gencode, code);
+        toast('Neuer Code: ' + code);
+        renderQr(Store.get());
+      }).catch(function () { toast('Speichern fehlgeschlagen'); });
+    }
+  };
+  // Codes für alle Accounts ohne Code erzeugen (einmalig anzeigen)
+  $('qrCodesAll').onclick = function () {
+    var st = Store.get(), todo = Object.keys(st.qrs).filter(function (id) { return !st.qrs[id].codeHash; });
+    if (!todo.length) { toast('Alle Accounts haben schon einen Code'); return; }
+    Promise.all(todo.map(function (id) {
+      var code = Account.gen();
+      return Account.setCode(id, code).then(function () { Account.rememberCode(id, code); return st.qrs[id].name + ': ' + code; });
+    })).then(function (lines) {
+      renderQr(Store.get());
+      window.alert('Neue Codes (nur jetzt sichtbar, auch auf den Karten beim Drucken):\n\n' + lines.join('\n'));
+    }).catch(function () { toast('Speichern fehlgeschlagen'); });
   };
   $('qrGrid').onchange = function (e) {
     var card = e.target.closest('.qr-card');
     var q = card && Store.get().qrs[card.dataset.id];
     if (!q) return;
-    var upd = { name: q.name, func: q.func || '', t: q.t, perms: permsOf(q) };
+    var upd = { name: q.name, func: q.func || '', t: q.t, perms: permsOf(q) };   // Code-Prüfwert und Einstellungen bleiben unberührt (updateQr mischt)
     var t = e.target;
     if (t.matches('input[data-f]')) {
       upd[t.dataset.f] = t.value.trim();
@@ -1282,7 +1420,7 @@
     }
     if (!upd.name) { toast('Name darf nicht leer sein'); renderQr(Store.get()); return; }
     if (!Object.keys(upd.perms).length) { toast('Mindestens eine Funktion auswählen'); renderQr(Store.get()); return; }
-    Store.setQr(card.dataset.id, upd).catch(function () { toast('Speichern fehlgeschlagen'); });
+    Store.updateQr(card.dataset.id, upd).catch(function () { toast('Speichern fehlgeschlagen'); });
   };
 
   // Podest-Auswahl für die Handys (Vorgabe aus js/config.js, bis hier etwas gespeichert wird)

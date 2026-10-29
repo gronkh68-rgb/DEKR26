@@ -457,3 +457,17 @@ body.cp-alert::before { content: ''; position: fixed; inset: 0; z-index: 98; poi
 #chats .chat-conv { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 #chats .chat-msgs { flex: 1; max-height: none; }
 .chat-list[hidden], .chat-conv[hidden] { display: none !important; }
+
+/* Account-Rechte am Dashboard: nicht erlaubte Bedienelemente verschwinden (zusätzlich wird der Klick abgefangen) */
+body.deny-d_status [data-p="d_status"], body.deny-d_close [data-p="d_close"], body.deny-d_plan [data-p="d_plan"],
+body.deny-d_orders [data-p="d_orders"], body.deny-d_problems [data-p="d_problems"], body.deny-d_send [data-p="d_send"],
+body.deny-admin [data-p="admin"] { display: none !important; }
+.acct-cover { z-index: 15; }
+.acct-line { font-size: 12px; margin: 4px 0; color: var(--dim); }
+.acct-line b { color: var(--accent); letter-spacing: .08em; }
+.pcard .pc-code { margin: 4px 0 8px; font-size: 12px; letter-spacing: .12em; color: #00f0ff; text-transform: uppercase; }
+.pcard .pc-code b { font-size: 16px; letter-spacing: .18em; color: #fcee09; }
+.pcard.light .pc-code, .pcard.light .pc-code b { color: #111; }
+.seg { display: flex; gap: 6px; margin-bottom: 8px; }
+.seg button { flex: 1; }
+.seg button.sel { background: var(--accent); color: #000; }

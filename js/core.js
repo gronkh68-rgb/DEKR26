@@ -303,7 +303,7 @@ window.Store = (function () {
   var state = norm(null);
   var subs = [];
   var es = null, esTimer = null, lockTimer = null;
-  var locked = false, offline = false, connected = false, label = '', requested = false, lastBeat = Date.now();
+  var locked = false, offline = false, connected = false, label = '', requested = false, lastBeat = Date.now(), loaded = false;
 
   function norm(s) {
     return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
@@ -415,7 +415,7 @@ window.Store = (function () {
 
   // Vollständiges Laden (Start, nach Fehlern, nach Freigabe)
   function refresh() {
-    if (!remote) { loadLocal(); emit(); return Promise.resolve(); }
+    if (!remote) { loadLocal(); loaded = true; emit(); return Promise.resolve(); }
     return api('/').then(function (r) {
       if (r.status === 401 || r.status === 403) { setLocked(true); return undefined; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -423,6 +423,7 @@ window.Store = (function () {
         raw = isObj(data) ? data : {};
         state = norm(raw);
         offline = false;
+        loaded = true;
         setLocked(false);
         emit();
       });
@@ -451,8 +452,8 @@ window.Store = (function () {
     }
     state = norm(raw); emit();
     var req, o0 = ops[0];
-    if (ops.length === 1) {
-      req = api('/' + o0.coll + '/' + o0.id, { method: o0.patch ? 'PATCH' : o0.val === null ? 'DELETE' : 'PUT', body: JSON.stringify(o0.val) });
+    if (ops.length === 1 && !o0.patch) {
+      req = api('/' + o0.coll + '/' + o0.id, { method: o0.val === null ? 'DELETE' : 'PUT', body: JSON.stringify(o0.val) });
     } else {
       var body = {};
       ops.forEach(function (o) {
@@ -503,6 +504,7 @@ window.Store = (function () {
     remote: remote,
     secure: remote && Auth.enabled,
     isLocked: function () { return locked; },
+    isLoaded: function () { return loaded; },
     isRequested: function () { return requested; },
     requestAccess: requestAccess,
     setSetting: function (k, v) { return one('settings', k, v); },
@@ -576,6 +578,7 @@ window.Store = (function () {
     // Nur einzelne Felder ändern (überschreibt keine gleichzeitigen Änderungen anderer Felder)
     updateTask: function (id, f) { return upd('tasks', id, f); },
     updateMsg: function (id, f) { return upd('msgs', id, f); },
+    updateQr: function (id, f) { return upd('qrs', id, f); },
     updateOrder: function (id, f) { return upd('orders', id, f); },
     updateProblem: function (id, f) { return upd('problems', id, f); },
     setTask: function (id, t) { return one('tasks', id, t); },

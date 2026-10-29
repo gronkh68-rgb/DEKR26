@@ -23,7 +23,15 @@
       ".write": "auth != null && auth.uid === 'ADMIN_UID'"
     },
     "qrs": {
-      ".write": "auth != null && auth.uid === 'ADMIN_UID'"
+      ".write": "auth != null && auth.uid === 'ADMIN_UID'",
+      "$qid": {
+        "codeHash": {
+          ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
+        },
+        "prefs": {
+          ".write": "auth != null && root.child('devices').child(auth.uid).child('ok').val() === true"
+        }
+      }
     },
     "podests": {
       ".write": "auth != null && auth.uid === 'ADMIN_UID'"
