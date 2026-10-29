@@ -76,6 +76,8 @@ window.Auth = (function () {
   var st = {};
   try { st = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { st = {}; }
   var idToken = '', exp = 0, pending = null;
+  // Speicher dauerhaft anfordern: der Browser soll die Geräte-Anmeldung nicht von sich aus löschen
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignorieren */ }
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* ignorieren */ } }
   function post(url, body, form) {
@@ -101,7 +103,10 @@ window.Auth = (function () {
   function fresh() {
     if (st.refresh) {
       return post('https://securetoken.googleapis.com/v1/token?key=' + key,
-        'grant_type=refresh_token&refresh_token=' + encodeURIComponent(st.refresh), true).then(adopt).catch(function () {
+        'grant_type=refresh_token&refresh_token=' + encodeURIComponent(st.refresh), true).then(adopt).catch(function (e) {
+        // Nur wenn Firebase das Token ausdrücklich ablehnt, entsteht ein neues Gerät (neue Freigabe nötig).
+        // Netzfehler (z.B. morgens beim Aufwachen ohne Verbindung) oder Serverfehler behalten das Gerät: später erneut versuchen.
+        if (!/TOKEN_EXPIRED|INVALID_REFRESH_TOKEN|USER_NOT_FOUND|USER_DISABLED|MISSING_REFRESH_TOKEN/.test(String(e && e.message))) throw e;
         st = {}; save();
         return post('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + key, { returnSecureToken: true }).then(adopt);
       });
