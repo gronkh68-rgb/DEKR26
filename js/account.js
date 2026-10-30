@@ -1,10 +1,9 @@
-// Accounts: Der Admin legt Accounts an. Jeder Account bekommt einen Startcode (Format XXXX-XXXX) und einen QR-Code zum Profil.
+// Accounts: Der Admin legt Accounts an. Jeder Account bekommt einen Startcode (8 Ziffern, ohne Bindestrich) und einen QR-Code zum Profil.
 // Beim ersten Anmelden legt die Person einen eigenen 6-stelligen Code fest. Der Code wird nur als Prüfwert (SHA-256) gespeichert.
 // Das ist eine Kennung, kein starkes Passwort: Gegen Fremde schützt die Geräte-Freigabe, Admin-Zugang läuft über E-Mail und Passwort.
 window.Account = (function () {
   'use strict';
   var SESSION = 'dekr26_account', NEWCODES = 'dekr26_newcodes', FAILS = 'dekr26_loginfails', CODEV = 2;
-  var ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // ohne 0/O/1/I/L
 
   // Dashboard: nur zwei Stufen. Ohne Haken wird es nur angesehen, mit Haken „dashEdit“ darf man alles bearbeiten (die Chats gehören nicht dazu).
   var DPERMS = [['dashEdit', 'Dashboard bearbeiten (ohne Haken: nur ansehen)']];
@@ -16,13 +15,13 @@ window.Account = (function () {
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignorieren */ } }
   function norm(c) { return String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
-  function format(c) { c = norm(c); return c.length > 4 ? c.slice(0, 4) + '-' + c.slice(4) : c; }
+  function format(c) { return norm(c); }   // keine Trennzeichen; ältere Startcodes mit Buchstaben und Bindestrich bleiben beim Eingeben gültig
 
   function gen() {
-    var out = '', a = new Uint8Array(8);
+    var out = '', a = new Uint8Array(32);
     (window.crypto || window.msCrypto).getRandomValues(a);
-    for (var i = 0; i < 8; i++) out += ALPHA.charAt(a[i] % ALPHA.length);
-    return format(out);
+    for (var i = 0; i < a.length && out.length < 8; i++) if (a[i] < 250) out += a[i] % 10;   // ab 250 verwerfen, damit jede Ziffer gleich wahrscheinlich ist
+    return out;
   }
   // Prüfwert des Codes. Gleiche Codes ergeben gleiche Werte; deshalb ist jeder Code nur einmal vergebbar.
   function hash(code) {

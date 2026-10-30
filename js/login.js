@@ -69,7 +69,7 @@
     var none = !locked && !Account.accounts(state).some(Account.usable);
     setStep('code:' + who + ':' + none + ':' + locked, '<div class="lgn-prompt">&gt; ' + (who ? 'KONTO: ' + esc(who.toUpperCase()) : 'ZUGANGSCODE') + '<span class="lgn-cur"></span></div>' +
       (none ? '<p class="lgn-p">Es gibt noch keine Accounts. Der Admin legt sie an.</p>' : '') +
-      '<form id="lgnF" autocomplete="off"><input id="lgnCode" class="lgn-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="______" aria-label="Code">' +
+      '<form id="lgnF" autocomplete="off"><input id="lgnCode" class="lgn-code" autocomplete="off" inputmode="numeric" pattern="[0-9]*" spellcheck="false" maxlength="12" placeholder="________" aria-label="Code">' +
       '<input id="lgnZg" class="lgn-in" placeholder="Zugangscode des Betriebs" autocomplete="off" value="' + esc(urlKey) + '"' + (urlKey ? '' : ' hidden') + '>' +
       '<button class="lgn-btn">ANMELDEN</button></form><div class="lgn-err" id="lgnErr"></div>' +
       '<div class="lgn-links"><a href="#" id="lgnZgL" class="lgn-link"' + (urlKey ? ' hidden' : '') + '>ZUGANGSCODE DES BETRIEBS</a><a href="#" id="lgnGuest" class="lgn-link">OHNE CODE: ALS GAST ANFRAGEN</a><a href="#" id="lgnAdm" class="lgn-link">ADMIN-ANMELDUNG</a></div>', function () {

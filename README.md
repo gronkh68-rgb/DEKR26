@@ -84,7 +84,7 @@ aus den Maßen). Flach drucken, Rückseite aufs Bett, ohne Stützen. Kartenmaße
 
 Die Seite öffnet immer mit einer **Anmeldeseite** (Cyberpunk-Stil). **Der Account-Code ist die Freigabe**: Wer einen gültigen Code eingibt, kommt direkt hinein.
 
-1. **Accounts anlegen (Admin):** Unter **„Accounts“** entstehen Accounts. Jeder bekommt einen **Startcode** (`XXXX-XXXX`, nur einmal sichtbar) und einen
+1. **Accounts anlegen (Admin):** Unter **„Accounts“** entstehen Accounts. Jeder bekommt einen **Startcode** (8 Ziffern, nur einmal sichtbar) und einen
    **QR-Code zum Profil** (`index.html?p=ID`). „Karte drucken“ zeigt beides.
 2. **Code eingeben:** Das Gerät schlägt den Code-Prüfwert unter `logins/<Prüfwert>` nach, trägt sich selbst als freigegeben ein (mit Account und Platz PC oder Handy)
    und belegt den Platz. Danach legt die Person beim ersten Mal einen **eigenen 6-stelligen Code (Ziffern)** fest. Jeder Code ist nur einmal vergebbar.
