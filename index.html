@@ -170,17 +170,25 @@
 <div class="modal" id="impModal" hidden>
   <div class="modal-box">
     <div class="col-title orb"><span>KR importieren</span><button class="btn-sm" id="impClose">Schließen</button></div>
-    <div class="empty"><a href="mipp.html" target="_blank" rel="noopener">MIPP-Lesezeichen einrichten</a> – holt die Liste mit einem Klick aus MIPP hierher.</div>
-    <div class="empty">Tabelle auf der Arbeitsseite kopieren und hier einfügen. Danach über jeder Spalte wählen, was sie ist. Nicht gewählte Spalten werden nicht übernommen.</div>
-    <textarea id="impText" rows="6" placeholder="Hier einfügen (Strg+V)"></textarea>
+    <div class="empty">Liste in MIPP markieren und kopieren, dann hier einfügen oder auf „Aus Zwischenablage" klicken. Das Format wird erkannt, übernommen werden nur KR, Tag, Position, Lieferumfang und USA. <a href="mipp.html" target="_blank" rel="noopener">MIPP-Lesezeichen</a> holt die Liste mit einem Klick.</div>
     <div class="qr-add">
-      <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="impHead" checked> Erste Zeile ist Überschrift</label>
+      <button class="btn-main" id="impPaste" type="button">Aus Zwischenablage einlesen</button>
       <label style="display:flex;align-items:center;gap:6px">Standard-Tag <select id="impDay"></select></label>
     </div>
-    <div class="imp-wrap" id="impPreview"></div>
+    <textarea id="impText" rows="3" placeholder="Oder hier einfügen (Strg+V)"></textarea>
+    <div class="empty" id="impInfo"></div>
+    <div class="imp-wrap" id="impList"></div>
     <div id="impDiff"></div>
     <label id="impDropRow" class="no-print" hidden style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="impDrop"> Entfallene KR (nicht erledigt) entfernen</label>
-    <div class="empty" id="impInfo"></div>
+    <details id="impAdv">
+      <summary>Kurzformat und Spalten (erweitert)</summary>
+      <div class="empty">Kurzformat: eine Zeile je KR, getrennt mit Semikolon: <code>KR;Datum;Halle;Position;Lieferumfang;Land</code>. Es lässt sich hier wieder einfügen und einlesen.</div>
+      <textarea id="impShort" rows="5" readonly></textarea>
+      <div class="qr-add"><button class="btn-sm" id="impCopyShort" type="button">Kurzformat kopieren</button>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="impHead" checked> Erste Zeile ist Überschrift</label></div>
+      <div class="empty">Andere Tabellen: über jeder Spalte wählen, was sie ist.</div>
+      <div class="imp-wrap" id="impPreview"></div>
+    </details>
     <button class="btn-main" id="impGo" disabled>Importieren</button>
   </div>
 </div>

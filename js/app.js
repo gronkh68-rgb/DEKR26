@@ -1169,7 +1169,7 @@
     var head = $('impHead').checked;
     if (!n) {
       imp.cols = []; $('impPreview').innerHTML = ''; $('impGo').disabled = true; $('impInfo').textContent = '';
-      $('impDiff').innerHTML = ''; $('impDropRow').hidden = true; return;
+      $('impDiff').innerHTML = ''; $('impList').innerHTML = ''; $('impShort').value = ''; $('impDropRow').hidden = true; return;
     }
     if (imp.cols.length !== n) imp.cols = autoCols(rows, n, head);
     var html = '<table class="imp"><tr>' + imp.cols.map(function (v, c) {
@@ -1185,7 +1185,7 @@
     $('impPreview').innerHTML = html + '</table>';
     var ok = imp.cols.indexOf('kr') >= 0;
     $('impGo').disabled = !ok;
-    if (!ok) { $('impInfo').textContent = 'Bitte über der KR-Spalte „KR" wählen.'; $('impDiff').innerHTML = ''; return; }
+    if (!ok) { $('impAdv').open = true; $('impInfo').textContent = 'Format nicht erkannt. Bitte unter „erweitert" über der KR-Spalte „KR" wählen.'; $('impDiff').innerHTML = ''; $('impList').innerHTML = ''; $('impShort').value = ''; return; }
     var c = collect(), weeks = {};
     c.items.forEach(function (x) { weeks[x.week] = 1; });
     $('impInfo').textContent = c.items.length + ' KR (' + Object.keys(weeks).sort().map(function (w) { return kwText(w) + ' ' + Util.dayDate(w, 1) + '–' + Util.dayDate(w, 5); }).join(', ') + ') · ' +
@@ -1193,8 +1193,52 @@
       c.items.filter(function (x) { return x.usa; }).length + ' USA' +
       (rows.multi ? ' · ' + rows.multi + ' mit mehreren Spots (erster wird genommen)' : '') +
       ' · nicht gewählte Spalten werden verworfen.';
-    renderDiff(diffItems(c.items));
+    var d = diffItems(c.items);
+    renderDiff(d);
+    renderList(c.items);
+    $('impShort').value = shortText(c.items);
   }
+  // Kurzformat: nur das Wichtigste, eine Zeile je KR. Wird beim Einfügen wieder erkannt (Überschrift wie unten).
+  var SHORT_HEAD = 'KR;Datum;Halle;Position;Lieferumfang;Land';
+  function fullDate(w, d) {
+    var m = Util.mondayOf(w), p = function (x) { return (x < 10 ? '0' : '') + x; };
+    m.setDate(m.getDate() + d - 1);
+    return p(m.getDate()) + '.' + p(m.getMonth() + 1) + '.' + m.getFullYear();
+  }
+  function hallShort(x) {
+    var id = x.from ? '' : (x.hall || x.hallEff), h = id ? Halls.get(id) : null;
+    return x.from || (h && h.short) || Halls.all[0].short;
+  }
+  function shortText(items) {
+    if (!items.length) return '';
+    return [SHORT_HEAD].concat(items.map(function (x) {
+      return [x.kr, fullDate(x.week, x.day), hallShort(x), x.pos, x.scope, x.usa ? 'US' : ''].join(';');
+    })).join('\n');
+  }
+  function renderList(items) {
+    var MAX = 60;
+    var head = '<tr><th>KR</th><th>Tag</th><th>Position</th><th>Umfang</th><th>Status</th></tr>';
+    var rowsH = items.slice(0, MAX).map(function (x) {
+      var st = [x.how === 'neu' ? 'neu' : x.how === 'gleich' ? '' : x.how, x.usa ? 'USA' : '', x.from ? 'aus Halle ' + x.from : ''].filter(Boolean).join(', ');
+      return '<tr><td><b>' + esc(x.kr) + '</b></td><td>' + esc(dayText(x.week, x.day)) + '</td><td>' + esc(x.from ? '–' : posText(x.hallEff, x.pos)) +
+        '</td><td>' + esc(x.scope || '–') + '</td><td>' + esc(st || 'unverändert') + '</td></tr>';
+    }).join('');
+    $('impList').innerHTML = items.length ? '<table class="imp">' + head + rowsH + '</table>' + (items.length > MAX ? '<div class="empty">… und ' + (items.length - MAX) + ' weitere</div>' : '') : '';
+  }
+  $('impPaste').onclick = function () {
+    var fail = function () { toast('Zwischenablage nicht lesbar – bitte im Feld mit Strg+V einfügen'); try { $('impText').focus(); } catch (e) { /* ignorieren */ } };
+    try {
+      navigator.clipboard.readText().then(function (t) {
+        if (!t || !t.trim()) { toast('Zwischenablage ist leer'); return; }
+        $('impText').value = t; imp.cols = []; renderImp();
+      }, fail);
+    } catch (e) { fail(); }
+  };
+  $('impCopyShort').onclick = function () {
+    var t = $('impShort').value;
+    if (!t) return;
+    try { navigator.clipboard.writeText(t).then(function () { toast('Kurzformat kopiert'); }, function () { $('impShort').select(); }); } catch (e) { $('impShort').select(); }
+  };
   $('impOpen').onclick = function () { $('impModal').hidden = false; };
   $('impClose').onclick = function () { $('impModal').hidden = true; };
   $('impText').oninput = function () { imp.cols = []; renderImp(); };
