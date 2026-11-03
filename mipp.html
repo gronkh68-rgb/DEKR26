@@ -15,14 +15,14 @@
 <div class="mobile" style="max-width:760px;margin:0 auto;padding:16px">
   <h1>MIPP-Lesezeichen</h1>
   <div class="card" style="padding:14px;display:grid;gap:10px">
-    <div><b>Was es macht:</b> Du öffnest die Auslieferliste in MIPP (mit deinem normalen Login) und klickst das Lesezeichen. Es <b>liest nur</b>, was auf der Seite steht, und schickt den Text an das Dashboard. Dort öffnet sich der Import mit der Vorschau. Gespeichert wird erst, wenn du dort auf „Importieren" klickst. Es werden keine Zugangsdaten gelesen oder gesendet, und es wird nichts in MIPP verändert.</div>
+    <div><b>Was es macht:</b> Du öffnest die Auslieferliste in MIPP (mit deinem normalen Login) und klickst das Lesezeichen. Es <b>liest nur</b>, was auf der Seite steht, behält das Wichtigste (KR, Datum, Halle, Position, Lieferumfang, USA) und zeigt es in einem neuen Fenster im Kurzformat. Dort kopierst du den Text. Es wird nichts gesendet und keine Verbindung zum Dashboard gebraucht.</div>
     <div><b>1. Lesezeichen anlegen</b> – diesen Knopf mit der Maus in die Lesezeichenleiste ziehen:</div>
     <div><a id="bm" class="btn-main" style="display:inline-block;padding:10px 16px;text-decoration:none;cursor:grab" href="#">KR aus MIPP holen</a></div>
     <div class="empty">Geht Ziehen nicht (z. B. gesperrte Leiste): Neues Lesezeichen anlegen, als Adresse den Code unten einfügen.</div>
     <div class="qr-add"><button type="button" class="btn-sm" id="copyBm">Code kopieren</button><span class="empty" id="copyInfo"></span></div>
     <textarea id="bmCode" rows="4" readonly style="font-size:11px"></textarea>
-    <div><b>2. Benutzen:</b> Dashboard in einem Tab offen lassen oder neu öffnen. In MIPP die Auslieferliste öffnen, Lesezeichen klicken. Es öffnet sich ein neuer Tab mit dem Import.</div>
-    <div class="empty">Wenn MIPP Lesezeichen-Skripte blockiert oder der neue Tab nichts empfängt, kopiert das Lesezeichen den Text stattdessen in die Zwischenablage. Dann im Import mit Strg+V einfügen. Notfalls wie bisher die Tabelle markieren, kopieren und einfügen.</div>
+    <div><b>2. Benutzen:</b> In MIPP die Auslieferliste öffnen (oder die Zeilen markieren), Lesezeichen klicken. Im neuen Fenster „Alles kopieren“ klicken. Danach im Dashboard (egal in welchem Browser) <b>Import</b> öffnen und mit „Aus Zwischenablage einlesen“ oder Strg+V einfügen.</div>
+    <div class="empty">Wird das neue Fenster blockiert, erscheint der Text stattdessen als Fenster über der MIPP-Seite. Blockiert MIPP Lesezeichen-Skripte ganz, die Tabelle wie bisher markieren, kopieren und im Import einfügen.</div>
     <div><a href="index.html">← Zum Dashboard</a></div>
   </div>
 </div>
