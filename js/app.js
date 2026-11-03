@@ -993,7 +993,7 @@
       var sc = indexWhere(rec, /^(komplett|maschine|schrumpftunnel)/i, c >= 0 ? c + 2 : krI + 1);
       var dt = /^\d{1,2}\.\d{1,2}\.(\d{4}|\d{2})$/.test(rec[4] || '') ? 4 : -1;   // Datum steht direkt hinter dem Wochentag
       rows.push([rec[krI], rec[1], rec[2], rec[3], dt >= 0 ? rec[dt] : '', R[0] || '', k ? R[k] : '', k ? R[2 * k] : '', sc >= 0 ? rec[sc] : '',
-        c >= 0 ? rec[c] : '']);
+        rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c] : '')]);
     });
     return rows;
   }
