@@ -59,7 +59,7 @@
       if (dm) date = pad(+dm[1]) + '.' + pad(+dm[2]) + '.' + (+dm[3] < 100 ? 2000 + +dm[3] : dm[3]);
       else date = dateOf(+rec[1], +rec[2], DAYS[rec[3].toLowerCase()]);
       seen[kr] = 1;
-      out.push([kr, date, hall, pos, scope, rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : ''].join(';'));
+      out.push([kr, date, hall, pos, scope, rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c] : '')].join(';'));
     });
     var count = out.length - 1, text = starts.length ? out.join('\n') : lines.join('\n');
     var info = !starts.length ? 'Format nicht erkannt: es folgt der gelesene Rohtext (' + lines.length + ' Zellen).' :

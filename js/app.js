@@ -1083,7 +1083,8 @@
         if (dd.getDay() >= 1 && dd.getDay() <= 5) day = dd.getDay();
       }
     }
-    return { week: week, kr: kr, day: day, hall: hall, pos: pos, scope: scope, usa: usa, from: from };
+    var cc = (g('country').trim().toUpperCase().match(/^[A-Z]{2,3}$/) || [''])[0];
+    return { week: week, kr: kr, day: day, hall: hall, pos: pos, scope: scope, usa: usa, from: from, country: usa ? 'US' : cc };
   }
   function roleIdx() {
     var ci = {};
@@ -1212,16 +1213,16 @@
   function shortText(items) {
     if (!items.length) return '';
     return [SHORT_HEAD].concat(items.map(function (x) {
-      return [x.kr, fullDate(x.week, x.day), hallShort(x), x.pos, x.scope, x.usa ? 'US' : ''].join(';');
+      return [x.kr, fullDate(x.week, x.day), hallShort(x), x.pos, x.scope, x.country || ''].join(';');
     })).join('\n');
   }
   function renderList(items) {
     var MAX = 60;
-    var head = '<tr><th>KR</th><th>Tag</th><th>Position</th><th>Umfang</th><th>Status</th></tr>';
+    var head = '<tr><th>KR</th><th>Tag</th><th>Position</th><th>Umfang</th><th>Land</th><th>Status</th></tr>';
     var rowsH = items.slice(0, MAX).map(function (x) {
       var st = [x.how === 'neu' ? 'neu' : x.how === 'gleich' ? '' : x.how, x.usa ? 'USA' : '', x.from ? 'aus Halle ' + x.from : ''].filter(Boolean).join(', ');
       return '<tr><td><b>' + esc(x.kr) + '</b></td><td>' + esc(dayText(x.week, x.day)) + '</td><td>' + esc(x.from ? '–' : posText(x.hallEff, x.pos)) +
-        '</td><td>' + esc(x.scope || '–') + '</td><td>' + esc(st || 'unverändert') + '</td></tr>';
+        '</td><td>' + esc(x.scope || '–') + '</td><td>' + esc(x.country || '–') + '</td><td>' + esc(st || 'unverändert') + '</td></tr>';
     }).join('');
     $('impList').innerHTML = items.length ? '<table class="imp">' + head + rowsH + '</table>' + (items.length > MAX ? '<div class="empty">… und ' + (items.length - MAX) + ' weitere</div>' : '') : '';
   }
