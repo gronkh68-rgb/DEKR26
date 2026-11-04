@@ -8,7 +8,7 @@
   var recent = [];
   try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { recent = []; }
   var PERM_KEYS = ['report', 'order', 'podest', 'solve', 'status', 'dash', 'ueber', 'kisten'];
-  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash', 'kisten', 'chat'];
+  var VIEWS = ['beipack', 'podest', 'ueber', 'orders', 'problems', 'dash', 'kisten', 'chat', 'admin'];
 
   // Name, Funktion und Rechte kommen vom QR-Code (?q=ID, im Dashboard gepflegt).
   // n/f/p im Link sind nur Rückfall, falls die Daten nicht aus der Datenbank kommen.
@@ -45,6 +45,7 @@
     el.classList.add('show');
     setTimeout(function () { el.classList.remove('show'); }, 3500);
   }
+  AdminM.setToast(toast);
   function fail() { toast('Fehler – bitte erneut versuchen', true); }
   function renderRecent() {
     $('hist').innerHTML = recent.length
@@ -499,6 +500,7 @@
     v.push(['dash', p.dash ? 'Dashboard' : 'Karte & KR']);   // Karte und KR-Listen sind für alle da, die Meldungen nur für Dashboard-Accounts
     if (p.kisten) v.push(['kisten', 'Kisten K2 / K5']);
     v.push(['chat', 'Messenger']);   // für alle QR-Codes immer aktiv
+    if (Account.isAdmin()) v.push(['admin', 'Admin']);
     return v;
   }
   function renderMenu() {
@@ -526,6 +528,7 @@
     view = b.dataset.view;
     renderMenu(); renderLists(); renderMobMap(Store.get());
     if (chatUi && view === 'chat') chatUi.render(Store.get());
+    if (view === 'admin') AdminM.render($('v-admin'), Store.get());
   };
 
   // ---------- Beipack ----------
@@ -823,6 +826,7 @@
     setupChat();
     if (chatUi && view === 'chat') chatUi.render(state);
     fixDashTabs();
+    if (view === 'admin' && Account.isAdmin()) AdminM.render($('v-admin'), state);
     renderDash(state);
     renderMobMap(state);
     watchDone(state);

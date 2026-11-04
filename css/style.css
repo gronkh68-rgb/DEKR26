@@ -503,3 +503,11 @@ body.cp-sb #verTag { bottom: 28px; }
 .mm-days, .mm-st { display: flex; gap: 4px; } .mm-days button, .mm-st button { flex: 1; padding: 5px 2px; } .mm-days small { display: block; font-size: 10px; opacity: .7; }
 .mm-days .sel, .mm-st .sel { background: var(--accent); color: #000; border-color: var(--accent); } .mm-days .today:not(.sel) { border-color: var(--accent); }
 #updBar { left: 10px; right: 10px; transform: none; max-width: none; } #updBar #updTxt { flex: 1; min-width: 0; } #updBar button { white-space: nowrap; }
+
+/* Admin im mobilen Dashboard */
+.adm-acc { border: 1px solid var(--line); background: var(--panel); margin-bottom: 8px; }
+.adm-acc summary { padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.adm-acc summary small { color: var(--dim); }
+.adm-st { margin-left: auto; font-size: 12px; color: var(--dim); }
+.adm-body { padding: 0 12px 12px; display: grid; gap: 6px; }
+.adm-body .perms { margin: 4px 0 8px; font-size: 13px; }
