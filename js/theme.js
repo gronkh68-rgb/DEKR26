@@ -40,7 +40,16 @@
     if (pn && t !== 'cp') pn.hidden = true;
   }
   apply(get());
-  var bootDue = get() === 'cp' && !flag('dekr-fxlow');   // bei jedem Laden
+  // Die Startanimation läuft nur noch, wenn die letzte mehr als 6 Stunden her ist (Schalter „immer zeigen“ im Farb-Fenster)
+  function bootWanted() {
+    if (get() !== 'cp' || flag('dekr-fxlow')) return false;
+    var now = Date.now(), last = 0;
+    try { last = +localStorage.getItem('dekr-bootat') || 0; } catch (e) { last = 0; }
+    if (!flag('dekr-bootall') && now - last < 6 * 3600 * 1000) return false;
+    try { localStorage.setItem('dekr-bootat', String(now)); } catch (e) { /* ignorieren */ }
+    return true;
+  }
+  var bootDue = bootWanted();
   if (bootDue) document.documentElement.classList.add('cp-boot');
   document.addEventListener('DOMContentLoaded', function () {
     var host = document.querySelector('.top') || document.querySelector('.sub') || document.body;
@@ -67,6 +76,7 @@
       return '<button type="button" class="cc-sw" data-a="' + p[2] + '" data-b="' + p[3] + '" title="' + p[1] + '"><i style="background:' + p[2] + '"></i><i style="background:' + p[3] + '"></i><span>' + p[1] + '</span></button>';
     }).join('') + '</div><div class="cc-own"><label>Hauptfarbe <input type="color" id="ccA"></label><label>Nebenfarbe <input type="color" id="ccB"></label></div>' +
       '<label class="cc-chk"><input type="checkbox" id="ccLens"> Linseneffekt (Farbsäume, leichte Wölbung)</label>' +
+      '<label class="cc-chk"><input type="checkbox" id="ccBoot"> Startanimation bei jedem Laden zeigen (sonst alle 6 Stunden)</label>' +
       '<label class="cc-chk"><input type="checkbox" id="ccFx"> Weniger Effekte (ruhiger, für schwache Geräte)</label>' +
       '<button type="button" class="cc-reset" id="ccReset">Zurücksetzen</button>';
     document.body.appendChild(pn);
@@ -74,7 +84,7 @@
       try { localStorage.setItem(CKEY, JSON.stringify({ a: a, b: b })); } catch (e) { /* nur für diese Sitzung */ }
       applyColors(get() === 'cp'); sync();
     }
-    function sync() { var c = getColors(); pn.querySelector('#ccA').value = c.a; pn.querySelector('#ccB').value = c.b; pn.querySelector('#ccLens').checked = flag('dekr-lens'); pn.querySelector('#ccFx').checked = flag('dekr-fxlow'); }
+    function sync() { var c = getColors(); pn.querySelector('#ccA').value = c.a; pn.querySelector('#ccB').value = c.b; pn.querySelector('#ccLens').checked = flag('dekr-lens'); pn.querySelector('#ccBoot').checked = flag('dekr-bootall'); pn.querySelector('#ccFx').checked = flag('dekr-fxlow'); }
     cb.onclick = function () { sync(); pn.hidden = !pn.hidden; };
     pn.addEventListener('click', function (e) {
       var sw = e.target.closest('.cc-sw');
@@ -83,6 +93,7 @@
     });
     pn.addEventListener('input', function (e) {
       if (e.target.id === 'ccLens') { setFlag('dekr-lens', e.target.checked); apply(get()); }
+      if (e.target.id === 'ccBoot') setFlag('dekr-bootall', e.target.checked);
       if (e.target.id === 'ccFx') { setFlag('dekr-fxlow', e.target.checked); apply(get()); }
       if (e.target.id === 'ccA' || e.target.id === 'ccB') save(pn.querySelector('#ccA').value, pn.querySelector('#ccB').value);
     });
@@ -107,7 +118,7 @@
   function on() { return get() === 'cp' && !flag('dekr-fxlow'); }
   function $(id) { return document.getElementById(id); }
 
-  // 1: Hacking-Animation bei jedem Laden (ca. 4,5 s, mit Klick oder Taste überspringbar; „Weniger Effekte“ schaltet sie ab)
+  // 1: Hacking-Animation (ca. 3 s, höchstens alle 6 Stunden, oder immer mit Schalter; mit Klick oder Taste überspringbar; „Weniger Effekte“ schaltet sie ab)
   function boot() {
     var root = document.documentElement;
     if (!bootDue) return;
