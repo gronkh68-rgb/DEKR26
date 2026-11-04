@@ -36,7 +36,7 @@
     for (j = 0; j + 3 < lines.length; j++) {
       if (/^\d+$/.test(lines[j]) && /^20\d\d$/.test(lines[j + 1]) && /^\d{1,2}$/.test(lines[j + 2]) && DAYS[lines[j + 3].toLowerCase()]) starts.push(j);
     }
-    var out = ['KR;Datum;Halle;Position;Lieferumfang;Land'], seen = {}, other = 0, noScope = 0, bad = 0, multi = 0;
+    var out = ['KR;Datum;Halle;Position;Lieferumfang;Land'], seen = {}, other = 0, noScope = 0, noLand = 0, bad = 0, multi = 0;
     starts.forEach(function (s, i) {
       var rec = lines.slice(s, i + 1 < starts.length ? starts[i + 1] : lines.length);
       var t = idx(rec, /Uhr$/), seg = idx(rec, /^\d{5}$/, t + 1), krI = seg < 0 ? -1 : idx(rec, /^KR[0-9A-Z]+$/i, seg);
@@ -46,7 +46,7 @@
       var R = rec.slice(a, seg), k = R.length % 3 === 0 ? R.length / 3 : 0;
       if (k > 1) multi++;
       var hall = (R[0] || '').split('.')[0], num = k ? R[k] : '', letter = k ? R[2 * k] : '';
-      var c = idx(rec, /^[A-Z]{2}$/, krI + 1), sc = idx(rec, /^(komplett|maschine|schrumpftunnel)/i, c >= 0 ? c + 2 : krI + 1);
+      var c = idx(rec, /^[A-Za-z]{2}(?:$|[\s\-–:,(])/, krI + 1), sc = idx(rec, /^(komplett|maschine|schrumpftunnel)/i, c >= 0 ? c + 2 : krI + 1);
       var kr = rec[krI].toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^KR/, '');
       if (seen[kr]) return;
       var low = sc >= 0 ? rec[sc].toLowerCase() : '', scope = /schrumpf/.test(low) ? '' : /komplett/.test(low) ? 'komplett' : /maschine/.test(low) ? 'Maschine' : '';
@@ -59,11 +59,12 @@
       if (dm) date = pad(+dm[1]) + '.' + pad(+dm[2]) + '.' + (+dm[3] < 100 ? 2000 + +dm[3] : dm[3]);
       else date = dateOf(+rec[1], +rec[2], DAYS[rec[3].toLowerCase()]);
       seen[kr] = 1;
-      out.push([kr, date, hall, pos, scope, rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c] : '')].join(';'));
+      out.push([kr, date, hall, pos, scope, rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c].slice(0, 2).toUpperCase() : '')].join(';'));
+      if (c < 0) noLand++;
     });
     var count = out.length - 1, text = starts.length ? out.join('\n') : lines.join('\n');
     var info = !starts.length ? 'Format nicht erkannt: es folgt der gelesene Rohtext (' + lines.length + ' Zellen).' :
-      count + ' KR im Kurzformat · ' + other + ' andere Halle ausgeblendet · ' + noScope + ' ohne Maschine/komplett ausgeblendet' + (bad ? ' · ' + bad + ' Einträge nicht lesbar' : '') + (multi ? ' · ' + multi + ' mit mehreren Spots (erster)' : '');
+      count + ' KR im Kurzformat · ' + other + ' andere Halle ausgeblendet · ' + noScope + ' ohne Maschine/komplett ausgeblendet' + (noLand ? ' · ' + noLand + ' ohne erkannten Ländercode' : '') + (bad ? ' · ' + bad + ' Einträge nicht lesbar' : '') + (multi ? ' · ' + multi + ' mit mehreren Spots (erster)' : '');
     function show(d, root, closer) {
       function el(tag, css, txt) { var e = d.createElement(tag); e.style.cssText = css || ''; if (txt) e.textContent = txt; root.appendChild(e); return e; }
       var BTN = 'font:700 13px monospace;letter-spacing:.1em;text-transform:uppercase;padding:10px 18px;border:1px solid #fcee09;background:#fcee09;color:#000;cursor:pointer;margin:0 8px 8px 0';

@@ -989,11 +989,11 @@
       while (a < seg && !/^\d{1,2}(\.\d)?$/.test(rec[a])) a++;
       var R = rec.slice(a, seg), k = R.length % 3 === 0 ? R.length / 3 : 0;
       if (k > 1) rows.multi++;
-      var c = indexWhere(rec, /^[A-Z]{2}$/, krI + 1);
+      var c = indexWhere(rec, /^[A-Za-z]{2}(?:$|[\s\-–:,(])/, krI + 1);
       var sc = indexWhere(rec, /^(komplett|maschine|schrumpftunnel)/i, c >= 0 ? c + 2 : krI + 1);
       var dt = /^\d{1,2}\.\d{1,2}\.(\d{4}|\d{2})$/.test(rec[4] || '') ? 4 : -1;   // Datum steht direkt hinter dem Wochentag
       rows.push([rec[krI], rec[1], rec[2], rec[3], dt >= 0 ? rec[dt] : '', R[0] || '', k ? R[k] : '', k ? R[2 * k] : '', sc >= 0 ? rec[sc] : '',
-        rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c] : '')]);
+        rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c].slice(0, 2).toUpperCase() : '')]);
     });
     return rows;
   }
