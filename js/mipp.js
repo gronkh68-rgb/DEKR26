@@ -8,16 +8,24 @@
     var OWN = ['6', '7'], FROM = '3';
     var lines = [], sel = String(window.getSelection ? getSelection() : '');
     function add(t) { String(t).split(/\r?\n|\t/).forEach(function (x) { x = x.trim(); if (x) lines.push(x); }); }
+    var best = null;
     if (sel.trim()) add(sel);
     else {
-      var best = null, n = 0;
+      var n = 0;
       [].forEach.call(document.querySelectorAll('table'), function (t) {
         var c = t.querySelectorAll('tr').length;
         if (c > n) { n = c; best = t; }
       });
-      if (best) [].forEach.call(best.querySelectorAll('tr'), function (r) {
-        [].forEach.call(r.children, function (c) { add(c.innerText || c.textContent); });
-      });
+      if (best) {
+        try {
+          var g = window.getSelection(), rg = document.createRange();
+          rg.selectNodeContents(best); g.removeAllRanges(); g.addRange(rg);
+          add(String(g)); g.removeAllRanges();
+        } catch (e) { lines = []; }
+        if (!lines.length) [].forEach.call(best.querySelectorAll('tr'), function (r) {
+          [].forEach.call(r.children, function (c) { add(c.innerText || c.textContent); });
+        });
+      }
       else add(document.body.innerText);
     }
     if (!lines.length) { alert('Nichts zum Übernehmen gefunden. Bitte die Auslieferliste öffnen.'); return; }
@@ -36,7 +44,7 @@
     for (j = 0; j + 3 < lines.length; j++) {
       if (/^\d+$/.test(lines[j]) && /^20\d\d$/.test(lines[j + 1]) && /^\d{1,2}$/.test(lines[j + 2]) && DAYS[lines[j + 3].toLowerCase()]) starts.push(j);
     }
-    var out = ['KR;Datum;Halle;Position;Lieferumfang;Land'], seen = {}, other = 0, noScope = 0, noLand = 0, bad = 0, multi = 0;
+    var dbg = '', out = ['KR;Datum;Halle;Position;Lieferumfang;Land'], seen = {}, other = 0, noScope = 0, noLand = 0, bad = 0, multi = 0;
     starts.forEach(function (s, i) {
       var rec = lines.slice(s, i + 1 < starts.length ? starts[i + 1] : lines.length);
       var t = idx(rec, /Uhr$/), seg = idx(rec, /^\d{5}$/, t + 1), krI = seg < 0 ? -1 : idx(rec, /^KR[0-9A-Z]+$/i, seg);
@@ -60,11 +68,11 @@
       else date = dateOf(+rec[1], +rec[2], DAYS[rec[3].toLowerCase()]);
       seen[kr] = 1;
       out.push([kr, date, hall, pos, scope, rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c].slice(0, 2).toUpperCase() : '')].join(';'));
-      if (c < 0) noLand++;
+      if (c < 0) { noLand++; if (!dbg) dbg = rec.slice(krI, krI + 12).join(' | '); }
     });
     var count = out.length - 1, text = starts.length ? out.join('\n') : lines.join('\n');
     var info = !starts.length ? 'Format nicht erkannt: es folgt der gelesene Rohtext (' + lines.length + ' Zellen).' :
-      count + ' KR im Kurzformat · ' + other + ' andere Halle ausgeblendet · ' + noScope + ' ohne Maschine/komplett ausgeblendet' + (noLand ? ' · ' + noLand + ' ohne erkannten Ländercode' : '') + (bad ? ' · ' + bad + ' Einträge nicht lesbar' : '') + (multi ? ' · ' + multi + ' mit mehreren Spots (erster)' : '');
+      count + ' KR im Kurzformat · ' + other + ' andere Halle ausgeblendet · ' + noScope + ' ohne Maschine/komplett ausgeblendet' + (noLand ? ' · ' + noLand + ' ohne erkannten Ländercode (Zellen nach der KR: ' + dbg + ')' : '') + (bad ? ' · ' + bad + ' Einträge nicht lesbar' : '') + (multi ? ' · ' + multi + ' mit mehreren Spots (erster)' : '');
     function show(d, root, closer) {
       function el(tag, css, txt) { var e = d.createElement(tag); e.style.cssText = css || ''; if (txt) e.textContent = txt; root.appendChild(e); return e; }
       var BTN = 'font:700 13px monospace;letter-spacing:.1em;text-transform:uppercase;padding:10px 18px;border:1px solid #fcee09;background:#fcee09;color:#000;cursor:pointer;margin:0 8px 8px 0';

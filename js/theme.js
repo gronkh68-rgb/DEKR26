@@ -40,17 +40,6 @@
     if (pn && t !== 'cp') pn.hidden = true;
   }
   apply(get());
-  // Die Startanimation läuft nur noch, wenn die letzte mehr als 6 Stunden her ist (Schalter „immer zeigen“ im Farb-Fenster)
-  function bootWanted() {
-    if (get() !== 'cp' || flag('dekr-fxlow')) return false;
-    var now = Date.now(), last = 0;
-    try { last = +localStorage.getItem('dekr-bootat') || 0; } catch (e) { last = 0; }
-    if (!flag('dekr-bootall') && now - last < 6 * 3600 * 1000) return false;
-    try { localStorage.setItem('dekr-bootat', String(now)); } catch (e) { /* ignorieren */ }
-    return true;
-  }
-  var bootDue = bootWanted();
-  if (bootDue) document.documentElement.classList.add('cp-boot');
   document.addEventListener('DOMContentLoaded', function () {
     var host = document.querySelector('.top') || document.querySelector('.sub') || document.body;
     var b = document.createElement('button');
@@ -76,7 +65,6 @@
       return '<button type="button" class="cc-sw" data-a="' + p[2] + '" data-b="' + p[3] + '" title="' + p[1] + '"><i style="background:' + p[2] + '"></i><i style="background:' + p[3] + '"></i><span>' + p[1] + '</span></button>';
     }).join('') + '</div><div class="cc-own"><label>Hauptfarbe <input type="color" id="ccA"></label><label>Nebenfarbe <input type="color" id="ccB"></label></div>' +
       '<label class="cc-chk"><input type="checkbox" id="ccLens"> Linseneffekt (Farbsäume, leichte Wölbung)</label>' +
-      '<label class="cc-chk"><input type="checkbox" id="ccBoot"> Startanimation bei jedem Laden zeigen (sonst alle 6 Stunden)</label>' +
       '<label class="cc-chk"><input type="checkbox" id="ccFx"> Weniger Effekte (ruhiger, für schwache Geräte)</label>' +
       '<button type="button" class="cc-reset" id="ccReset">Zurücksetzen</button>';
     document.body.appendChild(pn);
@@ -84,7 +72,7 @@
       try { localStorage.setItem(CKEY, JSON.stringify({ a: a, b: b })); } catch (e) { /* nur für diese Sitzung */ }
       applyColors(get() === 'cp'); sync();
     }
-    function sync() { var c = getColors(); pn.querySelector('#ccA').value = c.a; pn.querySelector('#ccB').value = c.b; pn.querySelector('#ccLens').checked = flag('dekr-lens'); pn.querySelector('#ccBoot').checked = flag('dekr-bootall'); pn.querySelector('#ccFx').checked = flag('dekr-fxlow'); }
+    function sync() { var c = getColors(); pn.querySelector('#ccA').value = c.a; pn.querySelector('#ccB').value = c.b; pn.querySelector('#ccLens').checked = flag('dekr-lens'); pn.querySelector('#ccFx').checked = flag('dekr-fxlow'); }
     cb.onclick = function () { sync(); pn.hidden = !pn.hidden; };
     pn.addEventListener('click', function (e) {
       var sw = e.target.closest('.cc-sw');
@@ -93,7 +81,6 @@
     });
     pn.addEventListener('input', function (e) {
       if (e.target.id === 'ccLens') { setFlag('dekr-lens', e.target.checked); apply(get()); }
-      if (e.target.id === 'ccBoot') setFlag('dekr-bootall', e.target.checked);
       if (e.target.id === 'ccFx') { setFlag('dekr-fxlow', e.target.checked); apply(get()); }
       if (e.target.id === 'ccA' || e.target.id === 'ccB') save(pn.querySelector('#ccA').value, pn.querySelector('#ccB').value);
     });
@@ -117,80 +104,6 @@
   // ---- Gimmicks (nur bei aktivem CP-Design) ----
   function on() { return get() === 'cp' && !flag('dekr-fxlow'); }
   function $(id) { return document.getElementById(id); }
-
-  // 1: Hacking-Animation (ca. 3 s, höchstens alle 6 Stunden, oder immer mit Schalter; mit Klick oder Taste überspringbar; „Weniger Effekte“ schaltet sie ab)
-  function boot() {
-    var root = document.documentElement;
-    if (!bootDue) return;
-    var cs = getComputedStyle(root), accent = (cs.getPropertyValue('--accent') || '#fcee09').trim(), cyan = (cs.getPropertyValue('--cyan') || '#00f0ff').trim();
-    var el = document.createElement('div');
-    el.id = 'cpBoot';
-    var V = window.DEKR_VERSION || { n: '', b: '' };
-    el.innerHTML = '<canvas id="btRain"></canvas><div class="bt-haz top"></div><div class="bt-haz bot"></div><i class="bt-c c1"></i><i class="bt-c c2"></i><i class="bt-c c3"></i><i class="bt-c c4"></i><div class="bt-tear" id="btTear"></div>' +
-      '<div class="bt-logo"><b data-t="DEUKRO26">DEUKRO26</b><small>BREACH PROTOCOL // NIGHT CITY EDITION</small></div><div class="bt-term" id="btTerm"></div><div class="bt-hex" id="btHex"></div>' +
-      '<div class="bt-mid"><div class="bt-lbl" id="btLbl">ZUGRIFF WIRD ERZWUNGEN</div><div class="bt-pct" id="btPct">0%</div><div class="bt-bar"><i id="btBar"></i></div></div>' +
-      '<div class="bt-foot">DEUKRO26 // ICE-BREAKER ' + (V.n ? 'v' + V.n : '') + '<span>KLICK = ÜBERSPRINGEN</span></div>';
-    document.body.appendChild(el);
-    var cv = document.getElementById('btRain'), cx = cv.getContext('2d'), cols = 0, drops = [], fs = 16, alive = true, t0 = Date.now(), DUR = 3100, fade = 1;
-    function size() { cv.width = window.innerWidth; cv.height = window.innerHeight; cols = Math.ceil(cv.width / fs); drops = []; for (var c = 0; c < cols; c++) drops.push(Math.random() * -40); }
-    size(); window.addEventListener('resize', size);
-    var glyphs = 'アイウエオカキクケコサシスセソ0123456789ABCDEF#$%&<>/\\|'.split('');
-    function rain() {
-      if (!alive) return;
-      cx.fillStyle = 'rgba(3,4,9,.14)'; cx.fillRect(0, 0, cv.width, cv.height);
-      cx.font = fs + 'px "Share Tech Mono", monospace';
-      for (var c = 0; c < cols; c++) {
-        var y = drops[c] * fs, g = glyphs[Math.floor(Math.random() * glyphs.length)];
-        cx.fillStyle = Math.random() < .04 ? '#ffffff' : (c % 5 === 0 ? cyan : accent); cx.globalAlpha = .75 * fade;
-        cx.fillText(g, c * fs, y); cx.globalAlpha = 1;
-        if (y > cv.height && Math.random() > .975) drops[c] = Math.random() * -12;
-        drops[c] += .55 + (c % 7) * .06;
-      }
-      requestAnimationFrame(rain);
-    }
-    rain();
-    // Terminal
-    var term = document.getElementById('btTerm'), ua = navigator.userAgent, os = /Android/.test(ua) ? 'ANDROID' : /iPhone|iPad/.test(ua) ? 'IOS' : /Windows/.test(ua) ? 'WINDOWS' : /Mac/.test(ua) ? 'MACOS' : 'LINUX';
-    var hex = function (n) { var s = ''; while (n--) s += Math.floor(Math.random() * 16).toString(16).toUpperCase(); return s; };
-    var steps = [
-      '> NETRUNNER-VERBINDUNG ....... OK', '> GERÄT: ' + os + ' ................. OK', '> FIREWALL ABTASTEN ........... 3 PORTS',
-      '> ICE-SCHICHT 1/3 ... ' + hex(8), '> ICE-SCHICHT 2/3 ... ' + hex(8), '> ICE-SCHICHT 3/3 ... ' + hex(8),
-      '> DAEMON HOCHGELADEN .......... OK', '> TRACE UMGELEITET ............ OK', '> ROOT-ZUGRIFF ERHALTEN'
-    ];
-    var si = 0, ivT = setInterval(function () {
-      if (si >= steps.length) { clearInterval(ivT); return; }
-      var d = document.createElement('div'); d.textContent = steps[si++]; term.appendChild(d);
-      while (term.children.length > 9) term.removeChild(term.firstChild);
-    }, DUR / (steps.length + 1));
-    // Hex-Strom rechts
-    var hx = document.getElementById('btHex'), ivH = setInterval(function () {
-      var l = document.createElement('div'); l.textContent = hex(4) + ' ' + hex(4) + ' ' + hex(4) + ' ' + hex(2); hx.appendChild(l);
-      while (hx.children.length > 26) hx.removeChild(hx.firstChild);
-    }, 55);
-    // Fortschritt und Abschluss
-    var pct = document.getElementById('btPct'), bar = document.getElementById('btBar'), lbl = document.getElementById('btLbl'), done = false;
-    var ivP = setInterval(function () {
-      var p = Math.min(100, Math.round(((Date.now() - t0) / (DUR - 550)) * 100 + (Math.random() * 3)));
-      if (p >= 100 && !done) { p = 100; done = true; grant(); }
-      pct.textContent = p + '%'; bar.style.width = p + '%';
-    }, 40);
-    function grant() { lbl.textContent = 'ZUGRIFF GEWÄHRT'; el.classList.add('granted'); }
-    var closed = false;
-    function close() {
-      if (closed) return; closed = true;
-      clearInterval(ivT); clearInterval(ivH); clearInterval(ivP); fade = 0;
-      el.classList.add('out'); root.classList.remove('cp-boot');
-      document.removeEventListener('keydown', close); el.removeEventListener('pointerdown', close);
-      setTimeout(function () { alive = false; window.removeEventListener('resize', size); if (el.parentNode) el.parentNode.removeChild(el); }, 520);
-    }
-    el.addEventListener('pointerdown', close); document.addEventListener('keydown', close);
-    setTimeout(function () { if (!done) { done = true; pct.textContent = '100%'; bar.style.width = '100%'; grant(); } }, DUR - 500);
-    setTimeout(close, DUR);
-    // Bildrisse: kurze Streifen springen über den Schirm
-    var tear = document.getElementById('btTear');
-    [600, 1500, 2300].forEach(function (ms) { setTimeout(function () { if (!alive || closed) return; tear.className = 'bt-tear go'; setTimeout(function () { tear.className = 'bt-tear'; }, 260); }, ms); });
-    setTimeout(function () { root.classList.remove('cp-boot'); }, DUR + 800);   // Sicherung
-  }
 
   // 2: Scramble-Text für neue Meldungen
   var CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&@$';
@@ -544,6 +457,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    boot(); watchMsgs(); countUp($('hallStat')); alertMode(); pings(); statusBar(); hud(); decodeTitles(); typedToast(); scanner(); radial(); uiSounds(); screensaver();
+    watchMsgs(); countUp($('hallStat')); alertMode(); pings(); statusBar(); hud(); decodeTitles(); typedToast(); scanner(); radial(); uiSounds(); screensaver();
   });
 })();

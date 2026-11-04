@@ -100,28 +100,7 @@ svg.map.plan .cell:hover { fill: rgba(var(--cy-rgb),.5); stroke: var(--cyan); fi
 .tabs .tab, .tab { font-size: 10px; letter-spacing: 0; padding-left: 4px; padding-right: 4px; text-overflow: clip; }
 
 /* Gimmicks */
-html:not([data-theme="cp"]) #cpBoot, html:not([data-theme="cp"]) #cpAlert, html:not([data-theme="cp"]) #cpBar, html:not([data-theme="cp"]) #cpHud { display: none !important; }
-/* 1 Boot */
-html.cp-boot body > *:not(#cpBoot) { visibility: hidden; }
-#cpBoot { position: fixed; inset: 0; z-index: 400; background: #030409; color: var(--accent); font-family: 'Share Tech Mono', monospace; overflow: hidden; transition: opacity .5s, filter .5s; }
-#cpBoot.out { opacity: 0; filter: blur(6px) brightness(2); pointer-events: none; }
-#cpBoot canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-#cpBoot::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.85)); }
-.bt-term { position: absolute; left: 4vw; top: 7vh; width: min(520px, 62vw); padding: 14px 16px; font-size: 13px; line-height: 1.75; letter-spacing: .05em; background: rgba(3,4,9,.82); border: 1px solid var(--accent); box-shadow: 0 0 24px rgba(var(--acc-rgb), .3); clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); z-index: 2; min-height: 120px; }
-.bt-term div { white-space: nowrap; overflow: hidden; animation: btLine .12s steps(6) backwards; } .bt-term div:last-child::after { content: '█'; margin-left: 5px; animation: cpBlink .5s steps(1) infinite; }
-@keyframes btLine { from { width: 0; } }
-.bt-hex { position: absolute; right: 4vw; top: 7vh; height: 60vh; overflow: hidden; font-size: 12px; line-height: 1.6; color: var(--cyan); opacity: .75; text-align: right; z-index: 2; display: flex; flex-direction: column; justify-content: flex-end; text-shadow: 0 0 6px var(--cyan); }
-.bt-mid { position: absolute; left: 50%; bottom: 14vh; transform: translateX(-50%); width: min(560px, 88vw); text-align: center; z-index: 3; }
-.bt-lbl { font-family: 'Orbitron', sans-serif; font-weight: 700; letter-spacing: .3em; font-size: clamp(12px, 3.4vw, 18px); color: var(--accent); text-shadow: 0 0 14px var(--accent); }
-.bt-pct { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(54px, 15vw, 120px); line-height: 1.1; color: #fff; text-shadow: 3px 0 var(--red), -3px 0 var(--cyan); animation: cpGlitch 3s steps(1) infinite; }
-.bt-bar { height: 10px; border: 1px solid var(--accent); background: rgba(0,0,0,.6); clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); } .bt-bar i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(-45deg, var(--accent) 0 6px, #0a0a0a 6px 10px); box-shadow: 0 0 14px var(--accent); }
-.bt-foot { position: absolute; left: 4vw; right: 4vw; bottom: 3vh; display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .25em; color: #6f8794; z-index: 3; }
-#cpBoot.granted .bt-lbl { color: var(--green); text-shadow: 0 0 20px var(--green), 3px 0 var(--red), -3px 0 var(--cyan); animation: btShake .35s steps(2) 3; }
-#cpBoot.granted .bt-pct { color: var(--green); } #cpBoot.granted .bt-bar { border-color: var(--green); } #cpBoot.granted .bt-bar i { background: var(--green); box-shadow: 0 0 18px var(--green); }
-#cpBoot.granted::before { content: ''; position: absolute; inset: 0; background: rgba(45,255,179,.12); animation: btFlash .5s ease-out; z-index: 1; pointer-events: none; }
-@keyframes btShake { 0% { transform: translate(-4px, 0) skewX(-6deg); } 50% { transform: translate(4px, 1px) skewX(5deg); } 100% { transform: none; } }
-@keyframes btFlash { from { opacity: 1; } to { opacity: 0; } }
-@media (max-width: 700px) { .bt-hex { display: none; } .bt-term { width: 92vw; font-size: 11px; top: 4vh; } }
+html:not([data-theme="cp"]) #cpAlert, html:not([data-theme="cp"]) #cpBar, html:not([data-theme="cp"]) #cpHud { display: none !important; }
 @keyframes cpBlink { 50% { opacity: 0; } }
 /* 4 Alarm */
 #cpAlert { background: repeating-linear-gradient(-45deg, #ff2a55 0 14px, #8a0f2a 14px 28px); color: #fff; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 12px; letter-spacing: .25em; text-align: center; padding: 4px; text-shadow: 0 1px 3px #000; animation: cpAlert 1s ease-in-out infinite alternate; }
@@ -223,7 +202,7 @@ html.lens-on .map-box, html.lens-on .col, html.lens-on .top h1 { filter: drop-sh
 html.lens-on .cols { perspective: 1400px; } html.lens-on .col:first-child { transform: rotateY(2.5deg); transform-origin: left center; } html.lens-on .col:last-child { transform: rotateY(-2.5deg); transform-origin: right center; }
 /* 5 Weniger Effekte */
 html.fx-low *, html.fx-low *::before, html.fx-low *::after { animation: none !important; transition: none !important; }
-html.fx-low #cpHud .scan, html.fx-low .cp-ring, html.fx-low .rip, html.fx-low #cpBoot { display: none !important; }
+html.fx-low #cpHud .scan, html.fx-low .cp-ring, html.fx-low .rip { display: none !important; }
 html.fx-low .top h1 { text-shadow: none; } html.fx-low button { clip-path: none; }
 /* 10 Hologramm-Meldung (Toast) */
 .toast { border-left: 4px solid var(--accent); background: rgba(6,18,24,.94); min-width: 240px; text-align: left; transform: translateX(120%); transition: transform .4s cubic-bezier(.2,.9,.3,1), opacity .3s; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%); }
@@ -258,21 +237,6 @@ html.fx-low .top h1 { text-shadow: none; } html.fx-low button { clip-path: none;
 .day-h { gap: 6px; } .day-h > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; } .day-h .cnt { white-space: nowrap; flex: none; }
 .segs { margin-right: 6px; gap: 1px; } .segs i { width: 4px; }
 
-/* Hacking-Animation: mehr Cyberpunk (Warnstreifen, HUD-Ecken, Logo, Bildrisse) */
-.bt-haz { position: absolute; left: 0; right: 0; height: 14px; z-index: 4; background: repeating-linear-gradient(-45deg, var(--accent) 0 12px, #0a0a0a 12px 24px); background-size: 34px 100%; animation: btHaz .6s linear infinite; }
-.bt-haz.top { top: 0; } .bt-haz.bot { bottom: 0; animation-direction: reverse; } @keyframes btHaz { to { background-position: 34px 0; } }
-.bt-c { position: absolute; width: 38px; height: 38px; border: 0 solid var(--cyan); z-index: 4; filter: drop-shadow(0 0 6px var(--cyan)); animation: btCorner 1.2s ease-in-out infinite alternate; }
-.bt-c.c1 { left: 14px; top: 26px; border-width: 3px 0 0 3px; } .bt-c.c2 { right: 14px; top: 26px; border-width: 3px 3px 0 0; } .bt-c.c3 { left: 14px; bottom: 26px; border-width: 0 0 3px 3px; } .bt-c.c4 { right: 14px; bottom: 26px; border-width: 0 3px 3px 0; }
-@keyframes btCorner { to { transform: scale(.82); opacity: .6; } }
-.bt-logo { position: absolute; left: 50%; top: 27vh; transform: translateX(-50%); text-align: center; z-index: 3; width: 92vw; }
-.bt-logo b { display: block; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(34px, 9vw, 92px); letter-spacing: .14em; color: #fff; text-shadow: 4px 0 var(--red), -4px 0 var(--cyan), 0 0 30px rgba(var(--acc-rgb), .5); animation: btLogo 1.1s steps(1) infinite; }
-.bt-logo small { display: block; margin-top: 6px; font-size: clamp(9px, 1.6vw, 13px); letter-spacing: .4em; color: var(--cyan); text-shadow: 0 0 10px var(--cyan); }
-@keyframes btLogo { 0%, 80%, 100% { transform: none; clip-path: none; } 82% { transform: translate(-8px, 0) skewX(-10deg); } 84% { transform: translate(7px, 2px); clip-path: inset(0 0 55% 0); } 86% { transform: translate(-3px, -2px); clip-path: inset(45% 0 0 0); } 90% { transform: none; clip-path: none; } }
-.bt-tear { position: absolute; inset: 0; z-index: 5; pointer-events: none; opacity: 0; mix-blend-mode: screen; background: repeating-linear-gradient(0deg, rgba(0,240,255,.35) 0 6px, transparent 6px 40px, rgba(255,42,85,.35) 40px 44px, transparent 44px 90px); }
-.bt-tear.go { opacity: 1; animation: btTear .26s steps(3); } @keyframes btTear { 0% { transform: translateX(-20px); } 33% { transform: translateX(26px) scaleY(1.02); } 66% { transform: translateX(-12px); } 100% { transform: none; } }
-.bt-mid { bottom: 9vh; } .bt-pct { font-size: clamp(40px, 11vw, 84px); } .bt-term { top: 10vh; }
-@media (max-width: 700px) { .bt-logo { top: 38vh; } .bt-term { top: 8vh; } }
-.bt-logo { top: 38vh; } .bt-term { font-size: 12px; line-height: 1.6; } @media (max-width: 700px) { .bt-logo { top: 44vh; } }
 
 /* Bildschirmschoner */
 #cpSaver { position: fixed; inset: 0; z-index: 380; background: #030409; color: var(--accent); font-family: 'Share Tech Mono', monospace; cursor: none; animation: svIn .8s ease-out; transition: opacity .38s, filter .38s; overflow: hidden; }
