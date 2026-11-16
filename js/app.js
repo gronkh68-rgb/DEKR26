@@ -279,7 +279,7 @@
   function badges(t) {
     var from = t.from ? ' <span class="badge">aus Halle ' + esc(t.from) + '</span>' : '';
     var fresh = t.chg && Date.now() - t.chgAt < 864e5;   // Vermerk 24 Stunden lang
-    return from + (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : t.country ? ' <span class="badge" title="Land">' + esc(t.country) + '</span>' : '') +
+    return from + (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + Countries.badge(t.country || (t.usa ? 'US' : '')) +
       (fresh ? ' <span class="badge chg" title="' + esc(t.chg) + '">' + esc(t.chgK || 'geändert') + '</span>' : '') +
       (t.k2 || t.k5 ? ' <span class="badge kis" title="Kisten">' + (t.k2 ? 'K2 ×' + t.k2 : '') + (t.k2 && t.k5 ? ' · ' : '') + (t.k5 ? 'K5 ×' + t.k5 : '') + '</span>' : '') +
       (openProb[t.kr] ? ' <span class="badge prob">Problem</span>' : '');
@@ -332,7 +332,7 @@
     var q = krFilter.trim().toLowerCase();
     var list = tasks.filter(function (t) {
       if (!q) return true;
-      var hay = (t.kr + ' ' + (t.pos ? Halls.label(t.hall, t.pos) : '') + ' ' + (t.scope || '') + (t.usa ? ' usa' : '') + ' ' + (t.country || '')).toLowerCase();
+      var hay = (t.kr + ' ' + (t.pos ? Halls.label(t.hall, t.pos) : '') + ' ' + (t.scope || '') + (t.usa ? ' usa' : '') + ' ' + (t.country || '') + ' ' + (t.country ? Countries.name(t.country) : '')).toLowerCase();
       return hay.indexOf(q) >= 0;
     }).sort(function (a, b) { return a.week < b.week ? -1 : a.week > b.week ? 1 : a.day - b.day; });
     var done = list.filter(function (t) { return t.done; }).length;
@@ -1232,7 +1232,7 @@
     var rowsH = items.slice(0, MAX).map(function (x) {
       var st = [x.how === 'neu' ? 'neu' : x.how === 'gleich' ? '' : x.how, x.usa ? 'USA' : '', x.from ? 'aus Halle ' + x.from : ''].filter(Boolean).join(', ');
       return '<tr><td><b>' + esc(x.kr) + '</b></td><td>' + esc(dayText(x.week, x.day)) + '</td><td>' + esc(x.from ? '–' : posText(x.hallEff, x.pos)) +
-        '</td><td>' + esc(x.scope || '–') + '</td><td>' + esc(x.country || '–') + '</td><td>' + esc(st || 'unverändert') + '</td></tr>';
+        '</td><td>' + esc(x.scope || '–') + '</td><td>' + (x.country ? Countries.badge(x.country) : '–') + '</td><td>' + esc(st || 'unverändert') + '</td></tr>';
     }).join('');
     $('impList').innerHTML = items.length ? '<table class="imp">' + head + rowsH + '</table>' + (items.length > MAX ? '<div class="empty">… und ' + (items.length - MAX) + ' weitere</div>' : '') : '';
   }
