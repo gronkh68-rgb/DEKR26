@@ -20,7 +20,7 @@ window.Countries = (function () {
   function set(s) { var o = {}; s.split(' ').forEach(function (c) { o[c] = 1; }); return o; }
   var BLUE = set('US MX CA ZA IN EG LY');
   var YELLOW = set('AD AL AT AX BA BE BG BY CH CY CZ DE DK EE ES FI FO FR GB GG GI GR HR HU IE IM IS IT JE LI LT LU LV MC MD ME MK MT NL NO PL PT RO RS RU SE SI SJ SK SM UA VA XK ' +
-    'TR GE AM AZ KZ UZ TM KG TJ IR IQ SY LB IL JO SA KW QA AE OM YE PS AF PK CN MN');
+    'TR GE AM AZ KZ UZ TM KG TJ IR IQ SY LB IL JO SA KW QA AE OM YE PS AF PK MN');
   var ZONE = { blue: 'Sonderziel', yellow: 'Europa oder Landweg', red: 'Seefracht' };
   function code(c) { return String(c || '').trim().toUpperCase().slice(0, 3); }
   function nameOf(c) { c = code(c); return name[c] || c; }
