@@ -69,6 +69,7 @@
     var t = { week: week, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : wasDone };
     if (extra && extra.scope) t.scope = extra.scope;
     if (extra && extra.usa) t.usa = true;
+    if (extra && extra.country) t.country = extra.country;
     if (extra && extra.from) t.from = extra.from;
     if (extra && extra.chg) { t.chg = extra.chg; t.chgK = extra.chgK; t.chgAt = Date.now(); }
     else if (prev && prev.chg) { t.chg = prev.chg; t.chgK = prev.chgK; t.chgAt = prev.chgAt; }
@@ -278,7 +279,7 @@
   function badges(t) {
     var from = t.from ? ' <span class="badge">aus Halle ' + esc(t.from) + '</span>' : '';
     var fresh = t.chg && Date.now() - t.chgAt < 864e5;   // Vermerk 24 Stunden lang
-    return from + (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '') +
+    return from + (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : t.country ? ' <span class="badge" title="Land">' + esc(t.country) + '</span>' : '') +
       (fresh ? ' <span class="badge chg" title="' + esc(t.chg) + '">' + esc(t.chgK || 'geändert') + '</span>' : '') +
       (t.k2 || t.k5 ? ' <span class="badge kis" title="Kisten">' + (t.k2 ? 'K2 ×' + t.k2 : '') + (t.k2 && t.k5 ? ' · ' : '') + (t.k5 ? 'K5 ×' + t.k5 : '') + '</span>' : '') +
       (openProb[t.kr] ? ' <span class="badge prob">Problem</span>' : '');
@@ -331,7 +332,7 @@
     var q = krFilter.trim().toLowerCase();
     var list = tasks.filter(function (t) {
       if (!q) return true;
-      var hay = (t.kr + ' ' + (t.pos ? Halls.label(t.hall, t.pos) : '') + ' ' + (t.scope || '') + (t.usa ? ' usa' : '')).toLowerCase();
+      var hay = (t.kr + ' ' + (t.pos ? Halls.label(t.hall, t.pos) : '') + ' ' + (t.scope || '') + (t.usa ? ' usa' : '') + ' ' + (t.country || '')).toLowerCase();
       return hay.indexOf(q) >= 0;
     }).sort(function (a, b) { return a.week < b.week ? -1 : a.week > b.week ? 1 : a.day - b.day; });
     var done = list.filter(function (t) { return t.done; }).length;
@@ -1258,7 +1259,7 @@
     var d = diffItems(c.items), ops = [], firstWeek = '';
     c.items.forEach(function (x) {
       if (!firstWeek || x.week < firstWeek) firstWeek = x.week;
-      var extra = { scope: x.scope, usa: x.usa, from: x.from };
+      var extra = { scope: x.scope, usa: x.usa, from: x.from, country: x.country };
       if (x.how === 'verschoben' || x.how === 'geändert') { extra.chg = x.chg; extra.chgK = x.how; }
       ops = ops.concat(planOps(x.kr, x.pos, x.day, x.hallEff || Halls.all[0].id, extra, x.hallEff, x.week));
     });

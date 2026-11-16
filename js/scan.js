@@ -397,14 +397,14 @@
       if (dashTab === 'week' ? t.week !== thisWeek : t.week < thisWeek) return false;
       if (kHide && t.closed) return false;
       if (!q) return true;
-      return (t.kr + ' ' + (t.pos ? Halls.label(t.hall, t.pos) : '') + ' ' + (t.scope || '') + (t.usa ? ' usa' : '')).toLowerCase().indexOf(q) >= 0;
+      return (t.kr + ' ' + (t.pos ? Halls.label(t.hall, t.pos) : '') + ' ' + (t.scope || '') + (t.usa ? ' usa' : '') + ' ' + (t.country || '')).toLowerCase().indexOf(q) >= 0;
     }).sort(function (a, b) { return a.week < b.week ? -1 : a.week > b.week ? 1 : a.day - b.day; });
     var html = '<div class="empty" style="margin-bottom:6px">' + (dashTab === 'week' ? 'KW ' + thisWeek.split('-W')[1] + ' · ' : 'Ab dieser Woche · ') + list.length + ' Einträge · ' + list.filter(function (t) { return t.done; }).length + ' fertig</div>', last = '';
     list.slice(0, 300).forEach(function (t) {
       var key = t.week + '-' + t.day;
       if (key !== last) { html += '<div class="daysep">KW ' + esc(t.week.split('-W')[1]) + ' · ' + esc(Util.DAYS[t.day]) + ' ' + esc(Util.dayDate(t.week, t.day)) + '</div>'; last = key; }
       html += '<div class="krrow' + (t.closed ? ' closed' : t.done ? ' ok' : '') + '"><span><b>KR ' + esc(t.kr) + '</b>' +
-        (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : '') +
+        (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + (t.usa ? ' <span class="badge usa">USA</span>' : t.country ? ' <span class="badge" title="Land">' + esc(t.country) + '</span>' : '') +
         (probs[t.kr] ? ' <span class="badge prob">Problem</span>' : '') +
         '<small>' + (t.pos ? esc(Halls.label(t.hall, t.pos)) : t.from ? 'Lieferung aus Halle ' + esc(t.from) : 'ohne Position') + '</small></span><span class="st">' + (t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit') + '</span></div>';
     });

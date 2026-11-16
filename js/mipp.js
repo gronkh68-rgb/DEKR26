@@ -37,6 +37,13 @@
         [].forEach.call(best.querySelectorAll('tr'), function (r) { [].forEach.call(r.children, function (c) { cellLines(c, viaCells); }); });
         cands.push(viaCells, viaSel);
       } else { var body = []; split(document.body.innerText, body); cands.push(body); }
+      var whole = [];
+      try {
+        var g2 = window.getSelection(), rg2 = document.createRange();
+        rg2.selectNodeContents(document.body); g2.removeAllRanges(); g2.addRange(rg2);
+        split(String(g2), whole); g2.removeAllRanges();
+      } catch (e2) { whole = []; }
+      cands.push(whole);
     }
     if (!cands.some(function (x) { return x.length; })) { alert('Nichts zum Übernehmen gefunden. Bitte die Auslieferliste öffnen.'); return; }
     var DAYS = { montag: 1, dienstag: 2, mittwoch: 3, donnerstag: 4, freitag: 5, samstag: 6, sonntag: 7 };
