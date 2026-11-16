@@ -1115,10 +1115,16 @@
   function kwText(w) { return 'KW ' + w.split('-W')[1]; }
   // z.B. "Mo 26.10. (KW 44)" – das Datum macht gleiche Wochentage verschiedener Wochen unterscheidbar
   function dayText(w, d) { return Util.DAYS[d].slice(0, 2) + ' ' + Util.dayDate(w, d) + ' (' + kwText(w) + ')'; }
+  // Liegt der Tag vor heute? Vergangenes wird beim Import nur übernommen, wenn sich dort etwas geändert hat.
+  function isPastDay(week, day) {
+    var d = Util.mondayOf(week), t = new Date();
+    d.setDate(d.getDate() + day - 1);
+    return d < new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  }
   // Vergleicht die Liste mit dem gespeicherten Stand: neu, verschoben, geändert, entfallen
   function diffItems(items) {
     var tasks = Store.get().tasks, byKr = {}, weeks = {}, inList = {};
-    var res = { neu: [], moved: [], chg: [], gone: [], same: 0 };
+    var res = { neu: [], moved: [], chg: [], gone: [], same: 0, past: 0 };
     Object.keys(tasks).forEach(function (id) {
       var t = Object.assign({ id: id }, tasks[id]);
       (byKr[t.kr] = byKr[t.kr] || []).push(t);
@@ -1126,7 +1132,7 @@
     items.forEach(function (x) {
       inList[x.kr] = 1; weeks[x.week] = 1;
       var ex = byKr[x.kr];
-      if (!ex) { x.how = 'neu'; res.neu.push(x); return; }
+      if (!ex) { x.how = 'neu'; if (isPastDay(x.week, x.day)) { x.skip = true; res.past++; return; } res.neu.push(x); return; }
       var e = ex[0], moved = [], ch = [];
       if (e.week !== x.week || e.day !== x.day) moved.push(dayText(e.week, e.day) + ' → ' + dayText(x.week, x.day));
       if ((e.pos || '') !== (x.pos || '') || (e.pos && (e.hall || '') !== x.hallEff)) {
@@ -1139,11 +1145,12 @@
       x.chgK = x.how;
       if (x.how === 'verschoben') res.moved.push(x);
       else if (x.how === 'geändert') res.chg.push(x);
+      else if (isPastDay(x.week, x.day)) { x.skip = true; res.past++; }
       else res.same++;
     });
     Object.keys(byKr).forEach(function (kr) {
       byKr[kr].forEach(function (t) {
-        if (!inList[kr] && weeks[t.week] && !t.done) res.gone.push(t);
+        if (!inList[kr] && weeks[t.week] && !t.done && !isPastDay(t.week, t.day)) res.gone.push(t);
       });
     });
     return res;
@@ -1196,9 +1203,11 @@
       (rows.multi ? ' · ' + rows.multi + ' mit mehreren Spots (erster wird genommen)' : '') +
       ' · nicht gewählte Spalten werden verworfen.';
     var d = diffItems(c.items);
+    var keep = c.items.filter(function (x) { return !x.skip; });
     renderDiff(d);
-    renderList(c.items);
-    $('impShort').value = shortText(c.items);
+    renderList(keep);
+    $('impShort').value = shortText(keep);
+    if (d.past) $('impInfo').textContent += ' · ' + d.past + ' aus der Vergangenheit übersprungen (unverändert oder neu).';
   }
   // Kurzformat: nur das Wichtigste, eine Zeile je KR. Wird beim Einfügen wieder erkannt (Überschrift wie unten).
   var SHORT_HEAD = 'KR;Datum;Halle;Position;Lieferumfang;Land';
@@ -1257,8 +1266,10 @@
     var c = collect(), head = $('impHead').checked;
     if (!c.items.length) { toast('Keine KR gefunden'); return; }
     var d = diffItems(c.items), ops = [], firstWeek = '';
+    var nowWeek = Util.isoWeek();
     c.items.forEach(function (x) {
-      if (!firstWeek || x.week < firstWeek) firstWeek = x.week;
+      if (x.skip) return;
+      if (x.week >= nowWeek && (!firstWeek || x.week < firstWeek)) firstWeek = x.week;
       var extra = { scope: x.scope, usa: x.usa, from: x.from, country: x.country };
       if (x.how === 'verschoben' || x.how === 'geändert') { extra.chg = x.chg; extra.chgK = x.how; }
       ops = ops.concat(planOps(x.kr, x.pos, x.day, x.hallEff || Halls.all[0].id, extra, x.hallEff, x.week));
@@ -1270,7 +1281,8 @@
     $('impGo').disabled = true;
     Store.batch(ops).then(function () {
       toast('Import: ' + d.neu.length + ' neu, ' + d.moved.length + ' verschoben, ' + d.chg.length + ' geändert');
-      viewWeek = firstWeek; weekLabel(); render(Store.get());
+      if (firstWeek) viewWeek = firstWeek;   // nie in einer vergangenen Woche landen
+      weekLabel(); render(Store.get());
       $('impText').value = ''; imp.cols = []; renderImp();
       $('impModal').hidden = true;
     }).catch(function () { toast('Import fehlgeschlagen'); renderImp(); });
