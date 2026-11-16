@@ -5,7 +5,8 @@
   // Läuft im Tab von MIPP, liest die Liste, macht das Kurzformat daraus und zeigt es in einem neuen Fenster zum Kopieren.
   // Es gibt keine Verbindung zum Dashboard. Das Programm darf keine Zeilenkommentare und keine Doppel-Schrägstriche enthalten (sie werden beim Erzeugen entfernt).
   var SRC = function () {
-    var OWN = ['6', '7'], FROM = '3';
+    var OWN = ['6', '7'], FROM = '3', w = null;
+    try { w = window.open('', '_blank'); } catch (e0) { w = null; }
     var sel = String(window.getSelection ? getSelection() : ''), cands = [];
     function split(t, arr) { String(t).split(/\r?\n|\t/).forEach(function (x) { x = x.trim(); if (x) arr.push(x); }); }
     function flagCode(e) {
@@ -45,7 +46,8 @@
       } catch (e2) { whole = []; }
       cands.push(whole);
     }
-    if (!cands.some(function (x) { return x.length; })) { alert('Nichts zum Übernehmen gefunden. Bitte die Auslieferliste öffnen.'); return; }
+    if (!cands.some(function (x) { return x.length; })) { if (w) w.close(); alert('Nichts zum Übernehmen gefunden. Bitte die Auslieferliste öffnen.'); return; }
+    function finish() {
     var DAYS = { montag: 1, dienstag: 2, mittwoch: 3, donnerstag: 4, freitag: 5, samstag: 6, sonntag: 7 };
     function pad(x) { return (x < 10 ? '0' : '') + x; }
     function dateOf(y, kw, d) {
@@ -136,8 +138,6 @@
       el('div', 'color:#7a8a96;font-size:12px;margin-top:8px', 'Im Dashboard: Import öffnen, einfügen (Strg+V) oder „Aus Zwischenablage einlesen“ klicken.');
       ta.focus(); ta.select();
     }
-    var w = null;
-    try { w = window.open('', '_blank'); } catch (e) { w = null; }
     if (w && w.document) {
       w.document.title = 'DEUKRO26 · Liste';
       w.document.body.style.cssText = 'margin:0;padding:20px;background:#05060b;color:#e8f9ff;font-family:monospace';
@@ -147,6 +147,27 @@
       ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483647;overflow:auto;padding:20px;background:#05060b;color:#e8f9ff;font-family:monospace';
       document.body.appendChild(ov);
       show(document, ov, function () { ov.remove(); });
+    }
+    }
+    var fin = false;
+    function go(extra) {
+      if (fin) return;
+      fin = true;
+      if (extra && extra.trim()) { var x = []; split(extra, x); cands.push(x); }
+      finish();
+    }
+    if (sel.trim()) go('');
+    else {
+      try {
+        var g3 = window.getSelection(), rg3 = document.createRange();
+        rg3.selectNodeContents(document.body); g3.removeAllRanges(); g3.addRange(rg3);
+        var okc = document.execCommand('copy');
+        g3.removeAllRanges();
+        if (okc && navigator.clipboard && navigator.clipboard.readText) {
+          navigator.clipboard.readText().then(go, function () { go(''); });
+          setTimeout(function () { go(''); }, 4000);
+        } else go('');
+      } catch (e4) { go(''); }
     }
   };
   // Kommentare und Einrückung entfernen (vor dem Einsetzen der Adresse, sie enthält „//")
