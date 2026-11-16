@@ -21,6 +21,22 @@
       flags.forEach(function (f) { arr.push(f); });
       split(t, arr);
     }
+    function walk() {
+      var arr = [], tw = document.createTreeWalker(document.body, 5, null, false), nd, pe, cs, al;
+      while ((nd = tw.nextNode())) {
+        if (nd.nodeType === 3) {
+          pe = nd.parentElement;
+          if (!pe || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(pe.tagName)) continue;
+          cs = getComputedStyle(pe);
+          if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+          split(nd.nodeValue, arr);
+        } else if (nd.tagName === 'IMG') {
+          al = (nd.getAttribute('alt') || nd.getAttribute('title') || '').trim();
+          if (al) arr.push(al);
+        }
+      }
+      return arr;
+    }
     if (sel.trim()) { var one = []; split(sel, one); cands.push(one); }
     else {
       var best = null, n = 0;
@@ -45,6 +61,7 @@
         split(String(g2), whole); g2.removeAllRanges();
       } catch (e2) { whole = []; }
       cands.push(whole);
+      try { cands.push(walk()); } catch (e5) { /* weitere Lesarten genügen */ }
     }
     if (!cands.some(function (x) { return x.length; })) { if (w) w.close(); alert('Nichts zum Übernehmen gefunden. Bitte die Auslieferliste öffnen.'); return; }
     function finish() {
@@ -64,7 +81,7 @@
     for (j = 0; j + 3 < lines.length; j++) {
       if (/^\d+$/.test(lines[j]) && /^20\d\d$/.test(lines[j + 1]) && /^\d{1,2}$/.test(lines[j + 2]) && DAYS[lines[j + 3].toLowerCase()]) starts.push(j);
     }
-    var dbg = '', out = ['KR;Datum;Halle;Position;Lieferumfang;Land'], seen = {}, other = 0, noScope = 0, noLand = 0, bad = 0, multi = 0;
+    var dbg = '', dbgKr = '', out = ['KR;Datum;Halle;Position;Lieferumfang;Land'], seen = {}, other = 0, noScope = 0, noLand = 0, bad = 0, multi = 0;
     starts.forEach(function (s, i) {
       var rec = lines.slice(s, i + 1 < starts.length ? starts[i + 1] : lines.length);
       var t = idx(rec, /Uhr$/), seg = idx(rec, /^\d{5}$/, t + 1), krI = seg < 0 ? -1 : idx(rec, /^KR[0-9A-Z]+$/i, seg);
@@ -90,13 +107,20 @@
       var di = idx(rec, /^\d{1,2}\.\d{1,2}\.\d{4}$/, krI + 1), glued = di >= 0 && /^[A-Z]{2}(?=[A-Z][a-z]|\s|$)/.test(rec[di + 1] || '') ? rec[di + 1].slice(0, 2) : '';
       var land = rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c].slice(0, 2).toUpperCase() : glued);
       out.push([kr, date, hall, pos, scope, land].join(';'));
-      if (!land) { noLand++; if (!dbg) dbg = rec.slice(krI, krI + 12).join(' | '); }
+      if (!land) { noLand++; if (!dbg) { dbg = rec.slice(krI, krI + 12).join(' | '); dbgKr = rec[krI]; } }
     });
-    return { starts: starts, lines: lines, out: out, other: other, noScope: noScope, noLand: noLand, bad: bad, multi: multi, dbg: dbg, land: out.filter(function (x) { return /;[A-Z]{2}$/.test(x); }).length };
+    return { starts: starts, lines: lines, out: out, other: other, noScope: noScope, noLand: noLand, bad: bad, multi: multi, dbg: dbg, dbgKr: dbgKr, land: out.filter(function (x) { return /;[A-Z]{2}$/.test(x); }).length };
     }
     var res = null;
     cands.forEach(function (l) { var r = parse(l); if (!res || r.land > res.land || (r.land === res.land && r.out.length > res.out.length)) res = r; });
-    var out = res.out, starts = res.starts, lines = res.lines, other = res.other, noScope = res.noScope, noLand = res.noLand, bad = res.bad, multi = res.multi, dbg = res.dbg;
+    var out = res.out, starts = res.starts, lines = res.lines, other = res.other, noScope = res.noScope, noLand = res.noLand, bad = res.bad, multi = res.multi, dbg = res.dbg, diag = '';
+    if (res.dbgKr) {
+      try {
+        var hit = null;
+        [].forEach.call(document.querySelectorAll('td,th,div,span,a,p'), function (e) { if (!hit && !e.children.length && e.textContent.trim() === res.dbgKr) hit = e; });
+        if (hit) { var rowEl = hit.closest('tr') || hit.parentElement.parentElement; diag = rowEl.outerHTML.replace(/\s+/g, ' ').slice(0, 3500); }
+      } catch (e6) { diag = ''; }
+    }
     var count = out.length - 1, text = starts.length ? out.join('\n') : lines.join('\n');
     var info = !starts.length ? 'Format nicht erkannt: es folgt der gelesene Rohtext (' + lines.length + ' Zellen).' :
       count + ' KR im Kurzformat · ' + other + ' andere Halle ausgeblendet · ' + noScope + ' ohne Maschine/komplett ausgeblendet' + (noLand ? ' · ' + noLand + ' ohne erkannten Ländercode (Zellen nach der KR: ' + dbg + ')' : '') + (bad ? ' · ' + bad + ' Einträge nicht lesbar' : '') + (multi ? ' · ' + multi + ' mit mehreren Spots (erster)' : '');
@@ -135,6 +159,11 @@
         msg.textContent = ok ? 'Kopiert. Im Dashboard unter Import einfügen.' : 'Bitte mit Strg+C kopieren (Text ist markiert).';
       }
       b.addEventListener('click', copy);
+      if (diag) {
+        el('div', 'color:#ff9a3d;font-size:12px;margin-top:16px', 'Ländercode nicht erkannt. Diagnose: HTML der ersten Zeile ohne Land (bitte an Claude schicken, enthält Daten dieser einen Zeile):');
+        var dt = el('textarea', 'width:100%;box-sizing:border-box;height:90px;background:#0b0e16;color:#e8f9ff;border:1px solid #3a3d18;padding:8px;font:11px monospace');
+        dt.value = diag; dt.readOnly = true;
+      }
       el('div', 'color:#7a8a96;font-size:12px;margin-top:8px', 'Im Dashboard: Import öffnen, einfügen (Strg+V) oder „Aus Zwischenablage einlesen“ klicken.');
       ta.focus(); ta.select();
     }
