@@ -5,7 +5,7 @@
   // Läuft im Tab von MIPP, liest die Liste, macht das Kurzformat daraus und zeigt es in einem neuen Fenster zum Kopieren.
   // Es gibt keine Verbindung zum Dashboard. Das Programm darf keine Zeilenkommentare und keine Doppel-Schrägstriche enthalten (sie werden beim Erzeugen entfernt).
   var SRC = function () {
-    var OWN = ['6', '7'], FROM = '3', w = null;
+    var VER = '__VER__', OWN = ['6', '7'], FROM = '3', w = null;
     try { w = window.open('', '_blank'); } catch (e0) { w = null; }
     var sel = String(window.getSelection ? getSelection() : ''), cands = [];
     function split(t, arr) { String(t).split(/\r?\n|\t/).forEach(function (x) { x = x.trim(); if (x) arr.push(x); }); }
@@ -127,7 +127,7 @@
     function show(d, root, closer) {
       function el(tag, css, txt) { var e = d.createElement(tag); e.style.cssText = css || ''; if (txt) e.textContent = txt; root.appendChild(e); return e; }
       var BTN = 'font:700 13px monospace;letter-spacing:.1em;text-transform:uppercase;padding:10px 18px;border:1px solid #fcee09;background:#fcee09;color:#000;cursor:pointer;margin:0 8px 8px 0';
-      el('h1', 'font:900 18px monospace;letter-spacing:.12em;color:#fcee09;margin:0 0 12px', 'DEUKRO26 · LISTE AUS MIPP');
+      el('h1', 'font:900 18px monospace;letter-spacing:.12em;color:#fcee09;margin:0 0 12px', 'DEUKRO26 · LISTE AUS MIPP · v' + VER);
       el('div', 'color:#00f0ff;margin-bottom:12px;font-size:13px', info);
       var ta = el('textarea', 'width:100%;box-sizing:border-box;height:55vh;background:#0b0e16;color:#e8f9ff;border:1px solid #3a3d18;padding:10px;font:13px monospace');
       ta.value = text; ta.readOnly = true;
@@ -201,7 +201,9 @@
   };
   // Kommentare und Einrückung entfernen (vor dem Einsetzen der Adresse, sie enthält „//")
   var body = SRC.toString().replace(/\/\/[^\n]*\n/g, '\n').replace(/\s*\n\s*/g, ' ');
-  var code = '(' + body.replace('__BASE__', base) + ')()';
+  var ver = (window.DEKR_VERSION && window.DEKR_VERSION.n) || '?';
+  document.getElementById('bmVer').textContent = 'v' + ver;
+  var code = '(' + body.replace('__BASE__', base).replace('__VER__', ver) + ')()';
   var url = 'javascript:' + encodeURIComponent(code);
   document.getElementById('bm').setAttribute('href', url);
   document.getElementById('bmCode').value = url;
