@@ -6,29 +6,39 @@
   // Es gibt keine Verbindung zum Dashboard. Das Programm darf keine Zeilenkommentare und keine Doppel-Schrägstriche enthalten (sie werden beim Erzeugen entfernt).
   var SRC = function () {
     var OWN = ['6', '7'], FROM = '3';
-    var lines = [], sel = String(window.getSelection ? getSelection() : '');
-    function add(t) { String(t).split(/\r?\n|\t/).forEach(function (x) { x = x.trim(); if (x) lines.push(x); }); }
-    var best = null;
-    if (sel.trim()) add(sel);
+    var sel = String(window.getSelection ? getSelection() : ''), cands = [];
+    function split(t, arr) { String(t).split(/\r?\n|\t/).forEach(function (x) { x = x.trim(); if (x) arr.push(x); }); }
+    function flagCode(e) {
+      var v = (e.getAttribute('alt') || e.getAttribute('title') || e.getAttribute('aria-label') || '').trim();
+      if (/^[A-Za-z]{2}$/.test(v)) return v.toUpperCase();
+      var m = /(?:^|[\s_-])(?:flag|fi|flag-icon|country)[-_]([a-z]{2})(?:\s|$)/i.exec(String(e.getAttribute('class') || ''));
+      return m ? m[1].toUpperCase() : '';
+    }
+    function cellLines(c, arr) {
+      var t = String(c.innerText || c.textContent || '').trim(), flags = [];
+      [].forEach.call(c.querySelectorAll('img,svg,span,i,div,[title],[aria-label]'), function (e) { var f = flagCode(e); if (f && t.indexOf(f) < 0 && flags.indexOf(f) < 0) flags.push(f); });
+      flags.forEach(function (f) { arr.push(f); });
+      split(t, arr);
+    }
+    if (sel.trim()) { var one = []; split(sel, one); cands.push(one); }
     else {
-      var n = 0;
+      var best = null, n = 0;
       [].forEach.call(document.querySelectorAll('table'), function (t) {
         var c = t.querySelectorAll('tr').length;
         if (c > n) { n = c; best = t; }
       });
       if (best) {
+        var viaSel = [], viaCells = [];
         try {
           var g = window.getSelection(), rg = document.createRange();
           rg.selectNodeContents(best); g.removeAllRanges(); g.addRange(rg);
-          add(String(g)); g.removeAllRanges();
-        } catch (e) { lines = []; }
-        if (!lines.length) [].forEach.call(best.querySelectorAll('tr'), function (r) {
-          [].forEach.call(r.children, function (c) { add(c.innerText || c.textContent); });
-        });
-      }
-      else add(document.body.innerText);
+          split(String(g), viaSel); g.removeAllRanges();
+        } catch (e) { viaSel = []; }
+        [].forEach.call(best.querySelectorAll('tr'), function (r) { [].forEach.call(r.children, function (c) { cellLines(c, viaCells); }); });
+        cands.push(viaCells, viaSel);
+      } else { var body = []; split(document.body.innerText, body); cands.push(body); }
     }
-    if (!lines.length) { alert('Nichts zum Übernehmen gefunden. Bitte die Auslieferliste öffnen.'); return; }
+    if (!cands.some(function (x) { return x.length; })) { alert('Nichts zum Übernehmen gefunden. Bitte die Auslieferliste öffnen.'); return; }
     var DAYS = { montag: 1, dienstag: 2, mittwoch: 3, donnerstag: 4, freitag: 5, samstag: 6, sonntag: 7 };
     function pad(x) { return (x < 10 ? '0' : '') + x; }
     function dateOf(y, kw, d) {
@@ -40,6 +50,7 @@
       for (var i = from || 0; i < arr.length; i++) if (re.test(arr[i])) return i;
       return -1;
     }
+    function parse(lines) {
     var starts = [], j;
     for (j = 0; j + 3 < lines.length; j++) {
       if (/^\d+$/.test(lines[j]) && /^20\d\d$/.test(lines[j + 1]) && /^\d{1,2}$/.test(lines[j + 2]) && DAYS[lines[j + 3].toLowerCase()]) starts.push(j);
@@ -67,9 +78,16 @@
       if (dm) date = pad(+dm[1]) + '.' + pad(+dm[2]) + '.' + (+dm[3] < 100 ? 2000 + +dm[3] : dm[3]);
       else date = dateOf(+rec[1], +rec[2], DAYS[rec[3].toLowerCase()]);
       seen[kr] = 1;
-      out.push([kr, date, hall, pos, scope, rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c].slice(0, 2).toUpperCase() : '')].join(';'));
-      if (c < 0) { noLand++; if (!dbg) dbg = rec.slice(krI, krI + 12).join(' | '); }
+      var di = idx(rec, /^\d{1,2}\.\d{1,2}\.\d{4}$/, krI + 1), glued = di >= 0 && /^[A-Z]{2}(?=[A-Z][a-z]|\s|$)/.test(rec[di + 1] || '') ? rec[di + 1].slice(0, 2) : '';
+      var land = rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c].slice(0, 2).toUpperCase() : glued);
+      out.push([kr, date, hall, pos, scope, land].join(';'));
+      if (!land) { noLand++; if (!dbg) dbg = rec.slice(krI, krI + 12).join(' | '); }
     });
+    return { starts: starts, lines: lines, out: out, other: other, noScope: noScope, noLand: noLand, bad: bad, multi: multi, dbg: dbg, land: out.filter(function (x) { return /;[A-Z]{2}$/.test(x); }).length };
+    }
+    var res = null;
+    cands.forEach(function (l) { var r = parse(l); if (!res || r.land > res.land || (r.land === res.land && r.out.length > res.out.length)) res = r; });
+    var out = res.out, starts = res.starts, lines = res.lines, other = res.other, noScope = res.noScope, noLand = res.noLand, bad = res.bad, multi = res.multi, dbg = res.dbg;
     var count = out.length - 1, text = starts.length ? out.join('\n') : lines.join('\n');
     var info = !starts.length ? 'Format nicht erkannt: es folgt der gelesene Rohtext (' + lines.length + ' Zellen).' :
       count + ' KR im Kurzformat · ' + other + ' andere Halle ausgeblendet · ' + noScope + ' ohne Maschine/komplett ausgeblendet' + (noLand ? ' · ' + noLand + ' ohne erkannten Ländercode (Zellen nach der KR: ' + dbg + ')' : '') + (bad ? ' · ' + bad + ' Einträge nicht lesbar' : '') + (multi ? ' · ' + multi + ' mit mehreren Spots (erster)' : '');
@@ -86,6 +104,18 @@
       var b = d.createElement('button');
       b.style.cssText = BTN; b.textContent = 'Alles kopieren';
       bar.appendChild(b);
+      var rb = d.createElement('button');
+      rb.style.cssText = BTN.replace('#fcee09;background:#fcee09;color:#000', '#3a3d18;background:#0b0e16;color:#e8f9ff'); rb.textContent = 'Rohtext kopieren';
+      rb.addEventListener('click', function () {
+        var hid = d.createElement('textarea');
+        hid.value = lines.join('\n'); hid.style.cssText = 'position:fixed;left:-9999px;top:0';
+        d.body.appendChild(hid); hid.select();
+        var ok2 = false;
+        try { ok2 = d.execCommand('copy'); } catch (e3) { ok2 = false; }
+        hid.remove();
+        msg.textContent = ok2 ? 'Rohtext kopiert (Notlösung: im Dashboard-Import einfügen).' : 'Rohtext konnte nicht kopiert werden.';
+      });
+      bar.appendChild(rb);
       if (closer) { var x = d.createElement('button'); x.style.cssText = BTN.replace('#fcee09;background:#fcee09;color:#000', '#3a3d18;background:#0b0e16;color:#e8f9ff'); x.textContent = 'Schließen'; x.addEventListener('click', closer); bar.appendChild(x); }
       bar.appendChild(msg);
       function copy() {
