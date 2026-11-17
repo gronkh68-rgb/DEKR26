@@ -2,7 +2,7 @@
 // Blau (hat Vorrang): Sonderziele. Gelb: Europa oder auf dem Landweg erreichbar. Rot: alle übrigen (Seefracht).
 window.Countries = (function () {
   'use strict';
-  var NAMES = ('AD Andorra|AE Vereinigte Arabische Emirate|AF Afghanistan|AG Antigua und Barbuda|AL Albanien|AM Armenien|AO Angola|AR Argentinien|AT Österreich|AU Australien|AZ Aserbaidschan|' +
+  var NAMES = ('AD Andorra|AX Åland-Inseln|GF Französisch-Guayana|GP Guadeloupe|MQ Martinique|IC Kanarische Inseln|AE Vereinigte Arabische Emirate|AF Afghanistan|AG Antigua und Barbuda|AL Albanien|AM Armenien|AO Angola|AR Argentinien|AT Österreich|AU Australien|AZ Aserbaidschan|' +
     'BA Bosnien und Herzegowina|BB Barbados|BD Bangladesch|BE Belgien|BF Burkina Faso|BG Bulgarien|BH Bahrain|BI Burundi|BJ Benin|BN Brunei|BO Bolivien|BR Brasilien|BS Bahamas|BT Bhutan|BW Botsuana|BY Belarus|BZ Belize|' +
     'CA Kanada|CD DR Kongo|CF Zentralafrikanische Republik|CG Kongo|CH Schweiz|CI Elfenbeinküste|CL Chile|CM Kamerun|CN China|CO Kolumbien|CR Costa Rica|CU Kuba|CV Kap Verde|CY Zypern|CZ Tschechien|' +
     'DE Deutschland|DJ Dschibuti|DK Dänemark|DM Dominica|DO Dominikanische Republik|DZ Algerien|EC Ecuador|EE Estland|EG Ägypten|ER Eritrea|ES Spanien|ET Äthiopien|FI Finnland|FJ Fidschi|FO Färöer|FR Frankreich|' +
@@ -19,8 +19,10 @@ window.Countries = (function () {
   NAMES.forEach(function (x) { name[x.slice(0, 2)] = x.slice(3); });
   function set(s) { var o = {}; s.split(' ').forEach(function (c) { o[c] = 1; }); return o; }
   var BLUE = set('US MX CA ZA IN EG LY');
-  var YELLOW = set('AD AL AT AX BA BE BG BY CH CY CZ DE DK EE ES FI FO FR GB GG GI GR HR HU IE IM IS IT JE LI LT LU LV MC MD ME MK MT NL NO PL PT RO RS RU SE SI SJ SK SM UA VA XK ' +
-    'TR GE AM AZ KZ UZ TM KG TJ IR IQ SY LB IL JO SA KW QA AE OM YE PS AF PK MN');
+  // Gelb: Europa, GUS-Staaten, Iran, Åland, Französisch-Guayana, Guadeloupe, Martinique, Réunion, Guernsey, Jersey, Kanarische Inseln, Malta, Zypern.
+  // Berg Athos gehört zu Griechenland (GR), die Kanaren zu Spanien (ES; eigener Code IC möglich).
+  var YELLOW = set('AD AL AT AX BA BE BG BY CH CY CZ DE DK EE ES FI FO FR GB GG GI GR HR HU IC IE IM IS IT JE LI LT LU LV MC MD ME MK MT NL NO PL PT RO RS RU SE SI SJ SK SM UA VA XK ' +
+    'GE AM AZ KZ KG TJ TM UZ IR TR GF GP MQ RE');
   var ZONE = { blue: 'Sonderziel', yellow: 'Europa oder Landweg', red: 'Seefracht' };
   var DEFCOL = { blue: '#3ea0ff', yellow: '#fcee09', red: '#ff2a55' };
   var ov = { map: {}, col: {} };   // Änderungen des Admins (settings/countries), überschreiben die Vorgaben
