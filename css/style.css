@@ -515,6 +515,13 @@ body.cp-sb #verTag { bottom: 28px; }
 /* Länder: Punkt für die Versandart */
 .badge.cty { display: inline-flex; align-items: center; gap: 5px; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-.dot.blue { background: #3ea0ff; box-shadow: 0 0 6px #3ea0ff; }
-.dot.yellow { background: #fcee09; box-shadow: 0 0 6px #fcee09; }
-.dot.red { background: #ff2a55; box-shadow: 0 0 6px #ff2a55; }
+.dot.blue { background: var(--cty-blue, #3ea0ff); box-shadow: 0 0 6px var(--cty-blue, #3ea0ff); }
+.dot.yellow { background: var(--cty-yellow, #fcee09); box-shadow: 0 0 6px var(--cty-yellow, #fcee09); }
+.dot.red { background: var(--cty-red, #ff2a55); box-shadow: 0 0 6px var(--cty-red, #ff2a55); }
+.cty-row { display: grid; grid-template-columns: 38px 1fr 150px 30px; gap: 6px; align-items: center; margin-bottom: 4px; font-size: 13px; }
+.cty-row input, .cty-row select { margin: 0; font-size: 13px; padding: 6px; width: 100%; box-sizing: border-box; }
+.cty-list { max-height: 300px; overflow-y: auto; margin: 6px 0; }
+.cty-cols { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0; font-size: 13px; }
+.cty-cols label { display: flex; align-items: center; gap: 6px; }
+.cty-cols input { width: 40px; height: 28px; padding: 0; }
+@media (max-width: 520px) { .cty-row { grid-template-columns: 34px 1fr 110px 28px; } }

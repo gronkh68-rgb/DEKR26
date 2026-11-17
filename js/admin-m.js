@@ -75,7 +75,9 @@ window.AdminM = (function () {
       '<div class="qr-add"><input id="admReg" class="full-in" style="margin:0;flex:1" value="' + esc(rc) + '" maxlength="40" placeholder="Code" autocomplete="off"><button type="button" class="btn-sm" id="admRegSave">Speichern</button></div></div>' +
       '<div class="qr-add" style="margin:8px 0"><b style="flex:1">Accounts (' + acc.length + ')</b>' + (noCode ? '<button type="button" class="btn-sm" id="admAllCodes">Codes erzeugen (' + noCode + ')</button>' : '') + '</div>' +
       (acc.length ? acc.map(accCard).join('') : '<div class="empty">Noch keine Accounts.</div>') +
-      (guests.length ? '<div class="qr-add" style="margin:14px 0 8px"><b>Gäste (' + guests.length + ')</b></div>' + guests.map(accCard).join('') : '');
+      (guests.length ? '<div class="qr-add" style="margin:14px 0 8px"><b>Gäste (' + guests.length + ')</b></div>' + guests.map(accCard).join('') : '') +
+      '<details class="adm-acc" id="admCtyBox" style="margin-top:14px"' + (openIds.cty ? ' open' : '') + '><summary><b>Länder und Punkte</b></summary><div class="adm-body" id="admCty"></div></details>';
+    CtyEdit.mount(root.querySelector('#admCty'));
   }
   function save(id, patch) {
     var q = Store.get().qrs[id];
@@ -100,7 +102,7 @@ window.AdminM = (function () {
         render(root, Store.get());
       }).catch(function () { toastFn('Speichern fehlgeschlagen', true); });
     });
-    root.addEventListener('toggle', function (e) { var d = e.target; if (d.matches && d.matches('details.adm-acc')) openIds[d.dataset.id] = d.open; }, true);
+    root.addEventListener('toggle', function (e) { var d = e.target; if (d.matches && d.matches('details.adm-acc')) openIds[d.dataset.id || 'cty'] = d.open; }, true);
     root.addEventListener('click', function (e) {
       var t = e.target.closest('button');
       if (!t) return;

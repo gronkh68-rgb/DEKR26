@@ -22,20 +22,37 @@ window.Countries = (function () {
   var YELLOW = set('AD AL AT AX BA BE BG BY CH CY CZ DE DK EE ES FI FO FR GB GG GI GR HR HU IE IM IS IT JE LI LT LU LV MC MD ME MK MT NL NO PL PT RO RS RU SE SI SJ SK SM UA VA XK ' +
     'TR GE AM AZ KZ UZ TM KG TJ IR IQ SY LB IL JO SA KW QA AE OM YE PS AF PK MN');
   var ZONE = { blue: 'Sonderziel', yellow: 'Europa oder Landweg', red: 'Seefracht' };
+  var DEFCOL = { blue: '#3ea0ff', yellow: '#fcee09', red: '#ff2a55' };
+  var ov = { map: {}, col: {} };   // Änderungen des Admins (settings/countries), überschreiben die Vorgaben
   function code(c) { return String(c || '').trim().toUpperCase().slice(0, 3); }
-  function nameOf(c) { c = code(c); return name[c] || c; }
-  // Blau geht vor Gelb, alles andere Bekannte ist Seefracht, unbekannte Codes haben keinen Punkt
-  function zone(c) {
+  function defName(c) { return name[code(c)] || ''; }
+  function defZone(c) {
     c = code(c);
     if (BLUE[c]) return 'blue';
     if (YELLOW[c]) return 'yellow';
     return name[c] ? 'red' : '';
   }
+  function nameOf(c) { c = code(c); return (ov.map[c] && ov.map[c].n) || name[c] || c; }
+  // Blau geht vor Gelb, alles andere Bekannte ist Seefracht, unbekannte Codes haben keinen Punkt. Der Admin kann pro Land eine Farbe oder „none“ festlegen.
+  function zone(c) {
+    c = code(c);
+    var o = ov.map[c];
+    if (o && o.z) return o.z === 'none' ? '' : o.z;
+    return defZone(c);
+  }
+  function use(cfg) {
+    ov = { map: (cfg && cfg.map) || {}, col: (cfg && cfg.col) || {} };
+    var st = document.documentElement.style;
+    ['blue', 'yellow', 'red'].forEach(function (z) {
+      if (ov.col[z] && /^#[0-9a-f]{6}$/i.test(ov.col[z])) st.setProperty('--cty-' + z, ov.col[z]); else st.removeProperty('--cty-' + z);
+    });
+  }
+  function known() { return Object.keys(name); }
   function badge(c) {
     c = code(c);
     if (!c) return '';
     var z = zone(c), esc = window.Util ? Util.esc : function (x) { return x; };
     return ' <span class="badge cty" title="' + esc('Land: ' + nameOf(c) + (z ? ' · ' + ZONE[z] : '')) + '">' + (z ? '<i class="dot ' + z + '"></i>' : '') + esc(nameOf(c)) + '</span>';
   }
-  return { name: nameOf, zone: zone, badge: badge };
+  return { name: nameOf, zone: zone, badge: badge, use: use, known: known, defName: defName, defZone: defZone, ZONE: ZONE, DEFCOL: DEFCOL };
 })();

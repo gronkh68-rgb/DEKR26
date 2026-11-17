@@ -731,6 +731,7 @@
     return allMode ? tasks : tasks.filter(function (t) { return !dayPrefs.hidden[t.day]; });
   }
   function render(state) {
+    Countries.use((state.settings || {}).countries);
     renderAccount(state);
     openProb = {};
     Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') openProb[state.problems[id].kr] = 1; });
@@ -1610,6 +1611,7 @@
       loadDevices();
       var rc = (Store.get().settings || {}).regcode || '';
       if (document.activeElement !== $('codeIn')) $('codeIn').value = rc;
+      if (!$('ctyRoot').firstChild) CtyEdit.mount($('ctyRoot')); else CtyEdit.refresh($('ctyRoot'));
       $('codeInfo').textContent = rc ? 'Aktiver Code: ' + rc + ' (steckt in neu erzeugten QR-Links)' : 'Kein Code: Jedes Gerät, das die Seite öffnet, kann eine Anfrage senden.';
     }
   }

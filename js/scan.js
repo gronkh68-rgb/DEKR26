@@ -777,6 +777,7 @@
   setInterval(function () { var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id); }, 20000);
   window.addEventListener('pagehide', function () { var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id); });
   function apply(state) {
+    Countries.use((state.settings || {}).countries);
     $('lockCover').hidden = !Store.isLocked();
     if (Store.isLocked()) {
       $('lockCode2').textContent = Auth.code();
