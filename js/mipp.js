@@ -5,8 +5,7 @@
   // Läuft im Tab von MIPP, liest die Liste, macht das Kurzformat daraus und zeigt es in einem neuen Fenster zum Kopieren.
   // Es gibt keine Verbindung zum Dashboard. Das Programm darf keine Zeilenkommentare und keine Doppel-Schrägstriche enthalten (sie werden beim Erzeugen entfernt).
   var SRC = function () {
-    var VER = '__VER__', OWN = ['6', '7'], FROM = ['3', '27'], w = null;
-    try { w = window.open('', '_blank'); } catch (e0) { w = null; }
+    var VER = '__VER__', CFG = __CFG__, OWN = ['6', '7'], FROM = CFG && !CFG.h27 ? ['3'] : ['3', '27'], w = null, tried = false;
     var sel = String(window.getSelection ? getSelection() : ''), cands = [];
     function split(t, arr) { String(t).split(/\r?\n|\t/).forEach(function (x) { x = x.trim(); if (x) arr.push(x); }); }
     function flagCode(e) {
@@ -114,6 +113,21 @@
     }
     var res = null;
     cands.forEach(function (l) { var r = parse(l); if (!res || r.land > res.land || (r.land === res.land && r.out.length > res.out.length)) res = r; });
+    if (res.noLand > 0 && !tried && !sel.trim() && navigator.clipboard && navigator.clipboard.readText) {
+      tried = true;
+      try {
+        var g3 = window.getSelection(), rg3 = document.createRange();
+        rg3.selectNodeContents(document.body); g3.removeAllRanges(); g3.addRange(rg3);
+        var okc = document.execCommand('copy'), again = false;
+        g3.removeAllRanges();
+        if (okc) {
+          var redo = function (t) { if (again) return; again = true; if (t && t.trim()) { var xx = []; split(t, xx); cands.push(xx); } finish(); };
+          navigator.clipboard.readText().then(redo, function () { redo(''); });
+          setTimeout(function () { redo(''); }, 2500);
+          return;
+        }
+      } catch (e4) { /* weiter ohne Zwischenablage */ }
+    }
     var out = res.out, starts = res.starts, lines = res.lines, other = res.other, noScope = res.noScope, noLand = res.noLand, bad = res.bad, multi = res.multi, dbg = res.dbg, diag = '';
     if (res.dbgKr) {
       try {
@@ -170,46 +184,143 @@
       el('div', 'color:#7a8a96;font-size:12px;margin-top:8px', 'Danach das Dashboard öffnen (egal in welchem Browser): Das Fenster mit den Änderungen erscheint dort von selbst. Sonst im Import einfügen (Strg+V).');
       copy(true);
     }
-    if (w && w.document) {
-      w.document.title = 'DEUKRO26 · Liste';
-      w.document.body.style.cssText = 'margin:0;padding:20px;background:#05060b;color:#e8f9ff;font-family:monospace';
-      show(w.document, w.document.body, null);
-    } else {
-      var ov = document.createElement('div');
-      ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483647;overflow:auto;padding:20px;background:#05060b;color:#e8f9ff;font-family:monospace';
-      document.body.appendChild(ov);
-      show(document, ov, function () { ov.remove(); });
+    function fallback(er) {
+      if (er) info = 'Direkter Import nicht möglich (' + er + '). ' + info;
+      try { w = window.open('', '_blank'); } catch (e7) { w = null; }
+      if (w && w.document) {
+        w.document.title = 'DEUKRO26 · Liste';
+        w.document.body.style.cssText = 'margin:0;padding:20px;background:#05060b;color:#e8f9ff;font-family:monospace';
+        show(w.document, w.document.body, null);
+      } else {
+        var ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483647;overflow:auto;padding:20px;background:#05060b;color:#e8f9ff;font-family:monospace';
+        document.body.appendChild(ov);
+        show(document, ov, function () { ov.remove(); });
+      }
+
     }
+    function toast(txt, bad) {
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;right:16px;top:16px;z-index:2147483647;padding:12px 18px;background:#05060b;color:' + (bad ? '#ff2a55' : '#2dffb3') + ';border:2px solid ' + (bad ? '#ff2a55' : '#2dffb3') + ';font:700 14px monospace;letter-spacing:.06em;box-shadow:0 0 16px rgba(0,0,0,.6)';
+      t.textContent = txt;
+      document.body.appendChild(t);
+      setTimeout(function () { t.remove(); }, 1600);
     }
-    var fin = false;
-    function go(extra) {
-      if (fin) return;
-      fin = true;
-      if (extra && extra.trim()) { var x = []; split(extra, x); cands.push(x); }
-      finish();
+    var SD = ['', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    function isoWeek(d) {
+      var t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+      var y = t.getUTCFullYear(), wk = Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7);
+      return y + '-W' + pad(wk);
     }
-    if (sel.trim()) go('');
-    else {
-      try {
-        var g3 = window.getSelection(), rg3 = document.createRange();
-        rg3.selectNodeContents(document.body); g3.removeAllRanges(); g3.addRange(rg3);
-        var okc = document.execCommand('copy');
-        g3.removeAllRanges();
-        if (okc && navigator.clipboard && navigator.clipboard.readText) {
-          navigator.clipboard.readText().then(go, function () { go(''); });
-          setTimeout(function () { go(''); }, 4000);
-        } else go('');
-      } catch (e4) { go(''); }
+    function mondayOf(key) {
+      var m = /^(\d{4})-W(\d{2})$/.exec(key), j4 = new Date(+m[1], 0, 4);
+      return new Date(+m[1], 0, 4 - ((j4.getDay() || 7) - 1) + 7 * (+m[2] - 1));
     }
+    function dayText(wk, d) {
+      var m = mondayOf(wk);
+      m.setDate(m.getDate() + d - 1);
+      return SD[d] + ' ' + pad(m.getDate()) + '.' + pad(m.getMonth() + 1) + '. (KW ' + wk.split('-W')[1] + ')';
+    }
+    function label(hallId, pos) {
+      if (!pos) return '–';
+      var m = /^([A-Z])(\d+)$/.exec(pos);
+      return (CFG.rev[hallId] ? CFG.rev[hallId] + ' ' : '') + (m ? m[2] + ' ' + m[1] : pos);
+    }
+    function plan(rows, tasks) {
+      var now = Date.now(), t0 = new Date(), today = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()), ops = {}, st = { neu: 0, moved: 0, chg: 0, same: 0, past: 0 }, by = {};
+      Object.keys(tasks).forEach(function (id) {
+        var t = tasks[id];
+        if (!t || !t.kr) return;
+        var k = t.kr + (t.scope === 'Schrumpftunnel' ? '~S' : '');
+        (by[k] = by[k] || []).push({ id: id, t: t });
+      });
+      rows.forEach(function (r) {
+        var dm = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(r[1]);
+        if (!dm) return;
+        var d = new Date(+dm[3], +dm[2] - 1, +dm[1]), wd = d.getDay(), day = wd >= 1 && wd <= 5 ? wd : 5, week = isoWeek(d);
+        var kr = r[0], pos = r[3], scope = r[4], land = r[5], from = CFG.hall[r[2]] ? '' : r[2], usa = land === 'US', shr = scope === 'Schrumpftunnel';
+        var hall = pos && !from ? CFG.hall[r[2]] || '' : '', ex = by[kr + (shr ? '~S' : '')], e = ex && ex[0] ? ex[0].t : null, how = 'neu', chg = '', movedFrom = '';
+        if (e) {
+          var mv = e.week !== week || e.day !== day, ch = [];
+          if (mv) { chg = 'von ' + dayText(e.week, e.day) + ' nach ' + dayText(week, day); movedFrom = SD[e.day] + ' ' + dayText(e.week, e.day).slice(3, 9) + (e.week !== week ? ' (KW ' + e.week.split('-W')[1] + ')' : ''); }
+          if ((e.pos || '') !== (pos || '') || (e.pos && (e.hall || '') !== hall)) ch.push('Position ' + label(e.hall, e.pos) + ' → ' + label(hall, pos));
+          if ((e.scope || '') !== (scope || '')) ch.push('Lieferumfang ' + (e.scope || '–') + ' → ' + (scope || '–'));
+          if (!!e.usa !== usa) ch.push(usa ? 'jetzt USA' : 'nicht mehr USA');
+          chg = [chg].concat(ch).filter(Boolean).join('; ');
+          how = mv ? 'verschoben' : ch.length ? 'geändert' : 'gleich';
+        }
+        if (d < today && (how === 'neu' || how === 'gleich')) { st.past++; return; }
+        st[how === 'neu' ? 'neu' : how === 'verschoben' ? 'moved' : how === 'geändert' ? 'chg' : 'same']++;
+        var id = [week, kr.replace(/[^A-Za-z0-9_-]/g, '_'), hall || '0', pos || '0'].join('_') + (shr ? '_S' : ''), cur = tasks[id];
+        var t = { week: week, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : !!(ex && ex.some(function (x) { return x.t.done; })) };
+        if (scope) t.scope = scope;
+        if (usa) t.usa = true;
+        if (land) t.country = land;
+        if (from) t.from = from;
+        t.impAt = now;
+        if (how === 'verschoben' || how === 'geändert') { t.chg = chg; t.chgK = how; t.chgAt = now; if (movedFrom) t.movedFrom = movedFrom; }
+        else if (e && e.chg) { t.chg = e.chg; t.chgK = e.chgK; t.chgAt = e.chgAt; if (e.movedFrom) t.movedFrom = e.movedFrom; }
+        var src = cur || e;
+        if (src && src.k2) t.k2 = src.k2;
+        if (src && src.k5) t.k5 = src.k5;
+        if (src && src.closed) { t.done = true; t.closed = true; t.closedAt = src.closedAt; t.closedBy = src.closedBy; }
+        if (ex) ex.forEach(function (x) { if (x.id !== id) ops['tasks/' + x.id] = null; });
+        ops['tasks/' + id] = t;
+      });
+      return { ops: ops, st: st };
+    }
+    function importDirect(rows) {
+      var tok = '';
+      return fetch('https:' + '/' + '/securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(CFG.key), { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(CFG.refresh) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'Anmeldung HTTP ' + r.status); return j.id_token || j.idToken; }); })
+        .then(function (t) { tok = t; return fetch(CFG.db + '/tasks.json?auth=' + encodeURIComponent(tok)); })
+        .then(function (r) { if (!r.ok) throw new Error('Lesen HTTP ' + r.status); return r.json(); })
+        .then(function (tasks) {
+          var p = plan(rows, tasks || {});
+          if (!Object.keys(p.ops).length) return p;
+          return fetch(CFG.db + '/.json?auth=' + encodeURIComponent(tok), { method: 'PATCH', body: JSON.stringify(p.ops) }).then(function (r) { if (!r.ok) throw new Error('Schreiben HTTP ' + r.status); return p; });
+        });
+    }
+    if (CFG && starts.length && count) {
+      importDirect(out.slice(1).map(function (l) { return l.split(';'); })).then(function (p) {
+        var s2 = p.st;
+        toast('✔ MIPP importiert: ' + s2.neu + ' neu, ' + s2.moved + ' verschoben, ' + s2.chg + ' geändert' + (s2.past ? ' (' + s2.past + ' Vergangenes übersprungen)' : ''), false);
+      }, function (er) { fallback(String((er && er.message) || er)); });
+    } else fallback('');
+    }
+    finish();
   };
   // Kommentare und Einrückung entfernen (vor dem Einsetzen der Adresse, sie enthält „//")
   var body = SRC.toString().replace(/\/\/[^\n]*\n/g, '\n').replace(/\s*\n\s*/g, ' ');
   var ver = (window.DEKR_VERSION && window.DEKR_VERSION.n) || '?';
   document.getElementById('bmVer').textContent = 'v' + ver;
-  var code = '(' + body.replace('__BASE__', base).replace('__VER__', ver) + ')()';
-  var url = 'javascript:' + encodeURIComponent(code);
-  document.getElementById('bm').setAttribute('href', url);
-  document.getElementById('bmCode').value = url;
+  // Zugang: das Lesezeichen enthält den Geräte-Zugang dessen, der es hier erzeugt (angemeldet in diesem Browser). Damit schreibt es die Liste direkt in die Datenbank.
+  var A = {}, C = window.DEKR_CONFIG || {}, hallMap = {}, hallRev = {};
+  try { A = JSON.parse(localStorage.getItem('dekr26_auth')) || {}; } catch (e) { A = {}; }
+  (window.DEKR_HALLS || []).forEach(function (h) { hallMap[h.short] = h.id; hallRev[h.id] = h.short; });
+  var haveAuth = !!(A.refresh && C.authApiKey && C.firebaseUrl);
+  function perm27() {
+    if (!haveAuth) return Promise.resolve(false);
+    if (A.admin) return Promise.resolve(true);
+    var id = ''; try { id = (JSON.parse(localStorage.getItem('dekr26_account')) || {}).id || ''; } catch (e) { id = ''; }
+    if (!id) return Promise.resolve(false);
+    return Auth.token().then(function (t) { return fetch(C.firebaseUrl + '/qrs/' + encodeURIComponent(id) + '/perms.json?auth=' + encodeURIComponent(t)); })
+      .then(function (r) { return r.ok ? r.json() : null; }).then(function (p) { return !!(p && p.hall27); }).catch(function () { return false; });
+  }
+  var url = '';
+  function build(h27) {
+    var cfg = haveAuth ? { key: C.authApiKey, db: C.firebaseUrl, refresh: A.refresh, h27: h27, hall: hallMap, rev: hallRev } : null;
+    var code = '(' + body.replace('__BASE__', base).replace('__VER__', ver).replace('__CFG__', function () { return JSON.stringify(cfg); }) + ')()';
+    url = 'javascript:' + encodeURIComponent(code);
+    document.getElementById('bm').setAttribute('href', url);
+    document.getElementById('bmCode').value = url;
+    document.getElementById('bmAuth').textContent = haveAuth
+      ? 'Zugang enthalten' + (A.admin ? ' (Admin: besonders gut aufbewahren)' : '') + (h27 ? ', Halle 27 sichtbar' : '') + '. Klick im MIPP-Tab importiert direkt.'
+      : 'Kein Zugang gefunden: Ohne Anmeldung kopiert das Lesezeichen nur. Öffne diese Seite in dem Browser, in dem du im Dashboard angemeldet bist.';
+  }
+  build(false);
+  perm27().then(function (h) { if (h) build(true); });
   document.getElementById('copyBm').onclick = function () {
     var info = document.getElementById('copyInfo');
     try {
