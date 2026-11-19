@@ -207,12 +207,16 @@
     }
     function startAuto() {
       if (!CFG) return;
-      if (window.__dekrAuto) { window.__dekrAuto.next = Date.now() + window.__dekrAuto.mins * 60000; return; }
+      if (window.__dekrAuto) {
+        window.__dekrAuto.next = Date.now() + window.__dekrAuto.mins * 60000;
+        if (window.__dekrAuto.box && !window.__dekrAuto.box.isConnected) document.body.appendChild(window.__dekrAuto.box);
+        return;
+      }
       var A = { mins: 60, next: 0, on: true, busy: false, last: 'noch kein automatischer Import', frame: null };
       window.__dekrAuto = A;
       A.next = Date.now() + A.mins * 60000;
       var box = document.createElement('div');
-      box.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:2147483646;width:260px;padding:10px 12px;background:#05060b;color:#e8f9ff;border:1px solid #fcee09;font:12px monospace;box-shadow:0 0 14px rgba(0,0,0,.6)';
+      box.style.cssText = 'position:fixed;right:16px;top:70px;z-index:2147483646;width:260px;padding:10px 12px;background:#05060b;color:#e8f9ff;border:1px solid #fcee09;font:12px monospace;box-shadow:0 0 14px rgba(0,0,0,.6)';
       var head = document.createElement('div');
       head.style.cssText = 'font:900 12px monospace;letter-spacing:.1em;color:#fcee09;margin-bottom:6px';
       head.textContent = 'DEUKRO26 · AUTO-IMPORT v' + VER;
@@ -230,6 +234,7 @@
       sel2.addEventListener('change', function () { A.mins = +sel2.value; A.next = Date.now() + A.mins * 60000; draw(); });
       box.appendChild(head); box.appendChild(stat); box.appendChild(last); box.appendChild(row);
       document.body.appendChild(box);
+      A.box = box;
       function draw() {
         var left = Math.max(0, Math.round((A.next - Date.now()) / 1000));
         stat.textContent = A.busy ? 'Lädt MIPP neu und liest …' : A.on ? 'Nächster Import in ' + pad(Math.floor(left / 60)) + ':' + pad(left % 60) : 'Pausiert';
@@ -263,7 +268,7 @@
         fr.src = location.href;
         document.body.appendChild(fr);
       }
-      var tm = setInterval(function () { if (A.on && !A.busy && Date.now() >= A.next) runAuto(); draw(); }, 1000);
+      var tm = setInterval(function () { if (!box.isConnected) document.body.appendChild(box); if (A.on && !A.busy && Date.now() >= A.next) runAuto(); draw(); }, 1000);
       draw();
     }
     function finish() {
@@ -358,8 +363,8 @@
     if (CFG && starts.length && count) {
       importDirect(out.slice(1).map(function (l) { return l.split(';'); })).then(function (p) {
         var s2 = p.st;
-        toast('✔ MIPP importiert: ' + s2.neu + ' neu, ' + s2.moved + ' verschoben, ' + s2.chg + ' geändert' + (s2.past ? ' (' + s2.past + ' Vergangenes übersprungen)' : ''), false);
-        startAuto();
+        toast('✔ MIPP importiert: ' + s2.neu + ' neu, ' + s2.moved + ' verschoben, ' + s2.chg + ' geändert' + (s2.past ? ' (' + s2.past + ' Vergangenes übersprungen)' : '') + ' · v' + VER, false);
+        try { startAuto(); } catch (e10) { toast('Auto-Import-Fenster Fehler: ' + String((e10 && e10.message) || e10), true); }
       }, function (er) { fallback(String((er && er.message) || er)); });
     } else fallback('');
     }
