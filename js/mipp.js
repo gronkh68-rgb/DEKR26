@@ -93,17 +93,21 @@
       var hall = (R[0] || '').split('.')[0], num = k ? R[k] : '', letter = k ? R[2 * k] : '';
       var c = idx(rec, /^[A-Za-z]{2}(?:$|[\s\-–:,(])/, krI + 1), sc = idx(rec, /^(komplett|maschine|schrumpftunnel)/i, c >= 0 ? c + 2 : krI + 1);
       var kr = rec[krI].toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^KR/, '');
-      if (seen[kr]) return;
-      var low = sc >= 0 ? rec[sc].toLowerCase() : '', scope = /schrumpf/.test(low) ? '' : /komplett/.test(low) ? 'komplett' : /maschine/.test(low) ? 'Maschine' : '';
+      var low = sc >= 0 ? rec[sc].toLowerCase() : '', scope = /komplett/.test(low) ? 'komplett' : /schrumpf/.test(low) ? 'Schrumpftunnel' : /maschine/.test(low) ? 'Maschine' : '';
       var own = OWN.indexOf(hall) >= 0;
       if (!own && FROM.indexOf(hall) < 0) { other++; return; }
+      if (seen[kr]) {
+        var oi = seen[kr], cells = out[oi].split(';'), both = (cells[4] === 'Maschine' && scope === 'Schrumpftunnel') || (cells[4] === 'Schrumpftunnel' && scope === 'Maschine');
+        if (both) { cells[4] = 'Maschine + Schrumpftunnel'; out[oi] = cells.join(';'); }
+        return;
+      }
       if (!scope) { noScope++; return; }
       var pos = own ? ((letter.toUpperCase().match(/[A-Z]/) || [''])[0] + (num.match(/\d+/) || [''])[0]) : '';
       if (pos.length < 2) pos = '';
       var dm = /^(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})$/.exec(rec[4] || ''), date;
       if (dm) date = pad(+dm[1]) + '.' + pad(+dm[2]) + '.' + (+dm[3] < 100 ? 2000 + +dm[3] : dm[3]);
       else date = dateOf(+rec[1], +rec[2], DAYS[rec[3].toLowerCase()]);
-      seen[kr] = 1;
+      seen[kr] = out.length;
       var di = idx(rec, /^\d{1,2}\.\d{1,2}\.\d{4}$/, krI + 1), glued = di >= 0 && /^[A-Z]{2}(?=[A-Z][a-z]|\s|$)/.test(rec[di + 1] || '') ? rec[di + 1].slice(0, 2) : '';
       var land = rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c].slice(0, 2).toUpperCase() : glued);
       out.push([kr, date, hall, pos, scope, land].join(';'));
@@ -123,7 +127,7 @@
     }
     var count = out.length - 1, text = starts.length ? out.join('\n') : lines.join('\n');
     var info = !starts.length ? 'Format nicht erkannt: es folgt der gelesene Rohtext (' + lines.length + ' Zellen).' :
-      count + ' KR im Kurzformat · ' + other + ' andere Halle ausgeblendet · ' + noScope + ' ohne Maschine/komplett ausgeblendet' + (noLand ? ' · ' + noLand + ' ohne erkannten Ländercode (Zellen nach der KR: ' + dbg + ')' : '') + (bad ? ' · ' + bad + ' Einträge nicht lesbar' : '') + (multi ? ' · ' + multi + ' mit mehreren Spots (erster)' : '');
+      count + ' KR im Kurzformat · ' + other + ' andere Halle ausgeblendet · ' + noScope + ' ohne Lieferumfang ausgeblendet' + (noLand ? ' · ' + noLand + ' ohne erkannten Ländercode (Zellen nach der KR: ' + dbg + ')' : '') + (bad ? ' · ' + bad + ' Einträge nicht lesbar' : '') + (multi ? ' · ' + multi + ' mit mehreren Spots (erster)' : '');
     function show(d, root, closer) {
       function el(tag, css, txt) { var e = d.createElement(tag); e.style.cssText = css || ''; if (txt) e.textContent = txt; root.appendChild(e); return e; }
       var BTN = 'font:700 13px monospace;letter-spacing:.1em;text-transform:uppercase;padding:10px 18px;border:1px solid #fcee09;background:#fcee09;color:#000;cursor:pointer;margin:0 8px 8px 0';

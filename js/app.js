@@ -1068,7 +1068,8 @@
     var scope = '';
     if (ci.scope >= 0) {
       var sc = g('scope').toLowerCase();
-      scope = /schrumpf/.test(sc) ? '' : /komplett/.test(sc) ? 'komplett' : /maschine/.test(sc) ? 'Maschine' : '';
+      var mach = /maschine/.test(sc), schr = /schrumpf/.test(sc);
+      scope = /komplett/.test(sc) ? 'komplett' : mach && schr ? 'Maschine + Schrumpftunnel' : schr ? 'Schrumpftunnel' : mach ? 'Maschine' : '';
       if (!scope) return { skip: 'Lieferumfang' };
     }
     var pos = '';
@@ -1109,8 +1110,12 @@
       var x = readRow(r, ci, dayDef);
       if (x.skip === 'andere Halle') out.hall++;
       else if (x.skip === 'Lieferumfang') out.scope++;
-      else if (!x.skip && !seen[x.kr]) {
-        seen[x.kr] = 1;
+      else if (!x.skip && seen[x.kr]) {
+        // Dieselbe KR mit Maschine und Schrumpftunnel (zwei Zeilen mit anderer Uhrzeit): ein Eintrag mit beiden
+        var f = seen[x.kr];
+        if (f.scope !== x.scope && /^(Maschine|Schrumpftunnel)$/.test(f.scope) && /^(Maschine|Schrumpftunnel)$/.test(x.scope)) f.scope = 'Maschine + Schrumpftunnel';
+      } else if (!x.skip) {
+        seen[x.kr] = x;
         x.hallEff = x.pos ? (x.hall || Halls.all[0].id) : '';
         out.items.push(x);
       }
@@ -1206,7 +1211,7 @@
     var c = collect(), weeks = {};
     c.items.forEach(function (x) { weeks[x.week] = 1; });
     $('impInfo').textContent = c.items.length + ' KR (' + Object.keys(weeks).sort().map(function (w) { return kwText(w) + ' ' + Util.dayDate(w, 1) + '–' + Util.dayDate(w, 5); }).join(', ') + ') · ' +
-      c.hall + ' andere Halle · ' + c.items.filter(function (x) { return x.from; }).length + ' Lieferungen aus Halle 3/27 (ohne Position) · ' + c.scope + ' ohne Maschine/komplett (übersprungen) · ' +
+      c.hall + ' andere Halle · ' + c.items.filter(function (x) { return x.from; }).length + ' Lieferungen aus Halle 3/27 (ohne Position) · ' + c.scope + ' ohne Lieferumfang (übersprungen) · ' +
       c.items.filter(function (x) { return x.usa; }).length + ' USA' +
       (rows.multi ? ' · ' + rows.multi + ' mit mehreren Spots (erster wird genommen)' : '') +
       ' · nicht gewählte Spalten werden verworfen.';
