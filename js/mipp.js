@@ -152,21 +152,23 @@
       bar.appendChild(rb);
       if (closer) { var x = d.createElement('button'); x.style.cssText = BTN.replace('#fcee09;background:#fcee09;color:#000', '#3a3d18;background:#0b0e16;color:#e8f9ff'); x.textContent = 'Schließen'; x.addEventListener('click', closer); bar.appendChild(x); }
       bar.appendChild(msg);
-      function copy() {
+      function copy(auto) {
         ta.focus(); ta.select();
         var ok = false;
         try { ok = d.execCommand('copy'); } catch (e) { ok = false; }
-        if (!ok) { try { (d.defaultView || window).navigator.clipboard.writeText(text); ok = true; } catch (e2) { ok = false; } }
-        msg.textContent = ok ? 'Kopiert. Im Dashboard unter Import einfügen.' : 'Bitte mit Strg+C kopieren (Text ist markiert).';
+        if (ok) { msg.textContent = (auto ? 'Automatisch kopiert. ' : 'Kopiert. ') + 'Jetzt das Dashboard öffnen, die Liste erscheint dort mit den Änderungen.'; return; }
+        try {
+          (d.defaultView || window).navigator.clipboard.writeText(text).then(function () { msg.textContent = (auto ? 'Automatisch kopiert. ' : 'Kopiert. ') + 'Jetzt das Dashboard öffnen, die Liste erscheint dort mit den Änderungen.'; }, function () { msg.textContent = 'Bitte „Alles kopieren“ klicken oder mit Strg+C kopieren (Text ist markiert).'; });
+        } catch (e2) { msg.textContent = 'Bitte „Alles kopieren“ klicken oder mit Strg+C kopieren (Text ist markiert).'; }
       }
-      b.addEventListener('click', copy);
+      b.addEventListener('click', function () { copy(false); });
       if (diag) {
         el('div', 'color:#ff9a3d;font-size:12px;margin-top:16px', 'Ländercode nicht erkannt. Diagnose: HTML der ersten Zeile ohne Land (bitte an Claude schicken, enthält Daten dieser einen Zeile):');
         var dt = el('textarea', 'width:100%;box-sizing:border-box;height:90px;background:#0b0e16;color:#e8f9ff;border:1px solid #3a3d18;padding:8px;font:11px monospace');
         dt.value = diag; dt.readOnly = true;
       }
-      el('div', 'color:#7a8a96;font-size:12px;margin-top:8px', 'Im Dashboard: Import öffnen, einfügen (Strg+V) oder „Aus Zwischenablage einlesen“ klicken.');
-      ta.focus(); ta.select();
+      el('div', 'color:#7a8a96;font-size:12px;margin-top:8px', 'Danach das Dashboard öffnen (egal in welchem Browser): Das Fenster mit den Änderungen erscheint dort von selbst. Sonst im Import einfügen (Strg+V).');
+      copy(true);
     }
     if (w && w.document) {
       w.document.title = 'DEUKRO26 · Liste';

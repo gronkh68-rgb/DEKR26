@@ -73,8 +73,8 @@
     if (extra && extra.country) t.country = extra.country;
     if (extra && extra.from) t.from = extra.from;
     if (extra && extra.imp) t.impAt = extra.imp;
-    if (extra && extra.chg) { t.chg = extra.chg; t.chgK = extra.chgK; t.chgAt = Date.now(); }
-    else if (prev && prev.chg) { t.chg = prev.chg; t.chgK = prev.chgK; t.chgAt = prev.chgAt; }
+    if (extra && extra.chg) { t.chg = extra.chg; t.chgK = extra.chgK; t.chgAt = Date.now(); if (extra.movedFrom) t.movedFrom = extra.movedFrom; }
+    else if (prev && prev.chg) { t.chg = prev.chg; t.chgK = prev.chgK; t.chgAt = prev.chgAt; if (prev.movedFrom) t.movedFrom = prev.movedFrom; }
     var src = cur || prev;   // „abgeschlossen" und Kisten bleiben bei erneutem Planen/Import erhalten
     if (src && src.k2) t.k2 = src.k2;
     if (src && src.k5) t.k5 = src.k5;
@@ -282,7 +282,7 @@
     var from = t.from ? ' <span class="badge">aus Halle ' + esc(t.from) + '</span>' : '';
     var fresh = t.chg && Date.now() - t.chgAt < 864e5;   // Vermerk 24 Stunden lang
     return from + (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + Countries.badge(t.country || (t.usa ? 'US' : '')) +
-      (fresh ? ' <span class="badge chg" title="' + esc(t.chg) + '">' + esc(t.chgK || 'geändert') + '</span>' : '') +
+      (fresh ? ' <span class="badge chg" title="' + esc(t.chg) + '">' + esc(t.chgK || 'geändert') + (t.chgK === 'verschoben' && t.movedFrom ? ' von ' + esc(t.movedFrom) : '') + '</span>' : '') +
       (t.k2 || t.k5 ? ' <span class="badge kis" title="Kisten">' + (t.k2 ? 'K2 ×' + t.k2 : '') + (t.k2 && t.k5 ? ' · ' : '') + (t.k5 ? 'K5 ×' + t.k5 : '') + '</span>' : '') +
       (openProb[t.kr] ? ' <span class="badge prob">Problem</span>' : '');
   }
@@ -1147,7 +1147,10 @@
       var ex = byKr[kk(x)];
       if (!ex) { x.how = 'neu'; if (isPastDay(x.week, x.day)) { x.skip = true; res.past++; return; } res.neu.push(x); return; }
       var e = ex[0], moved = [], ch = [];
-      if (e.week !== x.week || e.day !== x.day) moved.push(dayText(e.week, e.day) + ' → ' + dayText(x.week, x.day));
+      if (e.week !== x.week || e.day !== x.day) {
+        moved.push('von ' + dayText(e.week, e.day) + ' nach ' + dayText(x.week, x.day));
+        x.movedFrom = Util.DAYS[e.day].slice(0, 2) + ' ' + Util.dayDate(e.week, e.day) + (e.week !== x.week ? ' (' + kwText(e.week) + ')' : '');
+      }
       if ((e.pos || '') !== (x.pos || '') || (e.pos && (e.hall || '') !== x.hallEff)) {
         ch.push('Position ' + posText(e.hall, e.pos) + ' → ' + posText(x.hallEff, x.pos));
       }
@@ -1284,7 +1287,7 @@
       if (x.skip) return;
       if (x.week >= nowWeek && (!firstWeek || x.week < firstWeek)) firstWeek = x.week;
       var extra = { scope: x.scope, usa: x.usa, from: x.from, country: x.country, imp: impTs };
-      if (x.how === 'verschoben' || x.how === 'geändert') { extra.chg = x.chg; extra.chgK = x.how; }
+      if (x.how === 'verschoben' || x.how === 'geändert') { extra.chg = x.chg; extra.chgK = x.how; extra.movedFrom = x.movedFrom || ''; }
       ops = ops.concat(planOps(x.kr, x.pos, x.day, x.hallEff || Halls.all[0].id, extra, x.hallEff, x.week));
     });
     if ($('impDrop').checked) d.gone.forEach(function (t) { ops.push({ coll: 'tasks', id: t.id, val: null }); });
@@ -1301,6 +1304,29 @@
     }).catch(function () { toast('Import fehlgeschlagen'); renderImp(); });
   };
   $('impDay').innerHTML = $('pDay').innerHTML;
+  // Die MIPP-Lesezeichen legt die Liste (Kurzformat) in die Zwischenablage. Beim Öffnen oder Zurückkehren zur Seite zeigt das Dashboard sie mit den Änderungen an.
+  var CLIP_KEY = 'dekr26_lastclip';
+  function clipHash(t) { var h = 0, i; for (i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return String(h) + ':' + t.length; }
+  function clipCheck() {
+    try { if (localStorage.getItem('dekr26_clipoff') === '1') return; } catch (e) { return; }
+    if (!allowed(Store.get(), 'd_plan') || !Store.isLoaded() || !$('impModal').hidden || document.visibilityState === 'hidden') return;
+    if (!navigator.clipboard || !navigator.clipboard.readText) return;
+    navigator.clipboard.readText().then(function (t) {
+      if (!t || t.indexOf(SHORT_HEAD) !== 0) return;
+      var h = clipHash(t), last = '';
+      try { last = localStorage.getItem(CLIP_KEY) || ''; } catch (e) { last = ''; }
+      if (h === last) return;
+      try { localStorage.setItem(CLIP_KEY, h); } catch (e) { /* ignorieren */ }
+      $('impText').value = t; imp.cols = []; $('impModal').hidden = false; renderImp();
+      toast('Neue Liste aus MIPP gefunden: bitte die Änderungen prüfen');
+    }).catch(function () { /* keine Berechtigung oder kein Fokus: dann manuell einfügen */ });
+  }
+  window.addEventListener('focus', function () { setTimeout(clipCheck, 300); });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') setTimeout(clipCheck, 300); });
+  setTimeout(clipCheck, 4000);
+  $('impClip').checked = (function () { try { return localStorage.getItem('dekr26_clipoff') !== '1'; } catch (e) { return true; } })();
+  $('impClip').onchange = function () { try { localStorage.setItem('dekr26_clipoff', this.checked ? '0' : '1'); } catch (e) { /* ignorieren */ } };
+
 
   // ---------- QR-Codes ----------
   // Der Code enthält nur die ID (?q=...). Name, Funktion und Rechte lassen sich daher jederzeit ändern,
