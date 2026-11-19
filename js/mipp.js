@@ -214,6 +214,9 @@
         return;
       }
       var A = { mins: 60, next: 0, on: true, busy: false, last: 'noch kein automatischer Import', frame: null };
+      try { var sm = +localStorage.getItem('dekr26_auto_mins'); if (sm === 15 || sm === 30 || sm === 60) A.mins = sm; } catch (e11) { /* Vorgabe 60 */ }
+      var guard = function (ev) { ev.preventDefault(); ev.returnValue = ''; return ''; };
+      window.addEventListener('beforeunload', guard);
       window.__dekrAuto = A;
       A.next = Date.now() + A.mins * 60000;
       var box = document.createElement('div');
@@ -231,8 +234,8 @@
       row.appendChild(sel2);
       var bNow = mk('Jetzt', function () { runAuto(); });
       var bPause = mk('Pause', function () { A.on = !A.on; bPause.textContent = A.on ? 'Pause' : 'Weiter'; if (A.on) A.next = Date.now() + A.mins * 60000; draw(); });
-      mk('Beenden', function () { clearInterval(tm); if (A.frame) { A.frame.remove(); } box.remove(); delete window.__dekrAuto; });
-      sel2.addEventListener('change', function () { A.mins = +sel2.value; A.next = Date.now() + A.mins * 60000; draw(); });
+      mk('Beenden', function () { clearInterval(tm); if (A.frame) { A.frame.remove(); } box.remove(); window.removeEventListener('beforeunload', guard); delete window.__dekrAuto; });
+      sel2.addEventListener('change', function () { A.mins = +sel2.value; try { localStorage.setItem('dekr26_auto_mins', String(A.mins)); } catch (e12) { /* ignorieren */ } A.next = Date.now() + A.mins * 60000; draw(); });
       box.appendChild(head); box.appendChild(stat); box.appendChild(last); box.appendChild(row);
       document.body.appendChild(box);
       A.box = box;
