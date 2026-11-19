@@ -37,6 +37,16 @@
     <div class="qr-add"><button type="button" class="btn-sm" id="copyExt">Einrichtungscode kopieren</button><span class="empty" id="extInfo"></span></div>
     <textarea id="extCode" rows="3" readonly style="font-size:11px"></textarea>
     <div class="empty">Der Einrichtungscode enthält deinen Zugang. Nicht weitergeben.</div>
+    <div class="col-title orb" style="margin-top:10px"><span>Ohne Erweiterung: PowerShell-Skript</span></div>
+    <div class="empty">Für den Fall, dass weder Lesezeichen noch Erweiterung gehen. Das Skript startet Edge unsichtbar, öffnet die MIPP-Liste, importiert und beendet Edge wieder. Es braucht nur PowerShell und Edge.</div>
+    <div class="qr-add"><input id="psUrl" placeholder="MIPP-Adresse der Auslieferliste (https://…)" style="flex:1"><button type="button" class="btn-sm" id="dlPs">Skript herunterladen</button></div>
+    <div class="empty" id="psInfo"></div>
+    <ol class="empty" style="text-align:left;padding-left:18px;margin:6px 0">
+      <li>Skript nach <code>C:\DEUKRO26\mipp-import.ps1</code> speichern.</li>
+      <li>Einmal anmelden: <code>powershell -ExecutionPolicy Bypass -File C:\DEUKRO26\mipp-import.ps1 -Setup</code>. Edge öffnet sich, bei MIPP anmelden, Fenster schließen.</li>
+      <li>Testen: <code>powershell -ExecutionPolicy Bypass -File C:\DEUKRO26\mipp-import.ps1</code>. Das Ergebnis steht in der Ausgabe und in <code>%LOCALAPPDATA%\DEUKRO26-Import\log.txt</code>.</li>
+      <li>Regelmäßig: <code>schtasks /Create /SC MINUTE /MO 60 /TN "DEUKRO26 MIPP" /TR "powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\DEUKRO26\mipp-import.ps1"</code> (alle 60 Minuten, für 30 Minuten <code>/MO 30</code>).</li>
+    </ol>
     <div><a href="index.html">← Zum Dashboard</a></div>
   </div>
 </div>

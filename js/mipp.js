@@ -5,7 +5,8 @@
   // Läuft im Tab von MIPP, liest die Liste, macht das Kurzformat daraus und zeigt es in einem neuen Fenster zum Kopieren.
   // Es gibt keine Verbindung zum Dashboard. Das Programm darf keine Zeilenkommentare und keine Doppel-Schrägstriche enthalten (sie werden beim Erzeugen entfernt).
   var SRC = function () {
-    var VER = '__VER__', CFG = __CFG__, OWN = ['6', '7'], FROM = CFG && !CFG.h27 ? ['3'] : ['3', '27'], w = null, tried = false;
+    var VER = '__VER__', CFG = __CFG__, OWN = ['6', '7'], FROM = CFG && !CFG.h27 ? ['3'] : ['3', '27'], w = null, HL = !!window.__dekrHeadless, tried = HL;
+    function result(ok, txt) { window.__dekrResult = (ok ? 'OK ' : 'FEHLER ') + txt; }
     var sel = String(window.getSelection ? getSelection() : ''), cands = [];
     function split(t, arr) { String(t).split(/\r?\n|\t/).forEach(function (x) { x = x.trim(); if (x) arr.push(x); }); }
     function flagCode(e) {
@@ -62,7 +63,7 @@
       cands.push(whole);
       try { cands.push(walk()); } catch (e5) { /* weitere Lesarten genügen */ }
     }
-    if (!cands.some(function (x) { return x.length; })) { if (w) w.close(); alert('Nichts zum Übernehmen gefunden. Bitte die Auslieferliste öffnen.'); return; }
+    if (!cands.some(function (x) { return x.length; })) { if (HL) { result(false, 'Seite leer gelesen'); return; } if (w) w.close(); alert('Nichts zum Übernehmen gefunden. Bitte die Auslieferliste öffnen.'); return; }
     var DAYS = { montag: 1, dienstag: 2, mittwoch: 3, donnerstag: 4, freitag: 5, samstag: 6, sonntag: 7 };
     function pad(x) { return (x < 10 ? '0' : '') + x; }
     function dateOf(y, kw, d) {
@@ -346,6 +347,7 @@
       copy(true);
     }
     function fallback(er) {
+      if (HL) { result(false, er || ('Keine Liste gefunden (angemeldet?) · ' + info)); return; }
       if (er) info = 'Direkter Import nicht möglich (' + er + '). ' + info;
       try { w = window.open('', '_blank'); } catch (e7) { w = null; }
       if (w && w.document) {
@@ -363,6 +365,7 @@
     if (CFG && starts.length && count) {
       importDirect(out.slice(1).map(function (l) { return l.split(';'); })).then(function (p) {
         var s2 = p.st;
+        if (HL) { result(true, s2.neu + ' neu, ' + s2.moved + ' verschoben, ' + s2.chg + ' geändert, ' + s2.same + ' unverändert, ' + s2.past + ' Vergangenes übersprungen'); return; }
         toast('✔ MIPP importiert: ' + s2.neu + ' neu, ' + s2.moved + ' verschoben, ' + s2.chg + ' geändert' + (s2.past ? ' (' + s2.past + ' Vergangenes übersprungen)' : '') + ' · v' + VER, false);
         try { startAuto(); } catch (e10) { toast('Auto-Import-Fenster Fehler: ' + String((e10 && e10.message) || e10), true); }
       }, function (er) { fallback(String((er && er.message) || er)); });
@@ -387,11 +390,12 @@
     return Auth.token().then(function (t) { return fetch(C.firebaseUrl + '/qrs/' + encodeURIComponent(id) + '/perms.json?auth=' + encodeURIComponent(t)); })
       .then(function (r) { return r.ok ? r.json() : null; }).then(function (p) { return !!(p && p.hall27); }).catch(function () { return false; });
   }
-  var url = '';
+  var url = '', hlCode = '';
   function build(h27) {
     var cfg = haveAuth ? { key: C.authApiKey, db: C.firebaseUrl, refresh: A.refresh, h27: h27, hall: hallMap, rev: hallRev } : null;
     var code = '(' + body.replace('__BASE__', base).replace('__VER__', ver).replace('__CFG__', function () { return JSON.stringify(cfg); }) + ')()';
     url = 'javascript:' + encodeURIComponent(code);
+    hlCode = 'window.__dekrHeadless = true; ' + code;
     document.getElementById('bm').setAttribute('href', url);
     document.getElementById('bmCode').value = url;
     var ext = document.getElementById('extCode');
@@ -407,6 +411,18 @@
     var info = document.getElementById('extInfo'), t = document.getElementById('extCode').value;
     if (!t) { info.textContent = 'Kein Zugang gefunden: bitte erst im Dashboard anmelden.'; return; }
     try { navigator.clipboard.writeText(t).then(function () { info.textContent = 'Kopiert.'; }, function () { info.textContent = 'Bitte den Code im Feld markieren und kopieren.'; }); } catch (e) { info.textContent = 'Bitte den Code im Feld markieren und kopieren.'; }
+  };
+  var ps = document.getElementById('dlPs');
+  if (ps) ps.onclick = function () {
+    var info = document.getElementById('psInfo'), mu = document.getElementById('psUrl').value.trim();
+    if (!haveAuth) { info.textContent = 'Kein Zugang gefunden: bitte erst im Dashboard anmelden.'; return; }
+    if (!/^https?:\/\//i.test(mu)) { info.textContent = 'Bitte die MIPP-Adresse (Auslieferliste) eintragen.'; return; }
+    fetch('tools/mipp-import.ps1?v=' + encodeURIComponent(ver)).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); }).then(function (t) {
+      t = t.replace('__URL__', function () { return mu.replace(/'/g, "''"); }).replace('__JS__', function () { return hlCode; });
+      var blob = new Blob(['\uFEFF' + t.replace(/\r?\n/g, '\r\n')], { type: 'text/plain;charset=utf-8' }), a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'mipp-import.ps1'; document.body.appendChild(a); a.click(); a.remove();
+      info.textContent = 'Heruntergeladen. Enthält deinen Zugang, nicht weitergeben.';
+    }).catch(function (e) { info.textContent = 'Fehler: ' + e.message; });
   };
   document.getElementById('copyBm').onclick = function () {
     var info = document.getElementById('copyInfo');
