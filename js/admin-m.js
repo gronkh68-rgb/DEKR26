@@ -4,7 +4,7 @@ window.AdminM = (function () {
   'use strict';
   var esc = Util.esc;
   var PERM_LABELS = [['report', 'Beipack melden'], ['order', 'Podest bestellen'], ['kisten', 'Kisten K2/K5'], ['podest', 'Bestellungen bearbeiten'],
-    ['solve', 'Probleme lösen'], ['status', 'Bereit/Nicht bereit'], ['dash', 'Mobiles Dashboard'], ['ueber', 'Überspielen']].concat(Account.DPERMS);
+    ['solve', 'Probleme lösen'], ['status', 'Bereit/Nicht bereit'], ['dash', 'Mobiles Dashboard'], ['ueber', 'Überspielen'], ['hall27', 'KR aus Halle 27']].concat(Account.DPERMS);
   var PRESETS = [
     ['standard', 'Standard (melden + bestellen)', '', { report: 1, order: 1 }],
     ['kisten', 'Kisten K2/K5 eintragen', '', { report: 1, kisten: 1 }],
@@ -13,7 +13,7 @@ window.AdminM = (function () {
     ['ueber', 'Anfrage Überspielen', '', { report: 1, ueber: 1 }],
     ['mobil', 'Mobiles Dashboard (Push)', 'Dashboard mobil', { dash: 1 }],
     ['leitstand', 'Leitstand (Dashboard bearbeiten)', 'Leitstand', { dash: 1, dashEdit: 1 }],
-    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1, kisten: 1, dashEdit: 1 }]
+    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1, kisten: 1, hall27: 1, dashEdit: 1 }]
   ];
   var bound = null, openIds = {}, toastFn = function () { /* wird bei mount gesetzt */ };
 

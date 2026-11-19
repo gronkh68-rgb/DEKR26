@@ -56,6 +56,15 @@ window.Util = (function () {
     taskId: function (week, kr, hall, pos) {
       return [week, this.key(kr), hall, pos].join('_');
     },
+    // Letzte MIPP-Aktualisierung: jüngster Importzeitpunkt (impAt) aller sichtbaren KR
+    mippAge: function (tasks) {
+      var last = 0;
+      Object.keys(tasks || {}).forEach(function (id) { var a = tasks[id] && tasks[id].impAt; if (a > last) last = a; });
+      if (!last) return { t: 0, text: 'MIPP: noch kein Import', old: true };
+      var min = Math.max(0, Math.round((Date.now() - last) / 60000)), d = new Date(last), p = function (n) { return (n < 10 ? '0' : '') + n; };
+      var txt = min < 1 ? 'gerade eben' : min < 60 ? 'vor ' + min + ' Min' : min < 1440 ? 'vor ' + Math.floor(min / 60) + ' Std ' + (min % 60) + ' Min' : 'vor ' + Math.floor(min / 1440) + ' Tg';
+      return { t: last, text: 'MIPP: ' + txt, old: min > 720, title: 'Letzter MIPP-Import: ' + p(d.getDate()) + '.' + p(d.getMonth() + 1) + '. ' + p(d.getHours()) + ':' + p(d.getMinutes()) };
+    },
     time: function (ts) {
       var d = new Date(ts), p = function (n) { return (n < 10 ? '0' : '') + n; };
       return p(d.getHours()) + ':' + p(d.getMinutes());
@@ -321,8 +330,23 @@ window.Store = (function () {
   var es = null, esTimer = null, lockTimer = null;
   var locked = false, offline = false, connected = false, label = '', requested = false, lastBeat = Date.now(), loaded = false;
 
+  // Halle 27: nur Admin und Accounts mit dem Recht „hall27“ sehen diese KR. Für alle anderen werden sie aus dem Zustand herausgefiltert.
+  function h27ok(qrs) {
+    if (window.Auth && Auth.isAdmin && Auth.isAdmin()) return true;
+    var id = '';
+    try { var se = JSON.parse(localStorage.getItem('dekr26_account')); id = se && se.id; } catch (e) { id = ''; }
+    if (!id) { var pr = new URLSearchParams(location.search); id = pr.get('p') || pr.get('q') || ''; }
+    var q = qrs && qrs[id];
+    return !!(q && q.perms && q.perms.hall27);
+  }
+  function seeTasks(tasks, qrs) {
+    if (h27ok(qrs)) return tasks;
+    var o = {};
+    Object.keys(tasks).forEach(function (id) { if (tasks[id] && tasks[id].from !== '27') o[id] = tasks[id]; });
+    return o;
+  }
   function norm(s) {
-    return { tasks: (s && s.tasks) || {}, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
+    return { tasks: seeTasks((s && s.tasks) || {}, (s && s.qrs) || {}), msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
       orders: (s && s.orders) || {}, problems: (s && s.problems) || {}, podests: (s && s.podests) || {},
       settings: (s && s.settings) || {}, logins: (s && s.logins) || {} };
   }
@@ -615,7 +639,8 @@ window.Store = (function () {
       return one('msgs', id, m).then(function () { return id; });
     },
     setMsg: function (id, m) { return one('msgs', id, m); },
-    get: function () { return state; }
+    get: function () { return state; },
+    canHall27: function () { return h27ok(state.qrs); }
   };
 })();
 

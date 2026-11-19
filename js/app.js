@@ -71,6 +71,7 @@
     if (extra && extra.usa) t.usa = true;
     if (extra && extra.country) t.country = extra.country;
     if (extra && extra.from) t.from = extra.from;
+    if (extra && extra.imp) t.impAt = extra.imp;
     if (extra && extra.chg) { t.chg = extra.chg; t.chgK = extra.chgK; t.chgAt = Date.now(); }
     else if (prev && prev.chg) { t.chg = prev.chg; t.chgK = prev.chgK; t.chgAt = prev.chgAt; }
     var src = cur || prev;   // „abgeschlossen" und Kisten bleiben bei erneutem Planen/Import erhalten
@@ -730,8 +731,14 @@
   function mapTasks(tasks) {
     return allMode ? tasks : tasks.filter(function (t) { return !dayPrefs.hidden[t.day]; });
   }
+  function renderMipp(state) {
+    var a = Util.mippAge(state.tasks), el = $('mippAge');
+    el.textContent = a.text; el.title = a.title || ''; el.style.color = a.old ? 'var(--orange, #ff9a3d)' : '';
+  }
+  setInterval(function () { renderMipp(Store.get()); }, 30000);
   function render(state) {
     Countries.use((state.settings || {}).countries);
+    renderMipp(state);
     renderAccount(state);
     openProb = {};
     Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') openProb[state.problems[id].kr] = 1; });
@@ -1045,7 +1052,7 @@
     return cols;
   }
   // Ergebnis je Zeile: { skip: Grund } oder { kr, day, hall, pos, scope, usa }
-  var DELIVERED_HALL = '3';   // Halle 3 gehört nicht zu uns: KR werden nur geliefert
+  var DELIVERED_HALL = '3', HALL27 = '27';   // Halle 3 gehört nicht zu uns: KR werden nur geliefert
   function readRow(r, ci, dayDef) {
     var g = function (role) { return ci[role] >= 0 ? (r[ci[role]] || '') : ''; };
     var kr = Util.normKr(g('kr'));
@@ -1055,7 +1062,7 @@
       var major = g('hall').trim().split('.')[0];
       hall = Halls.byShort(major);   // Hallen 6 und 7 (eigene Hallen)
       // Aus Halle 3 wird nur geliefert: Eintrag ohne Position, mit Hinweis auf die Herkunft
-      if (!hall && major === DELIVERED_HALL) from = major;
+      if (!hall && (major === DELIVERED_HALL || (major === HALL27 && Store.canHall27()))) from = major;
       else if (!hall) return { skip: 'andere Halle' };
     }
     var scope = '';
@@ -1199,7 +1206,7 @@
     var c = collect(), weeks = {};
     c.items.forEach(function (x) { weeks[x.week] = 1; });
     $('impInfo').textContent = c.items.length + ' KR (' + Object.keys(weeks).sort().map(function (w) { return kwText(w) + ' ' + Util.dayDate(w, 1) + '–' + Util.dayDate(w, 5); }).join(', ') + ') · ' +
-      c.hall + ' andere Halle · ' + c.items.filter(function (x) { return x.from; }).length + ' aus Halle 3 (ohne Position) · ' + c.scope + ' ohne Maschine/komplett (übersprungen) · ' +
+      c.hall + ' andere Halle · ' + c.items.filter(function (x) { return x.from; }).length + ' Lieferungen aus Halle 3/27 (ohne Position) · ' + c.scope + ' ohne Maschine/komplett (übersprungen) · ' +
       c.items.filter(function (x) { return x.usa; }).length + ' USA' +
       (rows.multi ? ' · ' + rows.multi + ' mit mehreren Spots (erster wird genommen)' : '') +
       ' · nicht gewählte Spalten werden verworfen.';
@@ -1267,11 +1274,11 @@
     var c = collect(), head = $('impHead').checked;
     if (!c.items.length) { toast('Keine KR gefunden'); return; }
     var d = diffItems(c.items), ops = [], firstWeek = '';
-    var nowWeek = Util.isoWeek();
+    var nowWeek = Util.isoWeek(), impTs = Date.now();
     c.items.forEach(function (x) {
       if (x.skip) return;
       if (x.week >= nowWeek && (!firstWeek || x.week < firstWeek)) firstWeek = x.week;
-      var extra = { scope: x.scope, usa: x.usa, from: x.from, country: x.country };
+      var extra = { scope: x.scope, usa: x.usa, from: x.from, country: x.country, imp: impTs };
       if (x.how === 'verschoben' || x.how === 'geändert') { extra.chg = x.chg; extra.chgK = x.how; }
       ops = ops.concat(planOps(x.kr, x.pos, x.day, x.hallEff || Halls.all[0].id, extra, x.hallEff, x.week));
     });
@@ -1295,7 +1302,7 @@
   // ohne dass ausgedruckte Codes ungültig werden.
   var PERM_LABELS = [['report', 'Beipack melden (bereit/Problem)'], ['order', 'Podest bestellen'], ['kisten', 'Kisten je KR eintragen (K2/K5)'].concat([]),
     ['podest', 'Bestellungen bearbeiten'], ['solve', 'Probleme lösen'], ['status', 'Bereit/Nicht bereit setzen'],
-    ['dash', 'Mobiles Dashboard'], ['ueber', 'Anfrage Überspielen']].concat(Account.DPERMS);
+    ['dash', 'Mobiles Dashboard'], ['ueber', 'Anfrage Überspielen'], ['hall27', 'KR aus Halle 27 anzeigen']].concat(Account.DPERMS);
   var PRESETS = [
     ['standard', 'Standard (melden + bestellen)', '', { report: 1, order: 1 }],
     ['kisten', 'Kisten K2/K5 eintragen', '', { report: 1, kisten: 1 }],
@@ -1304,7 +1311,7 @@
     ['ueber', 'Anfrage Überspielen', '', { report: 1, ueber: 1 }],
     ['mobil', 'Mobiles Dashboard (Push)', 'Dashboard mobil', { dash: 1 }],
     ['leitstand', 'Leitstand (Dashboard bearbeiten)', 'Leitstand', { dash: 1, dashEdit: 1 }],
-    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1, kisten: 1, dashEdit: 1 }]
+    ['alles', 'Alle Rechte', '', { report: 1, order: 1, podest: 1, solve: 1, status: 1, dash: 1, ueber: 1, kisten: 1, hall27: 1, dashEdit: 1 }]
   ];
   function permsOf(q) { return q.perms && Object.keys(q.perms).length ? q.perms : { report: 1, order: 1 }; }
   // n/f/p sind nur ein Rückfall, falls das Handy die QR-Daten nicht aus der Datenbank laden kann

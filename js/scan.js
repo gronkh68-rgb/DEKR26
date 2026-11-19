@@ -776,8 +776,14 @@
   var prefsFor = '';
   setInterval(function () { var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id); }, 20000);
   window.addEventListener('pagehide', function () { var a = Account.me(Store.get()); if (a) Account.pushPrefs(a.id); });
+  function renderMipp(state) {
+    var a = Util.mippAge(state.tasks), el = $('mippAgeM');
+    el.textContent = a.text + (a.title ? ' (' + a.title.replace('Letzter MIPP-Import: ', '') + ')' : ''); el.style.color = a.old ? 'var(--orange, #ff9a3d)' : '';
+  }
+  setInterval(function () { renderMipp(Store.get()); }, 30000);
   function apply(state) {
     Countries.use((state.settings || {}).countries);
+    renderMipp(state);
     $('lockCover').hidden = !Store.isLocked();
     if (Store.isLocked()) {
       $('lockCode2').textContent = Auth.code();

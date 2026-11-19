@@ -5,7 +5,7 @@
   // Läuft im Tab von MIPP, liest die Liste, macht das Kurzformat daraus und zeigt es in einem neuen Fenster zum Kopieren.
   // Es gibt keine Verbindung zum Dashboard. Das Programm darf keine Zeilenkommentare und keine Doppel-Schrägstriche enthalten (sie werden beim Erzeugen entfernt).
   var SRC = function () {
-    var VER = '__VER__', OWN = ['6', '7'], FROM = '3', w = null;
+    var VER = '__VER__', OWN = ['6', '7'], FROM = ['3', '27'], w = null;
     try { w = window.open('', '_blank'); } catch (e0) { w = null; }
     var sel = String(window.getSelection ? getSelection() : ''), cands = [];
     function split(t, arr) { String(t).split(/\r?\n|\t/).forEach(function (x) { x = x.trim(); if (x) arr.push(x); }); }
@@ -96,7 +96,7 @@
       if (seen[kr]) return;
       var low = sc >= 0 ? rec[sc].toLowerCase() : '', scope = /schrumpf/.test(low) ? '' : /komplett/.test(low) ? 'komplett' : /maschine/.test(low) ? 'Maschine' : '';
       var own = OWN.indexOf(hall) >= 0;
-      if (!own && hall !== FROM) { other++; return; }
+      if (!own && FROM.indexOf(hall) < 0) { other++; return; }
       if (!scope) { noScope++; return; }
       var pos = own ? ((letter.toUpperCase().match(/[A-Z]/) || [''])[0] + (num.match(/\d+/) || [''])[0]) : '';
       if (pos.length < 2) pos = '';
