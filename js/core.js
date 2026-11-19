@@ -345,8 +345,22 @@ window.Store = (function () {
     Object.keys(tasks).forEach(function (id) { if (tasks[id] && tasks[id].from !== '27') o[id] = tasks[id]; });
     return o;
   }
+  // Ansichtsfilter des Admins (nur Anzeige): Schrumpftunnel und/oder Halle 27 ausblenden
+  function viewTasks(tasks) {
+    var shr = false, h27 = false;
+    try { shr = localStorage.getItem('dekr26_hide_shr') === '1'; h27 = localStorage.getItem('dekr26_hide_27') === '1'; } catch (e) { return tasks; }
+    if ((!shr && !h27) || !(window.Auth && Auth.isAdmin && Auth.isAdmin())) return tasks;
+    var o = {};
+    Object.keys(tasks).forEach(function (id) {
+      var t = tasks[id];
+      if (t && ((shr && t.scope === 'Schrumpftunnel') || (h27 && t.from === '27'))) return;
+      o[id] = t;
+    });
+    return o;
+  }
   function norm(s) {
-    return { tasks: seeTasks((s && s.tasks) || {}, (s && s.qrs) || {}), msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
+    var vis = seeTasks((s && s.tasks) || {}, (s && s.qrs) || {});   // tasksAll: auch die per Ansichtsfilter ausgeblendeten (für Import und Abgleich)
+    return { tasks: viewTasks(vis), tasksAll: vis, msgs: (s && s.msgs) || {}, layout: (s && s.layout) || {}, qrs: (s && s.qrs) || {},
       orders: (s && s.orders) || {}, problems: (s && s.problems) || {}, podests: (s && s.podests) || {},
       settings: (s && s.settings) || {}, logins: (s && s.logins) || {} };
   }
@@ -474,7 +488,7 @@ window.Store = (function () {
   // val null löscht den Eintrag; patch:true mischt nur die angegebenen Felder in den bestehenden Eintrag.
   // Mehrere Änderungen gehen in einer einzigen Anfrage raus.
   function commit(ops) {
-    if (!remote) { loadLocal(); raw = state; }   // lokal: aktuellen Stand aus dem Speicher nehmen (andere Tabs)
+    if (!remote) { loadLocal(); raw = Object.assign({}, state, { tasks: state.tasksAll }); }   // lokal: aktuellen Stand aus dem Speicher nehmen (andere Tabs)
     ops.forEach(function (o) {
       if (!isObj(raw[o.coll])) raw[o.coll] = {};
       var cur = raw[o.coll][o.id];
@@ -486,7 +500,7 @@ window.Store = (function () {
       } else raw[o.coll][o.id] = o.val;
     });
     if (!remote) {
-      try { localStorage.setItem(LS, JSON.stringify(norm(raw))); } catch (e) { return Promise.reject(e); }
+      try { var sv = norm(raw); sv.tasks = sv.tasksAll; delete sv.tasksAll; localStorage.setItem(LS, JSON.stringify(sv)); } catch (e) { return Promise.reject(e); }
       state = norm(raw); emit();
       return Promise.resolve();
     }
@@ -640,7 +654,8 @@ window.Store = (function () {
     },
     setMsg: function (id, m) { return one('msgs', id, m); },
     get: function () { return state; },
-    canHall27: function () { return h27ok(state.qrs); }
+    canHall27: function () { return h27ok(state.qrs); },
+    refresh: function () { state = norm(raw); emit(); }
   };
 })();
 

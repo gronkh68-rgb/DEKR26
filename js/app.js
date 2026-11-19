@@ -57,7 +57,7 @@
     var hall = !pos ? '' : forceHall || hall0;
     var shr = !!(extra && extra.scope === 'Schrumpftunnel');   // Schrumpftunnel ist ein eigener Eintrag neben Maschine/komplett derselben KR
     var id = Util.taskId(week, kr, hall || '0', pos || '0') + (shr ? '_S' : '');
-    var tasks = Store.get().tasks, wasDone = false, ops = [], prev = null;
+    var tasks = Store.get().tasksAll, wasDone = false, ops = [], prev = null;
     // Jede KR gibt es nur einmal (auch wochenübergreifend): frühere Einträge werden ersetzt
     Object.keys(tasks).forEach(function (tid) {
       if (tasks[tid].kr === kr && (tasks[tid].scope === 'Schrumpftunnel') === shr) {
@@ -1136,7 +1136,7 @@
   // Schrumpftunnel und Maschine/komplett derselben KR sind getrennte Einträge
   function kk(t) { return t.kr + (t.scope === 'Schrumpftunnel' ? '~S' : ''); }
   function diffItems(items) {
-    var tasks = Store.get().tasks, byKr = {}, weeks = {}, inList = {};
+    var tasks = Store.get().tasksAll, byKr = {}, weeks = {}, inList = {};
     var res = { neu: [], moved: [], chg: [], gone: [], same: 0, past: 0 };
     Object.keys(tasks).forEach(function (id) {
       var t = Object.assign({ id: id }, tasks[id]);
@@ -1659,6 +1659,7 @@
       loadDevices();
       var rc = (Store.get().settings || {}).regcode || '';
       if (document.activeElement !== $('codeIn')) $('codeIn').value = rc;
+      $('hideShr').checked = localStorage.getItem('dekr26_hide_shr') === '1'; $('hide27').checked = localStorage.getItem('dekr26_hide_27') === '1';
       if (!$('ctyRoot').firstChild) CtyEdit.mount($('ctyRoot')); else CtyEdit.refresh($('ctyRoot'));
       $('codeInfo').textContent = rc ? 'Aktiver Code: ' + rc + ' (steckt in neu erzeugten QR-Links)' : 'Kein Code: Jedes Gerät, das die Seite öffnet, kann eine Anfrage senden.';
     }
@@ -1683,6 +1684,10 @@
       return Store.clearDevices(ids).then(loadDevices);
     }).catch(function () { toast('Fehlgeschlagen (Admin angemeldet?)'); });
   };
+  // Ansichtsfilter des Admins: nur die Anzeige, importiert und gespeichert wird weiter alles
+  ['hideShr', 'hide27'].forEach(function (id) {
+    $(id).onchange = function () { try { localStorage.setItem(id === 'hideShr' ? 'dekr26_hide_shr' : 'dekr26_hide_27', this.checked ? '1' : '0'); } catch (e) { /* ignorieren */ } Store.refresh(); };
+  });
   $('admOpen').onclick = function () { $('admModal').hidden = false; renderAdmin(); };
   $('admClose').onclick = function () { $('admModal').hidden = true; };
   // Komplette Daten als Datei herunterladen (Sicherung)

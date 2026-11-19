@@ -17,6 +17,7 @@ window.AdminM = (function () {
   ];
   var bound = null, openIds = {}, toastFn = function () { /* wird bei mount gesetzt */ };
 
+  function lsOn(k) { try { return localStorage.getItem(k) === '1'; } catch (e) { return false; } }
   function permsOf(q) { return q.perms && Object.keys(q.perms).length ? q.perms : { report: 1, order: 1 }; }
   function presetOpts(sel) { return PRESETS.map(function (p) { return '<option value="' + p[0] + '"' + (p[0] === sel ? ' selected' : '') + '>' + esc(p[1]) + '</option>'; }).join(''); }
   function link(q) {
@@ -67,7 +68,9 @@ window.AdminM = (function () {
     var acc = list.filter(function (q) { return !q.guest; }).sort(function (a, b) { return (a.t || 0) - (b.t || 0); });
     var guests = list.filter(function (q) { return q.guest; });
     var noCode = acc.filter(function (q) { return !Account.usable(q); }).length, rc = (state.settings || {}).regcode || '';
-    root.innerHTML = '<div class="box"><b>Account anlegen</b><form id="admNew" class="form" style="margin-top:8px">' +
+    var hs = lsOn('dekr26_hide_shr'), h27 = lsOn('dekr26_hide_27');
+    root.innerHTML = '<div class="box"><b>Ansicht (nur für dich als Admin)</b><label class="chk"><input type="checkbox" id="admHideShr"' + (hs ? ' checked' : '') + '> Schrumpftunnel ausblenden</label><label class="chk"><input type="checkbox" id="admHide27"' + (h27 ? ' checked' : '') + '> KR aus Halle 27 ausblenden</label></div>' +
+      '<div class="box"><b>Account anlegen</b><form id="admNew" class="form" style="margin-top:8px">' +
       '<input class="full-in" id="admName" maxlength="40" placeholder="Name" autocomplete="off" required>' +
       '<input class="full-in" id="admFunc" maxlength="40" placeholder="Funktion (optional)" autocomplete="off">' +
       '<select class="full-in" id="admPre">' + presetOpts('standard') + '</select>' +
@@ -140,6 +143,8 @@ window.AdminM = (function () {
       }
     });
     root.addEventListener('change', function (e) {
+      var t0 = e.target;
+      if (t0.id === 'admHideShr' || t0.id === 'admHide27') { try { localStorage.setItem(t0.id === 'admHideShr' ? 'dekr26_hide_shr' : 'dekr26_hide_27', t0.checked ? '1' : '0'); } catch (x) { /* ignorieren */ } Store.refresh(); return; }
       var body = e.target.closest('.adm-body'), t = e.target;
       if (!body) return;
       var id = body.dataset.id;
