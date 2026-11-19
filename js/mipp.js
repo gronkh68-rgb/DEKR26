@@ -20,13 +20,13 @@
       flags.forEach(function (f) { arr.push(f); });
       split(t, arr);
     }
-    function walk() {
-      var arr = [], tw = document.createTreeWalker(document.body, 5, null, false), nd, pe, cs, al;
+    function walk(doc) {
+      var d0 = doc || document, vw = d0.defaultView || window, arr = [], tw = d0.createTreeWalker(d0.body, 5, null, false), nd, pe, cs, al;
       while ((nd = tw.nextNode())) {
         if (nd.nodeType === 3) {
           pe = nd.parentElement;
           if (!pe || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(pe.tagName)) continue;
-          cs = getComputedStyle(pe);
+          cs = vw.getComputedStyle(pe);
           if (cs.display === 'none' || cs.visibility === 'hidden') continue;
           split(nd.nodeValue, arr);
         } else if (nd.tagName === 'IMG') {
@@ -63,7 +63,6 @@
       try { cands.push(walk()); } catch (e5) { /* weitere Lesarten genügen */ }
     }
     if (!cands.some(function (x) { return x.length; })) { if (w) w.close(); alert('Nichts zum Übernehmen gefunden. Bitte die Auslieferliste öffnen.'); return; }
-    function finish() {
     var DAYS = { montag: 1, dienstag: 2, mittwoch: 3, donnerstag: 4, freitag: 5, samstag: 6, sonntag: 7 };
     function pad(x) { return (x < 10 ? '0' : '') + x; }
     function dateOf(y, kw, d) {
@@ -111,6 +110,163 @@
     });
     return { starts: starts, lines: lines, out: out, other: other, noScope: noScope, noLand: noLand, bad: bad, multi: multi, dbg: dbg, dbgKr: dbgKr, land: out.filter(function (x) { return /;[A-Z]{2}$/.test(x); }).length };
     }
+    function toast(txt, bad) {
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;right:16px;top:16px;z-index:2147483647;padding:12px 18px;background:#05060b;color:' + (bad ? '#ff2a55' : '#2dffb3') + ';border:2px solid ' + (bad ? '#ff2a55' : '#2dffb3') + ';font:700 14px monospace;letter-spacing:.06em;box-shadow:0 0 16px rgba(0,0,0,.6)';
+      t.textContent = txt;
+      document.body.appendChild(t);
+      setTimeout(function () { t.remove(); }, 1600);
+    }
+    var SD = ['', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    function isoWeek(d) {
+      var t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+      var y = t.getUTCFullYear(), wk = Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7);
+      return y + '-W' + pad(wk);
+    }
+    function mondayOf(key) {
+      var m = /^(\d{4})-W(\d{2})$/.exec(key), j4 = new Date(+m[1], 0, 4);
+      return new Date(+m[1], 0, 4 - ((j4.getDay() || 7) - 1) + 7 * (+m[2] - 1));
+    }
+    function dayText(wk, d) {
+      var m = mondayOf(wk);
+      m.setDate(m.getDate() + d - 1);
+      return SD[d] + ' ' + pad(m.getDate()) + '.' + pad(m.getMonth() + 1) + '. (KW ' + wk.split('-W')[1] + ')';
+    }
+    function label(hallId, pos) {
+      if (!pos) return '–';
+      var m = /^([A-Z])(\d+)$/.exec(pos);
+      return (CFG.rev[hallId] ? CFG.rev[hallId] + ' ' : '') + (m ? m[2] + ' ' + m[1] : pos);
+    }
+    function plan(rows, tasks) {
+      var now = Date.now(), t0 = new Date(), today = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()), ops = {}, st = { neu: 0, moved: 0, chg: 0, same: 0, past: 0 }, by = {};
+      Object.keys(tasks).forEach(function (id) {
+        var t = tasks[id];
+        if (!t || !t.kr) return;
+        var k = t.kr + (t.scope === 'Schrumpftunnel' ? '~S' : '');
+        (by[k] = by[k] || []).push({ id: id, t: t });
+      });
+      rows.forEach(function (r) {
+        var dm = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(r[1]);
+        if (!dm) return;
+        var d = new Date(+dm[3], +dm[2] - 1, +dm[1]), wd = d.getDay(), day = wd >= 1 && wd <= 5 ? wd : 5, week = isoWeek(d);
+        var kr = r[0], pos = r[3], scope = r[4], land = r[5], from = CFG.hall[r[2]] ? '' : r[2], usa = land === 'US', shr = scope === 'Schrumpftunnel';
+        var hall = pos && !from ? CFG.hall[r[2]] || '' : '', ex = by[kr + (shr ? '~S' : '')], e = ex && ex[0] ? ex[0].t : null, how = 'neu', chg = '', movedFrom = '';
+        if (e) {
+          var mv = e.week !== week || e.day !== day, ch = [];
+          if (mv) { chg = 'von ' + dayText(e.week, e.day) + ' nach ' + dayText(week, day); movedFrom = SD[e.day] + ' ' + dayText(e.week, e.day).slice(3, 9) + (e.week !== week ? ' (KW ' + e.week.split('-W')[1] + ')' : ''); }
+          if ((e.pos || '') !== (pos || '') || (e.pos && (e.hall || '') !== hall)) ch.push('Position ' + label(e.hall, e.pos) + ' → ' + label(hall, pos));
+          if ((e.scope || '') !== (scope || '')) ch.push('Lieferumfang ' + (e.scope || '–') + ' → ' + (scope || '–'));
+          if (!!e.usa !== usa) ch.push(usa ? 'jetzt USA' : 'nicht mehr USA');
+          chg = [chg].concat(ch).filter(Boolean).join('; ');
+          how = mv ? 'verschoben' : ch.length ? 'geändert' : 'gleich';
+        }
+        if (d < today && (how === 'neu' || how === 'gleich')) { st.past++; return; }
+        st[how === 'neu' ? 'neu' : how === 'verschoben' ? 'moved' : how === 'geändert' ? 'chg' : 'same']++;
+        var id = [week, kr.replace(/[^A-Za-z0-9_-]/g, '_'), hall || '0', pos || '0'].join('_') + (shr ? '_S' : ''), cur = tasks[id];
+        var t = { week: week, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : !!(ex && ex.some(function (x) { return x.t.done; })) };
+        if (scope) t.scope = scope;
+        if (usa) t.usa = true;
+        if (land) t.country = land;
+        if (from) t.from = from;
+        t.impAt = now;
+        if (how === 'verschoben' || how === 'geändert') { t.chg = chg; t.chgK = how; t.chgAt = now; if (movedFrom) t.movedFrom = movedFrom; }
+        else if (e && e.chg) { t.chg = e.chg; t.chgK = e.chgK; t.chgAt = e.chgAt; if (e.movedFrom) t.movedFrom = e.movedFrom; }
+        var src = cur || e;
+        if (src && src.k2) t.k2 = src.k2;
+        if (src && src.k5) t.k5 = src.k5;
+        if (src && src.closed) { t.done = true; t.closed = true; t.closedAt = src.closedAt; t.closedBy = src.closedBy; }
+        if (ex) ex.forEach(function (x) { if (x.id !== id) ops['tasks/' + x.id] = null; });
+        ops['tasks/' + id] = t;
+      });
+      return { ops: ops, st: st };
+    }
+    function importDirect(rows) {
+      var tok = '';
+      return fetch('https:' + '/' + '/securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(CFG.key), { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(CFG.refresh) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'Anmeldung HTTP ' + r.status); return j.id_token || j.idToken; }); })
+        .then(function (t) { tok = t; return fetch(CFG.db + '/tasks.json?auth=' + encodeURIComponent(tok)); })
+        .then(function (r) { if (!r.ok) throw new Error('Lesen HTTP ' + r.status); return r.json(); })
+        .then(function (tasks) {
+          var p = plan(rows, tasks || {});
+          if (!Object.keys(p.ops).length) return p;
+          return fetch(CFG.db + '/.json?auth=' + encodeURIComponent(tok), { method: 'PATCH', body: JSON.stringify(p.ops) }).then(function (r) { if (!r.ok) throw new Error('Schreiben HTTP ' + r.status); return p; });
+        });
+    }
+    function pick(cs) {
+      var best = null;
+      cs.forEach(function (l) { var r = parse(l); if (!best || r.land > best.land || (r.land === best.land && r.out.length > best.out.length)) best = r; });
+      return best;
+    }
+    function gatherDoc(doc) {
+      var cs = [], bestT = null, nn = 0, cells = [];
+      [].forEach.call(doc.querySelectorAll('table'), function (t) { var c = t.querySelectorAll('tr').length; if (c > nn) { nn = c; bestT = t; } });
+      if (bestT) { [].forEach.call(bestT.querySelectorAll('tr'), function (r) { [].forEach.call(r.children, function (c) { cellLines(c, cells); }); }); cs.push(cells); }
+      try { cs.push(walk(doc)); } catch (e8) { /* weitere Lesart genügt */ }
+      return cs;
+    }
+    function startAuto() {
+      if (!CFG) return;
+      if (window.__dekrAuto) { window.__dekrAuto.next = Date.now() + window.__dekrAuto.mins * 60000; return; }
+      var A = { mins: 60, next: 0, on: true, busy: false, last: 'noch kein automatischer Import', frame: null };
+      window.__dekrAuto = A;
+      A.next = Date.now() + A.mins * 60000;
+      var box = document.createElement('div');
+      box.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:2147483646;width:260px;padding:10px 12px;background:#05060b;color:#e8f9ff;border:1px solid #fcee09;font:12px monospace;box-shadow:0 0 14px rgba(0,0,0,.6)';
+      var head = document.createElement('div');
+      head.style.cssText = 'font:900 12px monospace;letter-spacing:.1em;color:#fcee09;margin-bottom:6px';
+      head.textContent = 'DEUKRO26 · AUTO-IMPORT v' + VER;
+      var stat = document.createElement('div'), last = document.createElement('div');
+      last.style.cssText = 'color:#7a8a96;margin:4px 0 8px';
+      var row = document.createElement('div'), sel2 = document.createElement('select');
+      [15, 30, 60].forEach(function (m) { var o = document.createElement('option'); o.value = m; o.textContent = 'alle ' + m + ' Min'; if (m === A.mins) o.selected = true; sel2.appendChild(o); });
+      var BT = 'font:700 11px monospace;padding:4px 8px;margin:4px 4px 0 0;border:1px solid #3a3d18;background:#0b0e16;color:#e8f9ff;cursor:pointer';
+      function mk(txt, fn) { var b = document.createElement('button'); b.style.cssText = BT; b.textContent = txt; b.addEventListener('click', fn); row.appendChild(b); return b; }
+      sel2.style.cssText = 'font:11px monospace;background:#0b0e16;color:#e8f9ff;border:1px solid #3a3d18;margin-right:4px';
+      row.appendChild(sel2);
+      var bNow = mk('Jetzt', function () { runAuto(); });
+      var bPause = mk('Pause', function () { A.on = !A.on; bPause.textContent = A.on ? 'Pause' : 'Weiter'; if (A.on) A.next = Date.now() + A.mins * 60000; draw(); });
+      mk('Beenden', function () { clearInterval(tm); if (A.frame) { A.frame.remove(); } box.remove(); delete window.__dekrAuto; });
+      sel2.addEventListener('change', function () { A.mins = +sel2.value; A.next = Date.now() + A.mins * 60000; draw(); });
+      box.appendChild(head); box.appendChild(stat); box.appendChild(last); box.appendChild(row);
+      document.body.appendChild(box);
+      function draw() {
+        var left = Math.max(0, Math.round((A.next - Date.now()) / 1000));
+        stat.textContent = A.busy ? 'Lädt MIPP neu und liest …' : A.on ? 'Nächster Import in ' + pad(Math.floor(left / 60)) + ':' + pad(left % 60) : 'Pausiert';
+        last.textContent = A.last;
+      }
+      function done(txt) {
+        A.busy = false; A.last = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes()) + ' ' + txt;
+        A.next = Date.now() + A.mins * 60000;
+        if (A.frame) { A.frame.remove(); A.frame = null; }
+        draw();
+      }
+      function runAuto() {
+        if (A.busy) return;
+        A.busy = true; draw();
+        var fr = document.createElement('iframe'), fin2 = false;
+        fr.style.cssText = 'position:fixed;left:-20000px;top:0;width:1500px;height:1000px;border:0';
+        A.frame = fr;
+        function work() {
+          if (fin2) return;
+          fin2 = true;
+          try {
+            var res = pick(gatherDoc(fr.contentDocument));
+            if (!res || res.out.length < 2) { done('✖ keine Liste gefunden (Seite offen und angemeldet?)'); return; }
+            importDirect(res.out.slice(1).map(function (l) { return l.split(';'); })).then(function (p) {
+              done('✔ ' + p.st.neu + ' neu, ' + p.st.moved + ' verschoben, ' + p.st.chg + ' geändert');
+            }, function (er) { done('✖ ' + String((er && er.message) || er)); });
+          } catch (e9) { done('✖ ' + String((e9 && e9.message) || e9)); }
+        }
+        fr.addEventListener('load', function () { setTimeout(work, 10000); });
+        setTimeout(function () { if (!fin2) { fin2 = true; done('✖ Zeitüberschreitung beim Laden'); } }, 120000);
+        fr.src = location.href;
+        document.body.appendChild(fr);
+      }
+      var tm = setInterval(function () { if (A.on && !A.busy && Date.now() >= A.next) runAuto(); draw(); }, 1000);
+      draw();
+    }
+    function finish() {
     var res = null;
     cands.forEach(function (l) { var r = parse(l); if (!res || r.land > res.land || (r.land === res.land && r.out.length > res.out.length)) res = r; });
     if (res.noLand > 0 && !tried && !sel.trim() && navigator.clipboard && navigator.clipboard.readText) {
@@ -199,93 +355,11 @@
       }
 
     }
-    function toast(txt, bad) {
-      var t = document.createElement('div');
-      t.style.cssText = 'position:fixed;right:16px;top:16px;z-index:2147483647;padding:12px 18px;background:#05060b;color:' + (bad ? '#ff2a55' : '#2dffb3') + ';border:2px solid ' + (bad ? '#ff2a55' : '#2dffb3') + ';font:700 14px monospace;letter-spacing:.06em;box-shadow:0 0 16px rgba(0,0,0,.6)';
-      t.textContent = txt;
-      document.body.appendChild(t);
-      setTimeout(function () { t.remove(); }, 1600);
-    }
-    var SD = ['', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-    function isoWeek(d) {
-      var t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
-      var y = t.getUTCFullYear(), wk = Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7);
-      return y + '-W' + pad(wk);
-    }
-    function mondayOf(key) {
-      var m = /^(\d{4})-W(\d{2})$/.exec(key), j4 = new Date(+m[1], 0, 4);
-      return new Date(+m[1], 0, 4 - ((j4.getDay() || 7) - 1) + 7 * (+m[2] - 1));
-    }
-    function dayText(wk, d) {
-      var m = mondayOf(wk);
-      m.setDate(m.getDate() + d - 1);
-      return SD[d] + ' ' + pad(m.getDate()) + '.' + pad(m.getMonth() + 1) + '. (KW ' + wk.split('-W')[1] + ')';
-    }
-    function label(hallId, pos) {
-      if (!pos) return '–';
-      var m = /^([A-Z])(\d+)$/.exec(pos);
-      return (CFG.rev[hallId] ? CFG.rev[hallId] + ' ' : '') + (m ? m[2] + ' ' + m[1] : pos);
-    }
-    function plan(rows, tasks) {
-      var now = Date.now(), t0 = new Date(), today = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()), ops = {}, st = { neu: 0, moved: 0, chg: 0, same: 0, past: 0 }, by = {};
-      Object.keys(tasks).forEach(function (id) {
-        var t = tasks[id];
-        if (!t || !t.kr) return;
-        var k = t.kr + (t.scope === 'Schrumpftunnel' ? '~S' : '');
-        (by[k] = by[k] || []).push({ id: id, t: t });
-      });
-      rows.forEach(function (r) {
-        var dm = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(r[1]);
-        if (!dm) return;
-        var d = new Date(+dm[3], +dm[2] - 1, +dm[1]), wd = d.getDay(), day = wd >= 1 && wd <= 5 ? wd : 5, week = isoWeek(d);
-        var kr = r[0], pos = r[3], scope = r[4], land = r[5], from = CFG.hall[r[2]] ? '' : r[2], usa = land === 'US', shr = scope === 'Schrumpftunnel';
-        var hall = pos && !from ? CFG.hall[r[2]] || '' : '', ex = by[kr + (shr ? '~S' : '')], e = ex && ex[0] ? ex[0].t : null, how = 'neu', chg = '', movedFrom = '';
-        if (e) {
-          var mv = e.week !== week || e.day !== day, ch = [];
-          if (mv) { chg = 'von ' + dayText(e.week, e.day) + ' nach ' + dayText(week, day); movedFrom = SD[e.day] + ' ' + dayText(e.week, e.day).slice(3, 9) + (e.week !== week ? ' (KW ' + e.week.split('-W')[1] + ')' : ''); }
-          if ((e.pos || '') !== (pos || '') || (e.pos && (e.hall || '') !== hall)) ch.push('Position ' + label(e.hall, e.pos) + ' → ' + label(hall, pos));
-          if ((e.scope || '') !== (scope || '')) ch.push('Lieferumfang ' + (e.scope || '–') + ' → ' + (scope || '–'));
-          if (!!e.usa !== usa) ch.push(usa ? 'jetzt USA' : 'nicht mehr USA');
-          chg = [chg].concat(ch).filter(Boolean).join('; ');
-          how = mv ? 'verschoben' : ch.length ? 'geändert' : 'gleich';
-        }
-        if (d < today && (how === 'neu' || how === 'gleich')) { st.past++; return; }
-        st[how === 'neu' ? 'neu' : how === 'verschoben' ? 'moved' : how === 'geändert' ? 'chg' : 'same']++;
-        var id = [week, kr.replace(/[^A-Za-z0-9_-]/g, '_'), hall || '0', pos || '0'].join('_') + (shr ? '_S' : ''), cur = tasks[id];
-        var t = { week: week, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : !!(ex && ex.some(function (x) { return x.t.done; })) };
-        if (scope) t.scope = scope;
-        if (usa) t.usa = true;
-        if (land) t.country = land;
-        if (from) t.from = from;
-        t.impAt = now;
-        if (how === 'verschoben' || how === 'geändert') { t.chg = chg; t.chgK = how; t.chgAt = now; if (movedFrom) t.movedFrom = movedFrom; }
-        else if (e && e.chg) { t.chg = e.chg; t.chgK = e.chgK; t.chgAt = e.chgAt; if (e.movedFrom) t.movedFrom = e.movedFrom; }
-        var src = cur || e;
-        if (src && src.k2) t.k2 = src.k2;
-        if (src && src.k5) t.k5 = src.k5;
-        if (src && src.closed) { t.done = true; t.closed = true; t.closedAt = src.closedAt; t.closedBy = src.closedBy; }
-        if (ex) ex.forEach(function (x) { if (x.id !== id) ops['tasks/' + x.id] = null; });
-        ops['tasks/' + id] = t;
-      });
-      return { ops: ops, st: st };
-    }
-    function importDirect(rows) {
-      var tok = '';
-      return fetch('https:' + '/' + '/securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(CFG.key), { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(CFG.refresh) })
-        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'Anmeldung HTTP ' + r.status); return j.id_token || j.idToken; }); })
-        .then(function (t) { tok = t; return fetch(CFG.db + '/tasks.json?auth=' + encodeURIComponent(tok)); })
-        .then(function (r) { if (!r.ok) throw new Error('Lesen HTTP ' + r.status); return r.json(); })
-        .then(function (tasks) {
-          var p = plan(rows, tasks || {});
-          if (!Object.keys(p.ops).length) return p;
-          return fetch(CFG.db + '/.json?auth=' + encodeURIComponent(tok), { method: 'PATCH', body: JSON.stringify(p.ops) }).then(function (r) { if (!r.ok) throw new Error('Schreiben HTTP ' + r.status); return p; });
-        });
-    }
     if (CFG && starts.length && count) {
       importDirect(out.slice(1).map(function (l) { return l.split(';'); })).then(function (p) {
         var s2 = p.st;
         toast('✔ MIPP importiert: ' + s2.neu + ' neu, ' + s2.moved + ' verschoben, ' + s2.chg + ' geändert' + (s2.past ? ' (' + s2.past + ' Vergangenes übersprungen)' : ''), false);
+        startAuto();
       }, function (er) { fallback(String((er && er.message) || er)); });
     } else fallback('');
     }

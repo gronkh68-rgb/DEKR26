@@ -1,2 +1,2 @@
 // Versionsnummer (n) von Hand erhöhen. Build (b) und Datum (d) setzt scripts/stamp.sh; version.json enthält dasselbe.
-window.DEKR_VERSION = { n: '2.34', b: 'eef8829', d: '2026-11-19' };
+window.DEKR_VERSION = { n: '2.35', b: 'eef8829', d: '2026-11-19' };
