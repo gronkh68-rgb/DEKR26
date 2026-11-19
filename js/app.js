@@ -1686,6 +1686,14 @@
       $('lockReq').hidden = Store.isRequested();
       $('lockWait').hidden = !Store.isRequested();
     });
+    // Anmelden mit dem eigenen Code (ohne Freigabe): das Gerät trägt sich über den Code selbst ein
+    $('lockAcct').onsubmit = function (e) {
+      e.preventDefault();
+      $('lockAcctErr').textContent = '';
+      Account.claim(Store.get(), $('lockAcctCode').value, $('lockAcctZg').value.trim() || '').then(function () { location.reload(); })
+        .catch(function (x) { $('lockAcctErr').textContent = (x && x.message) || 'Anmeldung fehlgeschlagen.'; });
+    };
+
     // Freigabe anfragen erst auf Tippen (nicht automatisch), mit Zugangscode falls vorhanden
     $('lockReq').onsubmit = function (e) {
       e.preventDefault();

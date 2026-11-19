@@ -20,6 +20,13 @@
   var urlQr = urlName && !Store.remote ? { name: urlName, func: (params.get('f') || '').trim(), perms: toPerms(params.get('p')) } : null;
   var qr = urlQr, view = '', pdSel = {};
   var urlKey = (params.get('k') || '').trim(), autoAsked = false;
+    // Anmelden mit dem eigenen Code (ohne Freigabe): das Gerät trägt sich über den Code selbst ein
+    $('lockAcct').onsubmit = function (e) {
+      e.preventDefault();
+      $('lockAcctErr').textContent = '';
+      Account.claim(Store.get(), $('lockAcctCode').value, $('lockAcctZg').value.trim() || urlKey).then(function () { location.reload(); })
+        .catch(function (x) { $('lockAcctErr').textContent = (x && x.message) || 'Anmeldung fehlgeschlagen.'; });
+    };
   $('lockReq').onsubmit = function (e) {
     e.preventDefault();
     $('lockReqErr').textContent = '';

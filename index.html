@@ -132,6 +132,13 @@
     <h2>Gerät wartet auf Freigabe</h2>
     <div class="empty">Dieses Gerät ist neu. Ein Admin muss es freigeben. Gerätecode: <b id="lockCode"></b></div>
     <div class="empty">Zur Freigabe sieht der Admin Gerätemodell, Betriebssystem, Browser, Bildschirmgröße, Sprache und Zeitzone. Standort und IP-Adresse werden nicht übermittelt.</div>
+    <div class="empty"><b>Schon einen Account?</b> Mit deinem Code anmelden, dafür braucht es keine Freigabe:</div>
+    <form id="lockAcct" class="plan">
+      <input id="lockAcctCode" inputmode="numeric" placeholder="Dein Code" autocomplete="off">
+      <input id="lockAcctZg" placeholder="Zugangscode des Betriebs (falls verlangt)" autocomplete="off">
+      <button class="btn-main">Mit Code anmelden</button>
+    </form>
+    <div class="note" id="lockAcctErr"></div>
     <form id="lockReq" class="plan">
       <input id="lockCodeIn" placeholder="Zugangscode (falls vorhanden)" autocomplete="off">
       <button class="btn-main">Freigabe anfragen</button>

@@ -120,7 +120,14 @@
     setStep('name', '<div class="lgn-prompt">&gt; GERÄT FREIGEGEBEN<span class="lgn-cur"></span></div>' +
       '<p class="lgn-p">Wie sollen wir dich nennen? Dein Name erscheint bei Meldungen und im Chat.</p>' +
       '<form id="lgnNameF" autocomplete="off"><input id="lgnName" class="lgn-in" maxlength="40" placeholder="Dein Name" autocomplete="off" required>' +
-      '<button class="lgn-btn">WEITER</button></form><div class="lgn-err" id="lgnErr"></div>', function () {
+      '<button class="lgn-btn">WEITER</button></form><div class="lgn-err" id="lgnErr"></div>' +
+      '<div class="lgn-links"><a href="#" id="lgnBack" class="lgn-link">&lsaquo; ZURÜCK: MIT CODE ANMELDEN</a></div>', function () {
+        $('lgnBack').onclick = function (e) {
+          e.preventDefault();
+          try { localStorage.removeItem(GUEST); } catch (x) { /* ignorieren */ }
+          guestName = false; step = '';
+          update(Store.get());
+        };
         $('lgnNameF').onsubmit = function (e) {
           e.preventDefault();
           if (busy) return;
