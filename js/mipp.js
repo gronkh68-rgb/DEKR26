@@ -96,18 +96,15 @@
       var low = sc >= 0 ? rec[sc].toLowerCase() : '', scope = /komplett/.test(low) ? 'komplett' : /schrumpf/.test(low) ? 'Schrumpftunnel' : /maschine/.test(low) ? 'Maschine' : '';
       var own = OWN.indexOf(hall) >= 0;
       if (!own && FROM.indexOf(hall) < 0) { other++; return; }
-      if (seen[kr]) {
-        var oi = seen[kr], cells = out[oi].split(';'), both = (cells[4] === 'Maschine' && scope === 'Schrumpftunnel') || (cells[4] === 'Schrumpftunnel' && scope === 'Maschine');
-        if (both) { cells[4] = 'Maschine + Schrumpftunnel'; out[oi] = cells.join(';'); }
-        return;
-      }
       if (!scope) { noScope++; return; }
+      var key = kr + (scope === 'Schrumpftunnel' ? '~S' : '');
+      if (seen[key]) return;
       var pos = own ? ((letter.toUpperCase().match(/[A-Z]/) || [''])[0] + (num.match(/\d+/) || [''])[0]) : '';
       if (pos.length < 2) pos = '';
       var dm = /^(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})$/.exec(rec[4] || ''), date;
       if (dm) date = pad(+dm[1]) + '.' + pad(+dm[2]) + '.' + (+dm[3] < 100 ? 2000 + +dm[3] : dm[3]);
       else date = dateOf(+rec[1], +rec[2], DAYS[rec[3].toLowerCase()]);
-      seen[kr] = out.length;
+      seen[key] = 1;
       var di = idx(rec, /^\d{1,2}\.\d{1,2}\.\d{4}$/, krI + 1), glued = di >= 0 && /^[A-Z]{2}(?=[A-Z][a-z]|\s|$)/.test(rec[di + 1] || '') ? rec[di + 1].slice(0, 2) : '';
       var land = rec.slice(krI + 1).some(function (x) { return /^(US|USA)$/i.test(x); }) ? 'US' : (c >= 0 ? rec[c].slice(0, 2).toUpperCase() : glued);
       out.push([kr, date, hall, pos, scope, land].join(';'));

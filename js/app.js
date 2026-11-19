@@ -55,11 +55,12 @@
   function planOps(kr, pos, day, hall0, extra, forceHall, week) {
     week = week || viewWeek;
     var hall = !pos ? '' : forceHall || hall0;
-    var id = Util.taskId(week, kr, hall || '0', pos || '0');
+    var shr = !!(extra && extra.scope === 'Schrumpftunnel');   // Schrumpftunnel ist ein eigener Eintrag neben Maschine/komplett derselben KR
+    var id = Util.taskId(week, kr, hall || '0', pos || '0') + (shr ? '_S' : '');
     var tasks = Store.get().tasks, wasDone = false, ops = [], prev = null;
     // Jede KR gibt es nur einmal (auch wochenübergreifend): frühere Einträge werden ersetzt
     Object.keys(tasks).forEach(function (tid) {
-      if (tasks[tid].kr === kr) {
+      if (tasks[tid].kr === kr && (tasks[tid].scope === 'Schrumpftunnel') === shr) {
         prev = prev || tasks[tid];
         wasDone = wasDone || !!tasks[tid].done;
         if (tid !== id) ops.push({ coll: 'tasks', id: tid, val: null });
@@ -1069,7 +1070,7 @@
     if (ci.scope >= 0) {
       var sc = g('scope').toLowerCase();
       var mach = /maschine/.test(sc), schr = /schrumpf/.test(sc);
-      scope = /komplett/.test(sc) ? 'komplett' : mach && schr ? 'Maschine + Schrumpftunnel' : schr ? 'Schrumpftunnel' : mach ? 'Maschine' : '';
+      scope = /komplett/.test(sc) ? 'komplett' : mach ? 'Maschine' : schr ? 'Schrumpftunnel' : '';
       if (!scope) return { skip: 'Lieferumfang' };
     }
     var pos = '';
@@ -1110,12 +1111,9 @@
       var x = readRow(r, ci, dayDef);
       if (x.skip === 'andere Halle') out.hall++;
       else if (x.skip === 'Lieferumfang') out.scope++;
-      else if (!x.skip && seen[x.kr]) {
-        // Dieselbe KR mit Maschine und Schrumpftunnel (zwei Zeilen mit anderer Uhrzeit): ein Eintrag mit beiden
-        var f = seen[x.kr];
-        if (f.scope !== x.scope && /^(Maschine|Schrumpftunnel)$/.test(f.scope) && /^(Maschine|Schrumpftunnel)$/.test(x.scope)) f.scope = 'Maschine + Schrumpftunnel';
+      else if (!x.skip && seen[x.kr + (x.scope === 'Schrumpftunnel' ? '~S' : '')]) { /* dieselbe KR im selben Umfang: der erste Eintrag zählt */
       } else if (!x.skip) {
-        seen[x.kr] = x;
+        seen[x.kr + (x.scope === 'Schrumpftunnel' ? '~S' : '')] = x;
         x.hallEff = x.pos ? (x.hall || Halls.all[0].id) : '';
         out.items.push(x);
       }
@@ -1135,16 +1133,18 @@
     return d < new Date(t.getFullYear(), t.getMonth(), t.getDate());
   }
   // Vergleicht die Liste mit dem gespeicherten Stand: neu, verschoben, geändert, entfallen
+  // Schrumpftunnel und Maschine/komplett derselben KR sind getrennte Einträge
+  function kk(t) { return t.kr + (t.scope === 'Schrumpftunnel' ? '~S' : ''); }
   function diffItems(items) {
     var tasks = Store.get().tasks, byKr = {}, weeks = {}, inList = {};
     var res = { neu: [], moved: [], chg: [], gone: [], same: 0, past: 0 };
     Object.keys(tasks).forEach(function (id) {
       var t = Object.assign({ id: id }, tasks[id]);
-      (byKr[t.kr] = byKr[t.kr] || []).push(t);
+      (byKr[kk(t)] = byKr[kk(t)] || []).push(t);
     });
     items.forEach(function (x) {
-      inList[x.kr] = 1; weeks[x.week] = 1;
-      var ex = byKr[x.kr];
+      inList[kk(x)] = 1; weeks[x.week] = 1;
+      var ex = byKr[kk(x)];
       if (!ex) { x.how = 'neu'; if (isPastDay(x.week, x.day)) { x.skip = true; res.past++; return; } res.neu.push(x); return; }
       var e = ex[0], moved = [], ch = [];
       if (e.week !== x.week || e.day !== x.day) moved.push(dayText(e.week, e.day) + ' → ' + dayText(x.week, x.day));
