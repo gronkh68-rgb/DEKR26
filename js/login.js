@@ -202,7 +202,7 @@
     if (admin || (a && !a.codeInit)) { if (!leaving) show(false); return; }
     if (a && a.codeInit) { show(true); stepPin(a); return; }
     // Keine gültige Anmeldung: Anmeldeseite zeigen
-    if (Account.session() && Store.isLoaded()) Account.logout();   // Code wurde geändert oder Account gelöscht
+    if (Account.session() && Store.isLoaded()) Account.logout(true);   // Code wurde geändert oder Account gelöscht
     show(true);
     if (adminMode) { stepAdmin(); return; }
     if (Store.isLocked()) {

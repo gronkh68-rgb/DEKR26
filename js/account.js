@@ -65,13 +65,15 @@ window.Account = (function () {
     if (w) return Promise.reject(new Error('Zu viele Versuche, bitte ' + w + ' s warten.'));
     return hash(code).then(function (h) {
       var a = accounts(state).filter(function (x) { return usable(x) && x.codeHash === h && (!hintId || x.id === hintId); })[0];
-      if (a) { lsSet(SESSION, JSON.stringify({ id: a.id, h: h })); lsSet(FAILS, ''); return a; }
+      if (a) { lsSet(SESSION, JSON.stringify({ id: a.id, h: h })); lsSet(NOGUEST, ''); lsSet(FAILS, ''); return a; }
       var f = null; try { f = JSON.parse(lsGet(FAILS)); } catch (e) { f = null; }
       lsSet(FAILS, JSON.stringify({ n: ((f && Date.now() - f.t < 60000) ? f.n : 0) + 1, t: Date.now() }));
       throw new Error('Code nicht gefunden.');
     });
   }
-  function logout() { lsSet(SESSION, ''); }
+  // Abmelden: ein Gast-Account dieses Geräts wird danach nicht mehr automatisch aufgenommen (sonst gäbe es keinen Weg zur Code-Eingabe). auto = Abmeldung ohne Zutun der Person
+  var NOGUEST = 'dekr26_noguest';
+  function logout(auto) { lsSet(SESSION, ''); if (!auto) lsSet(NOGUEST, '1'); }
 
   // Der Code-Prüfwert steht zusätzlich unter logins/<Prüfwert> = { id }. Damit kann ein neues Gerät mit dem Code eintreten (Freigabe durch den Code),
   // ohne dass es Accounts lesen darf. Beim Wechsel des Codes wird der alte Eintrag entfernt.
@@ -166,11 +168,12 @@ window.Account = (function () {
     var id = guestId();
     var q = { name: name, guest: true, t: Date.now(), perms: { report: 1, order: 1 } };
     var p = (state.qrs && state.qrs[id]) ? Store.updateQr(id, { name: name }) : Store.setQr(id, q);
-    return p.then(function () { lsSet(SESSION, JSON.stringify({ id: id, guest: true })); return id; });
+    return p.then(function () { lsSet(NOGUEST, ''); lsSet(SESSION, JSON.stringify({ id: id, guest: true })); return id; });
   }
   // Gerät hat schon einen Gast-Account (z.B. nach Neuladen): wieder anmelden
   function resumeGuest(state) {
     var id = guestId(), q = state.qrs && state.qrs[id];
+    if (lsGet(NOGUEST) === '1') return false;
     if (q && q.guest && uid()) { lsSet(SESSION, JSON.stringify({ id: id, guest: true })); return true; }
     return false;
   }
