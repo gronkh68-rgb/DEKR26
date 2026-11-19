@@ -534,6 +534,7 @@
         if (!seen[m.id]) {
           fresh[m.id] = 1;
           if (m.type === 'done' || m.type === 'problem') { toast(m.text); Sound.play(m.type); }
+          if (m.type === 'import') { toast(m.text); Sound.play('import'); }
           if (m.type === 'done' && m.kr && !editing) focusHall = m.kr;
         }
       });
@@ -1295,8 +1296,11 @@
       try { localStorage.setItem(MAP_KEY, JSON.stringify({ sig: sigOf(imp.rows[0]), cols: imp.cols })); } catch (e) { /* ignorieren */ }
     }
     $('impGo').disabled = true;
+    var impChg = d.neu.length + d.moved.length + d.chg.length, impSummary = d.neu.length + ' neu, ' + d.moved.length + ' verschoben, ' + d.chg.length + ' geändert';
     Store.batch(ops).then(function () {
-      toast('Import: ' + d.neu.length + ' neu, ' + d.moved.length + ' verschoben, ' + d.chg.length + ' geändert');
+      // Bei Änderungen übernimmt die Meldung im Nachrichtenstrom (fresh()) den Hinweis samt Ton; ohne Änderungen reicht ein Toast.
+      if (impChg > 0) Store.addMsg({ type: 'import', by: Util.getName() || 'Import', text: 'MIPP-Import: ' + impSummary });
+      else toast('Import: ' + impSummary);
       if (firstWeek) viewWeek = firstWeek;   // nie in einer vergangenen Woche landen
       weekLabel(); render(Store.get());
       $('impText').value = ''; imp.cols = []; renderImp();

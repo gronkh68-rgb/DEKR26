@@ -191,9 +191,10 @@ window.Sound = (function () {
     done: [[523, 0, 0.14], [659, 0.16, 0.14], [784, 0.32, 0.26]],            // fertig: aufsteigend, freundlich
     problem: [[440, 0, 0.2, 'triangle', 0.32], [311, 0.24, 0.2, 'triangle', 0.32], [440, 0.48, 0.3, 'triangle', 0.32]], // Problem: tiefer Wechselton
     order: [[880, 0, 0.12], [880, 0.2, 0.2]],                                // Bestellung/Anfrage: Doppel-Ping
+    import: [[600, 0, 0.1], [760, 0.12, 0.1], [600, 0.24, 0.16]],           // MIPP-Import: kurzer Dreiklang
     ding: [[659, 0, 0.3]]                                                    // Rückmeldung: sanfter Ton
   };
-  var KIND_NAMES = { done: 'Beipack bereit', problem: 'Probleme', order: 'Bestellungen und Anfragen', ding: 'Rückmeldungen und Nachrichten' };
+  var KIND_NAMES = { done: 'Beipack bereit', problem: 'Probleme', order: 'Bestellungen und Anfragen', ding: 'Rückmeldungen und Nachrichten', import: 'MIPP-Import' };
   function play(kind, force) {
     if (!cfg.on && !force) return;
     if (!force && cfg.kinds[kind] === 0) return;

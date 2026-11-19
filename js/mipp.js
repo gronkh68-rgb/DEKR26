@@ -139,6 +139,7 @@
       var m = /^([A-Z])(\d+)$/.exec(pos);
       return (CFG.rev[hallId] ? CFG.rev[hallId] + ' ' : '') + (m ? m[2] + ' ' + m[1] : pos);
     }
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
     function plan(rows, tasks) {
       var now = Date.now(), t0 = new Date(), today = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()), ops = {}, st = { neu: 0, moved: 0, chg: 0, same: 0, past: 0 }, by = {};
       Object.keys(tasks).forEach(function (id) {
@@ -180,6 +181,10 @@
         if (ex) ex.forEach(function (x) { if (x.id !== id) ops['tasks/' + x.id] = null; });
         ops['tasks/' + id] = t;
       });
+      // Meldung im Dashboard-Nachrichtenstrom (Toast samt Ton), nur wenn sich wirklich etwas geändert hat
+      if (st.neu + st.moved + st.chg > 0) {
+        ops['msgs/' + uid()] = { type: 'import', by: CFG.name || 'MIPP-Import', text: 'MIPP-Import: ' + st.neu + ' neu, ' + st.moved + ' verschoben, ' + st.chg + ' geändert', t: now };
+      }
       return { ops: ops, st: st };
     }
     function importDirect(rows) {
@@ -395,7 +400,7 @@
   }
   var url = '', hlCode = '';
   function build(h27) {
-    var cfg = haveAuth ? { key: C.authApiKey, db: C.firebaseUrl, refresh: A.refresh, h27: h27, hall: hallMap, rev: hallRev } : null;
+    var cfg = haveAuth ? { key: C.authApiKey, db: C.firebaseUrl, refresh: A.refresh, h27: h27, hall: hallMap, rev: hallRev, name: (window.Util && Util.getName && Util.getName()) || 'MIPP-Import' } : null;
     var code = '(' + body.replace('__BASE__', base).replace('__VER__', ver).replace('__CFG__', function () { return JSON.stringify(cfg); }) + ')()';
     url = 'javascript:' + encodeURIComponent(code);
     hlCode = 'window.__dekrHeadless = true; ' + code;
