@@ -1267,6 +1267,17 @@
     if (!t) return;
     try { navigator.clipboard.writeText(t).then(function () { toast('Kurzformat kopiert'); }, function () { $('impShort').select(); }); } catch (e) { $('impShort').select(); }
   };
+  // Was genau sich geändert hat, kurz je KR, für die Meldung im Nachrichtenstrom (nicht nur die Zahlen)
+  function impDetailText(d) {
+    var lines = [];
+    d.neu.forEach(function (x) {
+      lines.push('KR ' + x.kr + ' neu (' + dayText(x.week, x.day) + (x.pos ? ', ' + posText(x.hallEff, x.pos) : x.from ? ', aus Halle ' + x.from : '') + ')');
+    });
+    d.moved.forEach(function (x) { lines.push('KR ' + x.kr + ' verschoben: ' + x.chg); });
+    d.chg.forEach(function (x) { lines.push('KR ' + x.kr + ' geändert: ' + x.chg); });
+    var MAX = 8, extra = lines.length - MAX;
+    return lines.slice(0, MAX).join(' · ') + (extra > 0 ? ' · und ' + extra + ' weitere' : '');
+  }
   $('impOpen').onclick = function () { $('impModal').hidden = false; };
   $('impClose').onclick = function () { $('impModal').hidden = true; };
   $('impText').oninput = function () { imp.cols = []; renderImp(); };
@@ -1299,7 +1310,7 @@
     var impChg = d.neu.length + d.moved.length + d.chg.length, impSummary = d.neu.length + ' neu, ' + d.moved.length + ' verschoben, ' + d.chg.length + ' geändert';
     Store.batch(ops).then(function () {
       // Bei Änderungen übernimmt die Meldung im Nachrichtenstrom (fresh()) den Hinweis samt Ton; ohne Änderungen reicht ein Toast.
-      if (impChg > 0) Store.addMsg({ type: 'import', by: Util.getName() || 'Import', text: 'MIPP-Import: ' + impSummary });
+      if (impChg > 0) Store.addMsg({ type: 'import', by: Util.getName() || 'Import', text: 'MIPP-Import: ' + impSummary + ' · ' + impDetailText(d) });
       else toast('Import: ' + impSummary);
       if (firstWeek) viewWeek = firstWeek;   // nie in einer vergangenen Woche landen
       weekLabel(); render(Store.get());

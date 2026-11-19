@@ -99,6 +99,7 @@ svg.map { display: block; width: 100%; }
   position: fixed; right: 16px; bottom: 16px; padding: 10px 14px; background: var(--panel2);
   border: 1px solid var(--green); border-radius: 6px; color: var(--green);
   box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  max-width: min(440px, calc(100vw - 32px)); word-wrap: break-word;
   opacity: 0; transform: translateY(10px); transition: .25s; pointer-events: none; z-index: 9;
 }
 .toast.show { opacity: 1; transform: none; }

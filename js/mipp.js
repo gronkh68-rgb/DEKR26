@@ -141,7 +141,7 @@
     }
     function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
     function plan(rows, tasks) {
-      var now = Date.now(), t0 = new Date(), today = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()), ops = {}, st = { neu: 0, moved: 0, chg: 0, same: 0, past: 0 }, by = {};
+      var now = Date.now(), t0 = new Date(), today = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()), ops = {}, st = { neu: 0, moved: 0, chg: 0, same: 0, past: 0 }, by = {}, lines = [];
       Object.keys(tasks).forEach(function (id) {
         var t = tasks[id];
         if (!t || !t.kr) return;
@@ -165,6 +165,8 @@
         }
         if (d < today && (how === 'neu' || how === 'gleich')) { st.past++; return; }
         st[how === 'neu' ? 'neu' : how === 'verschoben' ? 'moved' : how === 'geändert' ? 'chg' : 'same']++;
+        if (how === 'neu') lines.push('KR ' + kr + ' neu (' + dayText(week, day) + (pos ? ', ' + label(hall, pos) : from ? ', aus Halle ' + from : '') + ')');
+        else if (how === 'verschoben' || how === 'geändert') lines.push('KR ' + kr + ' ' + how + ': ' + chg);
         var id = [week, kr.replace(/[^A-Za-z0-9_-]/g, '_'), hall || '0', pos || '0'].join('_') + (shr ? '_S' : ''), cur = tasks[id];
         var t = { week: week, kr: kr, day: day, hall: hall, pos: pos, done: cur ? !!cur.done : !!(ex && ex.some(function (x) { return x.t.done; })) };
         if (scope) t.scope = scope;
@@ -181,9 +183,10 @@
         if (ex) ex.forEach(function (x) { if (x.id !== id) ops['tasks/' + x.id] = null; });
         ops['tasks/' + id] = t;
       });
-      // Meldung im Dashboard-Nachrichtenstrom (Toast samt Ton), nur wenn sich wirklich etwas geändert hat
+      // Meldung im Dashboard-Nachrichtenstrom (Toast samt Ton), nur wenn sich wirklich etwas geändert hat, mit Details je KR
       if (st.neu + st.moved + st.chg > 0) {
-        ops['msgs/' + uid()] = { type: 'import', by: CFG.name || 'MIPP-Import', text: 'MIPP-Import: ' + st.neu + ' neu, ' + st.moved + ' verschoben, ' + st.chg + ' geändert', t: now };
+        var MAXL = 8, detail = lines.slice(0, MAXL).join(' · ') + (lines.length > MAXL ? ' · und ' + (lines.length - MAXL) + ' weitere' : '');
+        ops['msgs/' + uid()] = { type: 'import', by: CFG.name || 'MIPP-Import', text: 'MIPP-Import: ' + st.neu + ' neu, ' + st.moved + ' verschoben, ' + st.chg + ' geändert · ' + detail, t: now };
       }
       return { ops: ops, st: st };
     }
