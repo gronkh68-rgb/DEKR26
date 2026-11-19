@@ -1369,7 +1369,7 @@
           return '<label><input type="checkbox" data-perm="' + p[0] + '"' + (pm[p[0]] ? ' checked' : '') + '>' + esc(p[1]) + '</label>';
         }).join('') + '</div>' +
         (q.guest ? '' : qr.createSvgTag(4, 2)) +
-        '<div class="no-print acct-line">' + acctLine(q) + (q.guest ? '' : ' <button class="btn-sm" data-gencode="' + esc(q.id) + '">' + (Account.usable(q) ? 'Neuen Startcode erzeugen' : 'Startcode erzeugen') + '</button>') + '</div>' +
+        '<div class="no-print acct-line">' + acctLine(q) + (q.guest ? '' : ' <button class="btn-sm" data-gencode="' + esc(q.id) + '">' + (Account.usable(q) ? 'Neuen Startcode erzeugen' : 'Startcode erzeugen') + '</button>') + (q.guest ? '' : ' <span class="own-code"><input data-codein inputmode="numeric" maxlength="10" size="10" placeholder="eigener Startcode" autocomplete="off"> <button class="btn-sm" data-setcode="' + esc(q.id) + '">Setzen</button></span>') + '</div>' +
         devLines(q) +
         '<div class="no-print qr-links">' + (q.guest ? '' : '<a href="' + esc(scanUrl(q)) + '" target="_blank" rel="noopener">Seite am PC testen ↗</a> ' +
         '<button class="btn-sm" data-card="' + esc(q.id) + '">Karte drucken</button> ') +
@@ -1451,6 +1451,16 @@
     if (dr) {
       var pr = dr.dataset.devrm.split('|');
       if (confirm('Dieses Gerät zurücksetzen? Es verliert den Zugang und muss sich neu mit dem Code anmelden.')) Account.removeDevice(Store.get(), pr[0], pr[1]).catch(function () { toast('Zurücksetzen fehlgeschlagen'); });
+      return;
+    }
+    var sc = e.target.closest('button[data-setcode]');
+    if (sc) {
+      var inp = sc.parentNode.querySelector('input[data-codein]'), sid = sc.dataset.setcode;
+      Account.setCustomStartCode(Store.get(), sid, inp.value).then(function (code) {
+        Account.rememberCode(sid, code);
+        toast('Startcode gesetzt: ' + code);
+        renderQr(Store.get());
+      }).catch(function (x) { toast((x && x.message) || 'Speichern fehlgeschlagen'); });
       return;
     }
     var g = e.target.closest('button[data-gencode]');

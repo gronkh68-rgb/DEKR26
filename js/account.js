@@ -87,6 +87,16 @@ window.Account = (function () {
     var q = (Store.get().qrs || {})[id] || {};
     return hash(code).then(function (h) { return writeCode(id, h, q.codeHash, true); });
   }
+  // Admin: eigenen einmaligen Startcode festlegen (6 bis 10 Ziffern, nicht doppelt vergeben). Die Person ersetzt ihn beim ersten Anmelden durch ihren eigenen Code.
+  function setCustomStartCode(state, id, code) {
+    code = String(code || '').replace(/\D/g, '');
+    if (!/^\d{6,10}$/.test(code)) return Promise.reject(new Error('Der Startcode braucht 6 bis 10 Ziffern.'));
+    return hash(code).then(function (h) {
+      if (taken(state, h, id)) throw new Error('Dieser Code ist schon vergeben, bitte einen anderen wählen.');
+      var q = (state.qrs || {})[id] || {};
+      return writeCode(id, h, q.codeHash, true);
+    }).then(function () { return code; });
+  }
   function validPin(pin) { return /^\d{6}$/.test(String(pin || '')); }
   function taken(state, h, exceptId) {
     return accounts(state).some(function (a) { return a.id !== exceptId && a.codeHash === h; });
@@ -233,6 +243,6 @@ window.Account = (function () {
   }
 
   return { DPERMS: DPERMS, CODEV: CODEV, norm: norm, format: format, gen: gen, hash: hash, accounts: accounts, usable: usable, me: me, session: session,
-    GATES: GATES, can: can, isAdmin: isAdmin, login: login, logout: logout, setStartCode: setStartCode, setPin: setPin, changePin: changePin,
+    GATES: GATES, can: can, isAdmin: isAdmin, login: login, logout: logout, setStartCode: setStartCode, setCustomStartCode: setCustomStartCode, setPin: setPin, changePin: changePin,
     rename: rename, validPin: validPin, claim: claim, becomeGuest: becomeGuest, resumeGuest: resumeGuest, guestId: guestId, remove: remove, removeDevice: removeDevice, syncLogins: syncLogins, isMobileDevice: isMobileDevice, newCodes: newCodes, rememberCode: rememberCode, applyPrefs: applyPrefs, pushPrefs: pushPrefs, wait: wait };
 })();

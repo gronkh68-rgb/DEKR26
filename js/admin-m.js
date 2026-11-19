@@ -44,7 +44,8 @@ window.AdminM = (function () {
     if (q.guest) return '';
     var nc = Account.newCodes()[q.id], txt = !Account.usable(q) ? 'Noch kein Code.' : q.codeInit ? (nc ? 'Startcode: <b>' + esc(nc) + '</b> (nur jetzt sichtbar)' : 'Startcode vergeben, wartet auf den eigenen Code.') : 'Eigener Code gesetzt.';
     return '<div class="acct-line">' + txt + '</div><div class="qr-add"><button type="button" class="btn-sm" data-gen="' + esc(q.id) + '">' + (Account.usable(q) ? 'Neuen Startcode' : 'Startcode erzeugen') + '</button>' +
-      '<button type="button" class="btn-sm" data-link="' + esc(q.id) + '">Profil-Link kopieren</button></div>';
+      '<button type="button" class="btn-sm" data-link="' + esc(q.id) + '">Profil-Link kopieren</button></div>' +
+      '<div class="qr-add"><input class="full-in" style="margin:0;flex:1" data-codein inputmode="numeric" maxlength="10" placeholder="Eigener Startcode (6–10 Ziffern)" autocomplete="off"><button type="button" class="btn-sm" data-setcode="' + esc(q.id) + '">Setzen</button></div>';
   }
   function accCard(q) {
     var pm = permsOf(q);
@@ -122,6 +123,10 @@ window.AdminM = (function () {
         var code2 = Account.gen(), id2 = t.dataset.gen;
         Account.setStartCode(id2, code2).then(function () { Account.rememberCode(id2, code2); toastFn('Neuer Startcode: ' + code2); render(root, Store.get()); })
           .catch(function () { toastFn('Speichern fehlgeschlagen', true); });
+      } else if (t.dataset.setcode) {
+        var sid = t.dataset.setcode, inp = t.parentNode.querySelector('input[data-codein]');
+        Account.setCustomStartCode(Store.get(), sid, inp.value).then(function (c3) { Account.rememberCode(sid, c3); toastFn('Startcode gesetzt: ' + c3); render(root, Store.get()); })
+          .catch(function (x) { toastFn((x && x.message) || 'Speichern fehlgeschlagen', true); });
       } else if (t.dataset.link) {
         var lq = Store.get().qrs[t.dataset.link];
         if (!lq) return;
