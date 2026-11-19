@@ -26,6 +26,17 @@
     <textarea id="bmCode" rows="4" readonly style="font-size:11px"></textarea>
     <div><b>2. Benutzen:</b> In MIPP die Auslieferliste öffnen (oder die Zeilen markieren), Lesezeichen klicken. Fertig. Klappt der direkte Import nicht (kein Zugang, Netz gesperrt), öffnet sich ein Fenster mit der Liste zum Kopieren; das Dashboard zeigt sie dann beim Öffnen mit den Änderungen an.</div>
     <div class="empty">Wird das neue Fenster blockiert, erscheint der Text stattdessen als Fenster über der MIPP-Seite. Blockiert MIPP Lesezeichen-Skripte ganz, die Tabelle wie bisher markieren, kopieren und im Import einfügen.</div>
+    <div class="col-title orb" style="margin-top:10px"><span>Edge-Erweiterung (falls das Lesezeichen am Firmen-PC nicht klappt)</span></div>
+    <div class="empty">Die Erweiterung öffnet die MIPP-Liste in festen Abständen selbst im Hintergrund, liest sie, importiert und schließt den Tab wieder. Sie braucht kein Lesezeichen und keinen offenen MIPP-Tab.</div>
+    <div><a class="btn-main" style="display:inline-block;padding:8px 14px;text-decoration:none" href="extension/deukro-mipp-edge.zip" download>Erweiterung herunterladen (ZIP)</a></div>
+    <ol class="empty" style="text-align:left;padding-left:18px;margin:6px 0">
+      <li>ZIP entpacken (zum Beispiel nach <code>C:\DEUKRO26-Import</code>, nicht löschen).</li>
+      <li>In Edge <code>edge://extensions</code> öffnen, „Entwicklermodus" einschalten, „Entpackte Erweiterung laden" und den Ordner wählen.</li>
+      <li>Das Symbol der Erweiterung anklicken. Unter „Einrichtung" den Einrichtungscode von hier einfügen und die MIPP-Adresse (Auslieferliste) eintragen, Speichern, „Jetzt importieren".</li>
+    </ol>
+    <div class="qr-add"><button type="button" class="btn-sm" id="copyExt">Einrichtungscode kopieren</button><span class="empty" id="extInfo"></span></div>
+    <textarea id="extCode" rows="3" readonly style="font-size:11px"></textarea>
+    <div class="empty">Der Einrichtungscode enthält deinen Zugang. Nicht weitergeben.</div>
     <div><a href="index.html">← Zum Dashboard</a></div>
   </div>
 </div>

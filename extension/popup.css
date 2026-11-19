@@ -1,0 +1,10 @@
+body { width: 340px; margin: 0; padding: 12px; background: #05060b; color: #e8f9ff; font: 12px/1.5 "Share Tech Mono", Consolas, monospace; }
+h1 { margin: 0 0 8px; font: 900 13px "Orbitron", Consolas, monospace; letter-spacing: .12em; color: #fcee09; }
+.state { font-weight: 700; } .dim { color: #7a8a96; } .last { margin: 6px 0 10px; padding: 6px 8px; border-left: 3px solid #3a3d18; background: #0b0e16; min-height: 18px; }
+.last.ok { border-left-color: #2dffb3; } .last.bad { border-left-color: #ff2a55; color: #ff9a9a; }
+.row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+button, select { font: 700 11px Consolas, monospace; padding: 6px 10px; background: #0b0e16; color: #e8f9ff; border: 1px solid #3a3d18; cursor: pointer; }
+button:hover { border-color: #fcee09; color: #fcee09; } #now { background: #fcee09; color: #000; border-color: #fcee09; } #now:disabled { opacity: .5; }
+details { margin-top: 8px; border-top: 1px solid #23261a; padding-top: 6px; } summary { cursor: pointer; color: #00f0ff; }
+label { display: block; margin: 6px 0; color: #7a8a96; } textarea, input { width: 100%; box-sizing: border-box; margin-top: 3px; background: #0b0e16; color: #e8f9ff; border: 1px solid #3a3d18; padding: 6px; font: 11px Consolas, monospace; }
+.msg { color: #ff9a3d; min-height: 16px; } .hist div { padding: 2px 0; border-bottom: 1px dotted #23261a; } .hist .ok { color: #2dffb3; } .hist .bad { color: #ff6b8a; }

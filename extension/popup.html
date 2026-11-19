@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>DEUKRO26 MIPP-Import</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+<h1>DEUKRO26 · MIPP-IMPORT</h1>
+<div id="state" class="state"></div>
+<div id="next" class="dim"></div>
+<div id="last" class="last"></div>
+<div class="row">
+  <button id="now">Jetzt importieren</button>
+  <button id="toggle">Pause</button>
+  <select id="mins" aria-label="Intervall"><option value="15">alle 15 Min</option><option value="30">alle 30 Min</option><option value="60">alle 60 Min</option></select>
+</div>
+<details id="setup">
+  <summary>Einrichtung</summary>
+  <label>Einrichtungscode (von mipp.html kopieren)<textarea id="cfg" rows="3" spellcheck="false" placeholder="{&quot;key&quot;:…}"></textarea></label>
+  <label>MIPP-Adresse (Auslieferliste)<input id="url" placeholder="https://…"></label>
+  <div class="row"><button id="useTab">Adresse des aktuellen Tabs</button><button id="save">Speichern</button></div>
+  <div id="msg" class="msg"></div>
+</details>
+<details>
+  <summary>Verlauf</summary>
+  <div id="hist" class="hist"></div>
+</details>
+<script src="popup.js"></script>
+</body></html>

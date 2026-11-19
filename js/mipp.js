@@ -394,12 +394,20 @@
     url = 'javascript:' + encodeURIComponent(code);
     document.getElementById('bm').setAttribute('href', url);
     document.getElementById('bmCode').value = url;
+    var ext = document.getElementById('extCode');
+    if (ext) ext.value = cfg ? JSON.stringify(cfg) : '';
     document.getElementById('bmAuth').textContent = haveAuth
       ? 'Zugang enthalten' + (A.admin ? ' (Admin: besonders gut aufbewahren)' : '') + (h27 ? ', Halle 27 sichtbar' : '') + '. Klick im MIPP-Tab importiert direkt.'
       : 'Kein Zugang gefunden: Ohne Anmeldung kopiert das Lesezeichen nur. Öffne diese Seite in dem Browser, in dem du im Dashboard angemeldet bist.';
   }
   build(false);
   perm27().then(function (h) { if (h) build(true); });
+  var ec = document.getElementById('copyExt');
+  if (ec) ec.onclick = function () {
+    var info = document.getElementById('extInfo'), t = document.getElementById('extCode').value;
+    if (!t) { info.textContent = 'Kein Zugang gefunden: bitte erst im Dashboard anmelden.'; return; }
+    try { navigator.clipboard.writeText(t).then(function () { info.textContent = 'Kopiert.'; }, function () { info.textContent = 'Bitte den Code im Feld markieren und kopieren.'; }); } catch (e) { info.textContent = 'Bitte den Code im Feld markieren und kopieren.'; }
+  };
   document.getElementById('copyBm').onclick = function () {
     var info = document.getElementById('copyInfo');
     try {

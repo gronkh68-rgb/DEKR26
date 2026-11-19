@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "DEUKRO26 MIPP-Import",
+  "version": "2.37",
+  "description": "Liest die MIPP-Auslieferliste in festen Abständen im Hintergrund aus und importiert sie ins DEUKRO26-Dashboard.",
+  "permissions": ["alarms", "storage", "tabs", "scripting"],
+  "host_permissions": ["https://*.krones-group.com/*", "https://*.firebasedatabase.app/*", "https://securetoken.googleapis.com/*"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "DEUKRO26 MIPP-Import",
+    "default_icon": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" }
+  },
+  "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" }
+}
