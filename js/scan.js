@@ -327,8 +327,24 @@
     notifSeen = notifSeen || {};
     ms.forEach(function (m) { notifSeen[m.id] = 1; });
   }
+  // MIPP-Import: keine Bestätigung nötig, nur Hinweis (Toast, Ton, Benachrichtigung) und eine kurze Liste
+  var impSeen = null;
+  function importMsgs(state) {
+    return Object.keys(state.msgs).map(function (id) { return Object.assign({ id: id }, state.msgs[id]); })
+      .filter(function (m) { return m.type === 'import'; }).sort(function (a, b) { return b.t - a.t; });
+  }
+  function watchImports(state) {
+    if (!perms().dash) return;
+    var ms = importMsgs(state);
+    if (impSeen) {
+      ms.forEach(function (m) { if (!impSeen[m.id]) { toast(m.text); notify('MIPP-Import', m.text, m.id, 'import'); } });
+    }
+    impSeen = impSeen || {};
+    ms.forEach(function (m) { impSeen[m.id] = 1; });
+  }
   function renderDash(state) {
     var ms = doneMsgs(state), un = ms.filter(function (m) { return !m.ack; }), ac = ms.filter(function (m) { return m.ack; }).slice(0, 5);
+    var imp = importMsgs(state).slice(0, 5);
     var today = Object.keys(state.tasks).map(function (id) { return state.tasks[id]; })
       .filter(function (t) { return t.week === WEEK && t.day === Util.todayIdx(); });
     var open = today.filter(function (t) { return !t.done; });
@@ -344,7 +360,8 @@
       (open.length ? '<div class="chips">' + open.slice(0, 40).map(function (t) {
         return '<span class="chip">KR ' + esc(t.kr) + (t.pos ? ' · ' + esc(Halls.label(t.hall, t.pos)) : '') + '</span>';
       }).join('') + '</div>' : '') +
-      (ac.length ? '<div class="col-title orb" style="margin:12px 0 8px">Zuletzt bestätigt</div>' + ac.map(function (m) { return item(m, false); }).join('') : '');
+      (ac.length ? '<div class="col-title orb" style="margin:12px 0 8px">Zuletzt bestätigt</div>' + ac.map(function (m) { return item(m, false); }).join('') : '') +
+      (imp.length ? '<div class="col-title orb" style="margin:12px 0 8px">MIPP-Import</div>' + imp.map(function (m) { return item(m, false); }).join('') : '');
     notifState();
     renderAllList(state);
   }
@@ -885,6 +902,7 @@
     renderDash(state);
     renderMobMap(state);
     watchDone(state);
+    watchImports(state);
     checkAcks(state);
     checkOrders(state);
     checkProblems(state);
