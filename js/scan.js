@@ -399,7 +399,7 @@
     var thisWeek = Util.isoWeek();
     var probs = {};
     Object.keys(state.problems).forEach(function (id) { if (state.problems[id].status === 'offen') probs[state.problems[id].kr] = 1; });
-    var list = Object.keys(state.tasks).map(function (id) { return state.tasks[id]; }).filter(function (t) {
+    var list = Object.keys(state.tasks).map(function (id) { return Object.assign({ id: id }, state.tasks[id]); }).filter(function (t) {
       // „Diese Woche“: nur die laufende Woche; „Alle KR“: vergangene Wochen ausgeblendet
       if (dashTab === 'week' ? t.week !== thisWeek : t.week < thisWeek) return false;
       if (kHide && t.closed) return false;
@@ -410,7 +410,7 @@
     list.slice(0, 300).forEach(function (t) {
       var key = t.week + '-' + t.day;
       if (key !== last) { html += '<div class="daysep">KW ' + esc(t.week.split('-W')[1]) + ' · ' + esc(Util.DAYS[t.day]) + ' ' + esc(Util.dayDate(t.week, t.day)) + '</div>'; last = key; }
-      html += '<div class="krrow' + (t.closed ? ' closed' : t.done ? ' ok' : '') + '"><span><b>KR ' + esc(t.kr) + '</b>' +
+      html += '<div class="krrow' + (t.closed ? ' closed' : t.done ? ' ok' : '') + '" data-id="' + esc(t.id) + '"><span><b>KR ' + esc(t.kr) + '</b>' +
         (t.scope ? ' <span class="badge">' + esc(t.scope) + '</span>' : '') + Countries.badge(t.country || (t.usa ? 'US' : '')) +
         (probs[t.kr] ? ' <span class="badge prob">Problem</span>' : '') +
         '<small>' + (t.pos ? esc(Halls.label(t.hall, t.pos)) : t.from ? 'Lieferung aus Halle ' + esc(t.from) : 'ohne Position') + '</small></span><span class="st">' + (t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit') + '</span></div>';
@@ -418,6 +418,47 @@
     $('allList').innerHTML = list.length ? html : '<div class="empty">Keine KR gefunden.</div>';
   }
   $('allFilter').addEventListener('input', function () { renderAllList(Store.get()); });
+  // KR in „Diese Woche“/„Alle KR“ antippen: Bereit/Nicht bereit für alle, die melden dürfen; Abschließen/Wieder öffnen nur mit Dashboard-Bearbeiten
+  function openKrAct(id) {
+    var t = Store.get().tasks[id];
+    if (!t) return;
+    var p = perms(), canStatus = !!(p.report || p.status) || Account.can(Store.get(), 'd_status'), canClose = Account.can(Store.get(), 'd_close');
+    if (!canStatus && !canClose) { toast('Keine Berechtigung zum Ändern'); return; }
+    $('krActTitle').textContent = 'KR ' + t.kr;
+    $('krActInfo').textContent = (t.pos ? Halls.label(t.hall, t.pos) : t.from ? 'Lieferung aus Halle ' + t.from : 'ohne Position') + ' · ' +
+      Util.DAYS[t.day] + ' ' + Util.dayDate(t.week, t.day) + ' · ' + (t.closed ? 'abgeschlossen' : t.done ? 'bereit' : 'nicht bereit');
+    var btns = '';
+    if (t.closed) {
+      if (canClose) btns += '<button type="button" class="btn-sm" data-act="reopen">Wieder öffnen</button>';
+    } else {
+      if (canStatus) btns += '<button type="button" class="btn-sm btn-ok" data-act="toggle">' + (t.done ? 'Nicht bereit' : 'Bereit') + '</button>';
+      if (canClose) btns += '<button type="button" class="btn-sm" data-act="close">Abschließen</button>';
+    }
+    $('krActBtns').innerHTML = btns;
+    $('krActModal').dataset.id = id;
+    $('krActModal').hidden = false;
+  }
+  $('allList').addEventListener('click', function (e) {
+    var row = e.target.closest('.krrow[data-id]');
+    if (row) openKrAct(row.dataset.id);
+  });
+  $('krActClose').onclick = function () { $('krActModal').hidden = true; };
+  $('krActBtns').onclick = function (e) {
+    var b = e.target.closest('button[data-act]'), id = $('krActModal').dataset.id, t = id && Store.get().tasks[id];
+    if (!b || !t) return;
+    var p;
+    if (b.dataset.act === 'close') {
+      var who = qr.name || Util.getName() || 'Deufol';
+      p = Store.updateTask(id, { done: true, doneAt: t.doneAt || Date.now(), doneBy: t.doneBy || who, closed: true, closedAt: Date.now(), closedBy: who });
+    } else if (b.dataset.act === 'reopen') {
+      p = Store.updateTask(id, { closed: null, closedAt: null, closedBy: null });
+    } else {
+      var nd = !t.done;
+      p = Store.updateTask(id, { done: nd, doneAt: nd ? Date.now() : null, doneBy: nd ? (qr.name || Util.getName() || 'Deufol') : null });
+    }
+    $('krActModal').hidden = true;
+    p.catch(function () { toast('Speichern fehlgeschlagen'); });
+  };
   $('v-dash').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-dt]');
     if (!b) return;

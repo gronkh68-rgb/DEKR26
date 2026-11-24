@@ -289,6 +289,8 @@ textarea.full { width: 100%; font-size: 16px; padding: 10px; min-height: 90px; }
 
 .full-in { width: 100%; font-size: 16px; padding: 12px; margin-bottom: 10px; }
 .krrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 10px; margin-bottom: 6px; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--orange); border-radius: 6px; font-size: 14px; }
+.krrow[data-id] { cursor: pointer; }
+.krrow[data-id]:active { opacity: .7; }
 .krrow.ok { border-left-color: var(--green); }
 .krrow .st { font-size: 12px; color: var(--orange); white-space: nowrap; }
 .krrow.ok .st { color: var(--green); }
