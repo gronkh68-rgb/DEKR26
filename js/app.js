@@ -1069,9 +1069,10 @@
     }
     var scope = '';
     if (ci.scope >= 0) {
-      var sc = g('scope').toLowerCase();
+      var scRaw = g('scope').trim(), sc = scRaw.toLowerCase();
       var mach = /maschine/.test(sc), schr = /schrumpf/.test(sc);
-      scope = /komplett/.test(sc) ? 'komplett' : mach ? 'Maschine' : schr ? 'Schrumpftunnel' : '';
+      // Andere, seltene Lieferumfang-Werte werden nicht verworfen, sondern unverändert übernommen (nur eine leere Zelle wird übersprungen)
+      scope = /komplett/.test(sc) ? 'komplett' : mach ? 'Maschine' : schr ? 'Schrumpftunnel' : scRaw;
       if (!scope) return { skip: 'Lieferumfang' };
     }
     var pos = '';

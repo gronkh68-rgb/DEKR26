@@ -80,7 +80,7 @@
     for (j = 0; j + 3 < lines.length; j++) {
       if (/^\d+$/.test(lines[j]) && /^20\d\d$/.test(lines[j + 1]) && /^\d{1,2}$/.test(lines[j + 2]) && DAYS[lines[j + 3].toLowerCase()]) starts.push(j);
     }
-    var dbg = '', dbgKr = '', out = ['KR;Datum;Halle;Position;Lieferumfang;Land'], seen = {}, other = 0, noScope = 0, noLand = 0, bad = 0, multi = 0;
+    var dbg = '', dbgKr = '', dbgSc = '', dbgScKr = '', out = ['KR;Datum;Halle;Position;Lieferumfang;Land'], seen = {}, other = 0, noScope = 0, noLand = 0, bad = 0, multi = 0;
     starts.forEach(function (s, i) {
       var rec = lines.slice(s, i + 1 < starts.length ? starts[i + 1] : lines.length);
       var t = idx(rec, /Uhr$/), seg = idx(rec, /^\d{5}$/, t + 1), krI = seg < 0 ? -1 : idx(rec, /^KR[0-9A-Z]+$/i, seg);
@@ -93,9 +93,14 @@
       var c = idx(rec, /^[A-Za-z]{2}(?:$|[\s\-–:,(])/, krI + 1), sc = idx(rec, /^(komplett|maschine|schrumpftunnel)/i, c >= 0 ? c + 2 : krI + 1);
       var kr = rec[krI].toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^KR/, '');
       var low = sc >= 0 ? rec[sc].toLowerCase() : '', scope = /komplett/.test(low) ? 'komplett' : /schrumpf/.test(low) ? 'Schrumpftunnel' : /maschine/.test(low) ? 'Maschine' : '';
+      // Seltene, andere Lieferumfang-Werte (kein „komplett“/„Maschine“/„Schrumpftunnel“): die Zelle steht immer 3 nach dem Land, direkt vor dem Status-Eintrag.
+      if (!scope && c >= 0 && rec[c + 3] != null) {
+        var cand = String(rec[c + 3]).trim();
+        if (cand && cand.length <= 50 && !/^(↺|⛟|-$| - |k\d|\d+$|\d{1,2}\.\d{1,2}\.\d{2,4}$)/i.test(cand)) scope = cand;
+      }
       var own = OWN.indexOf(hall) >= 0;
       if (!own && FROM.indexOf(hall) < 0) { other++; return; }
-      if (!scope) { noScope++; return; }
+      if (!scope) { noScope++; if (!dbgSc) { dbgSc = rec.slice(krI, krI + 12).join(' | '); dbgScKr = rec[krI]; } return; }
       var key = kr + (scope === 'Schrumpftunnel' ? '~S' : '');
       if (seen[key]) return;
       var pos = own ? ((letter.toUpperCase().match(/[A-Z]/) || [''])[0] + (num.match(/\d+/) || [''])[0]) : '';
@@ -109,7 +114,7 @@
       out.push([kr, date, hall, pos, scope, land].join(';'));
       if (!land) { noLand++; if (!dbg) { dbg = rec.slice(krI, krI + 12).join(' | '); dbgKr = rec[krI]; } }
     });
-    return { starts: starts, lines: lines, out: out, other: other, noScope: noScope, noLand: noLand, bad: bad, multi: multi, dbg: dbg, dbgKr: dbgKr, land: out.filter(function (x) { return /;[A-Z]{2}$/.test(x); }).length };
+    return { starts: starts, lines: lines, out: out, other: other, noScope: noScope, noLand: noLand, bad: bad, multi: multi, dbg: dbg, dbgKr: dbgKr, dbgSc: dbgSc, dbgScKr: dbgScKr, land: out.filter(function (x) { return /;[A-Z]{2}$/.test(x); }).length };
     }
     function toast(txt, bad) {
       var t = document.createElement('div');
@@ -301,14 +306,17 @@
         }
       } catch (e4) { /* weiter ohne Zwischenablage */ }
     }
-    var out = res.out, starts = res.starts, lines = res.lines, other = res.other, noScope = res.noScope, noLand = res.noLand, bad = res.bad, multi = res.multi, dbg = res.dbg, diag = '';
-    if (res.dbgKr) {
+    var out = res.out, starts = res.starts, lines = res.lines, other = res.other, noScope = res.noScope, noLand = res.noLand, bad = res.bad, multi = res.multi, dbg = res.dbg, diag = '', diagWhat = '';
+    function findRow(krText) {
       try {
         var hit = null;
-        [].forEach.call(document.querySelectorAll('td,th,div,span,a,p'), function (e) { if (!hit && !e.children.length && e.textContent.trim() === res.dbgKr) hit = e; });
-        if (hit) { var rowEl = hit.closest('tr') || hit.parentElement.parentElement; diag = rowEl.outerHTML.replace(/\s+/g, ' ').slice(0, 3500); }
-      } catch (e6) { diag = ''; }
+        [].forEach.call(document.querySelectorAll('td,th,div,span,a,p'), function (e) { if (!hit && !e.children.length && e.textContent.trim() === krText) hit = e; });
+        if (hit) { var rowEl = hit.closest('tr') || hit.parentElement.parentElement; return rowEl.outerHTML.replace(/\s+/g, ' ').slice(0, 3500); }
+      } catch (e6) { /* keine Diagnose möglich */ }
+      return '';
     }
+    if (res.dbgKr) { diag = findRow(res.dbgKr); diagWhat = 'Ländercode'; }
+    if (!diag && res.dbgScKr) { diag = findRow(res.dbgScKr); diagWhat = 'Lieferumfang'; }
     var count = out.length - 1, text = starts.length ? out.join('\n') : lines.join('\n');
     var info = !starts.length ? 'Format nicht erkannt: es folgt der gelesene Rohtext (' + lines.length + ' Zellen).' :
       count + ' KR im Kurzformat · ' + other + ' andere Halle ausgeblendet · ' + noScope + ' ohne Lieferumfang ausgeblendet' + (noLand ? ' · ' + noLand + ' ohne erkannten Ländercode (Zellen nach der KR: ' + dbg + ')' : '') + (bad ? ' · ' + bad + ' Einträge nicht lesbar' : '') + (multi ? ' · ' + multi + ' mit mehreren Spots (erster)' : '');
@@ -350,7 +358,7 @@
       }
       b.addEventListener('click', function () { copy(false); });
       if (diag) {
-        el('div', 'color:#ff9a3d;font-size:12px;margin-top:16px', 'Ländercode nicht erkannt. Diagnose: HTML der ersten Zeile ohne Land (bitte an Claude schicken, enthält Daten dieser einen Zeile):');
+        el('div', 'color:#ff9a3d;font-size:12px;margin-top:16px', diagWhat + ' nicht erkannt. Diagnose: HTML der ersten Zeile ohne ' + diagWhat + ' (bitte an Claude schicken, enthält Daten dieser einen Zeile):');
         var dt = el('textarea', 'width:100%;box-sizing:border-box;height:90px;background:#0b0e16;color:#e8f9ff;border:1px solid #3a3d18;padding:8px;font:11px monospace');
         dt.value = diag; dt.readOnly = true;
       }
