@@ -128,6 +128,12 @@ dialog::backdrop{background:rgba(2,4,8,.85)}
 </header>
 
 <main>
+  <div class="card" id="warnBar" style="--c:var(--orange)" hidden>
+    <div class="row" style="align-items:center">
+      <div id="warnText" style="flex:2 1 220px"></div>
+      <button class="btn o" id="warnBtn" type="button">Verbinden</button>
+    </div>
+  </div>
   <!-- ERFASSEN (Handy) -->
   <section id="tab-erfassen" hidden>
     <div class="card">
@@ -170,6 +176,12 @@ dialog::backdrop{background:rgba(2,4,8,.85)}
 
   <!-- DATEN -->
   <section id="tab-daten" hidden>
+    <div class="card" id="cardFolder">
+      <h2>Speicherort</h2>
+      <div id="folderState" style="margin-bottom:10px"></div>
+      <div class="row" id="folderBtns"></div>
+      <p class="dim" id="folderNote" style="margin-top:10px;font-size:12px"></p>
+    </div>
     <div class="card">
       <h2>Übersicht</h2>
       <div class="stat" id="statData"></div>
@@ -186,6 +198,12 @@ dialog::backdrop{background:rgba(2,4,8,.85)}
           <input type="file" id="inDir" webkitdirectory multiple hidden>
         </label>
       </div>
+    </div>
+    <div class="card" id="cardInbox" style="--c:var(--green)">
+      <h2>Eingang (Cloud- oder Download-Ordner)</h2>
+      <div id="inboxState" style="margin-bottom:10px"></div>
+      <div class="row" id="inboxBtns"></div>
+      <p class="dim" style="margin-top:10px;font-size:12px">Die Galerie liest neue ZIP-Dateien aus diesem Ordner selbst ein (beim Öffnen, beim Zurückkehren zum Fenster und jede Minute). Dafür den Ordner wählen, in den OneDrive/Google Drive synchronisiert oder in den der Browser Downloads speichert.</p>
     </div>
     <div class="card" style="--c:var(--orange)">
       <h2>Export</h2>
@@ -259,15 +277,20 @@ function toast(msg, isErr) {
   toastTimer = setTimeout(() => { t.className = ''; }, isErr ? 5000 : 2200);
 }
 
-/* ================= IndexedDB ================= */
+/* ================= Speicher: Browser (IndexedDB) oder Arbeitsordner ================= */
 const DB_NAME = 'teile-fotogalerie', STORE = 'entries';
 let dbp = null;
 
 function openDB() {
   if (!dbp) {
     dbp = new Promise((resolve, reject) => {
-      const r = indexedDB.open(DB_NAME, 1);
-      r.onupgradeneeded = () => { r.result.createObjectStore(STORE, { keyPath: 'id' }); };
+      const r = indexedDB.open(DB_NAME, 2);
+      r.onupgradeneeded = () => {
+        const db = r.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('thumbs')) db.createObjectStore('thumbs');
+        if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+      };
       r.onsuccess = () => resolve(r.result);
       r.onerror = () => reject(r.error);
     });
@@ -275,13 +298,12 @@ function openDB() {
   return dbp;
 }
 
-async function dbRun(mode, fn) {
+async function idbRun(store, mode, fn) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, mode);
-    const st = tx.objectStore(STORE);
+    const tx = db.transaction(store, mode);
     let result;
-    const req = fn(st);
+    const req = fn(tx.objectStore(store));
     if (req) req.onsuccess = () => { result = req.result; };
     tx.oncomplete = () => resolve(result);
     tx.onerror = () => reject(tx.error);
@@ -289,9 +311,129 @@ async function dbRun(mode, fn) {
   });
 }
 
-const dbAll = () => dbRun('readonly', s => s.getAll());
-const dbPut = e => dbRun('readwrite', s => s.put(e));
-const dbDel = id => dbRun('readwrite', s => s.delete(id));
+const idbAll = () => idbRun(STORE, 'readonly', s => s.getAll());
+const idbPut = e => idbRun(STORE, 'readwrite', s => s.put(e));
+const idbDel = id => idbRun(STORE, 'readwrite', s => s.delete(id));
+const kvGet = k => idbRun('kv', 'readonly', s => s.get(k));
+const kvSet = (k, v) => idbRun('kv', 'readwrite', s => s.put(v, k));
+const kvDel = k => idbRun('kv', 'readwrite', s => s.delete(k));
+
+/* --- Arbeitsordner (File System Access API, Chrome/Edge am PC) ---
+   Aufbau identisch zum ZIP-Export: daten.json, daten.csv, bilder/*.jpg */
+const FS = {
+  supported: typeof window.showDirectoryPicker === 'function',
+  handle: null, name: '', ready: false, bilder: null,
+  meta: [], cache: new Map(), defer: false, dirty: false, missing: 0
+};
+const folderOn = () => !!FS.handle;
+const fsName = (e, i) => 'bilder/' + safe(e.matnr) + '_' + safe(e.name).slice(0, 40) + '_' + e.id.slice(0, 8) + '_' + (i + 1) + '.jpg';
+const baseName = p => String(p).split('/').pop();
+const thumbKey = (id, fn, size) => FS.name + '|' + id + '|' + fn + '|' + size;
+
+function csvFromMeta(meta) {
+  const rows = ['﻿' + ['Materialnummer', 'Bezeichnung', 'Erfasst', 'Dateien'].map(csvCell).join(';')];
+  meta.forEach(m => rows.push([m.matnr, m.name, fmtDate(m.erstellt), (m.fotos || []).join(' | ')].map(csvCell).join(';')));
+  return rows.join('\r\n');
+}
+
+async function fsReadMeta(dir) {
+  let fh;
+  try { fh = await dir.getFileHandle('daten.json'); }
+  catch (e) { if (e.name === 'NotFoundError') return []; throw e; }
+  const j = JSON.parse(await (await fh.getFile()).text());
+  return Array.isArray(j.eintraege) ? j.eintraege : [];
+}
+
+FS.connect = async h => {
+  const bilder = await h.getDirectoryHandle('bilder', { create: true });
+  const meta = await fsReadMeta(h);
+  FS.handle = h; FS.name = h.name; FS.bilder = bilder; FS.meta = meta; FS.cache.clear(); FS.ready = true;
+};
+
+FS.writeMeta = async () => {
+  FS.dirty = false;
+  const write = async (name, text) => {
+    const fh = await FS.handle.getFileHandle(name, { create: true });
+    const w = await fh.createWritable();
+    await w.write(text); await w.close();
+  };
+  await write('daten.json', JSON.stringify({ version: 1, exportiert: Date.now(), eintraege: FS.meta }, null, 1));
+  try { await write('daten.csv', csvFromMeta(FS.meta)); } catch (e) { /* z. B. in Excel geöffnet – nicht schlimm */ }
+};
+
+FS.all = async () => {
+  const out = []; let missing = 0;
+  for (const m of FS.meta) {
+    const sig = JSON.stringify([m.matnr, m.name, m.erstellt, m.exportiert || 0, m.fotos]);
+    const hit = FS.cache.get(m.id);
+    if (hit && hit.sig === sig) { out.push(hit.entry); continue; }
+    const photos = [], names = [];
+    for (const fn of m.fotos || []) {
+      try { photos.push(await (await FS.bilder.getFileHandle(baseName(fn))).getFile()); names.push(fn); }
+      catch (e) { /* Datei fehlt */ }
+    }
+    if (!photos.length) { missing++; continue; }
+    const entry = {
+      id: String(m.id), matnr: String(m.matnr), name: String(m.name), created: Number(m.erstellt) || 0,
+      exported: m.exportiert || null, photos: photos, photoNames: names, thumb: null
+    };
+    try { entry.thumb = (await idbRun('thumbs', 'readonly', s => s.get(thumbKey(m.id, names[0], photos[0].size)))) || null; }
+    catch (e) { /* ohne Cache */ }
+    FS.cache.set(m.id, { sig: sig, entry: entry });
+    out.push(entry);
+  }
+  FS.missing = missing;
+  return out;
+};
+
+FS.put = async e => {
+  const have = e.photoNames || [];
+  const want = e.photos.map((p, i) => fsName(e, i));
+  const old = (FS.meta.find(m => m.id === e.id) || {}).fotos || [];
+  const bufs = new Map();
+  for (let i = 0; i < want.length; i++) if (have[i] !== want[i]) bufs.set(i, await e.photos[i].arrayBuffer());
+  for (const [i, buf] of bufs) {
+    const fh = await FS.bilder.getFileHandle(baseName(want[i]), { create: true });
+    const w = await fh.createWritable();
+    await w.write(buf); await w.close();
+    e.photos[i] = new Blob([buf], { type: 'image/jpeg' });
+  }
+  const keep = new Set(want);
+  for (const n of old) if (!keep.has(n)) { try { await FS.bilder.removeEntry(baseName(n)); } catch (x) { /* weg */ } }
+  e.photoNames = want;
+  if (e.thumb) {
+    try { await idbRun('thumbs', 'readwrite', s => s.put(e.thumb, thumbKey(e.id, want[0], bufs.has(0) ? bufs.get(0).byteLength : e.photos[0].size))); }
+    catch (x) { /* ohne Cache */ }
+  }
+  const m = { id: e.id, matnr: e.matnr, name: e.name, erstellt: e.created, exportiert: e.exported || null, fotos: want };
+  const i = FS.meta.findIndex(x => x.id === e.id);
+  if (i >= 0) FS.meta[i] = m; else FS.meta.push(m);
+  FS.cache.delete(e.id);
+  if (FS.defer) FS.dirty = true; else await FS.writeMeta();
+};
+
+FS.del = async id => {
+  const i = FS.meta.findIndex(m => m.id === id);
+  if (i < 0) return;
+  for (const n of FS.meta[i].fotos || []) { try { await FS.bilder.removeEntry(baseName(n)); } catch (x) { /* weg */ } }
+  FS.meta.splice(i, 1); FS.cache.delete(id);
+  if (FS.defer) FS.dirty = true; else await FS.writeMeta();
+};
+
+function needFolder() {
+  if (folderOn() && !FS.ready) throw new Error('Arbeitsordner nicht verbunden – unter „Daten“ verbinden.');
+  return folderOn();
+}
+const dbAll = async () => needFolder() ? FS.all() : idbAll();
+const dbPut = async e => needFolder() ? FS.put(e) : idbPut(e);
+const dbDel = async id => needFolder() ? FS.del(id) : idbDel(id);
+
+/* mehrere Änderungen sammeln: daten.json wird nur einmal geschrieben */
+async function batch(fn) {
+  FS.defer = true;
+  try { await fn(); }
+  finally { FS.defer = false; if (FS.dirty) await FS.writeMeta(); }
+}
 
 /* ================= Bilder ================= */
 function loadImg(blob) {
@@ -444,7 +586,11 @@ let shown = 60;            // Anzahl sichtbarer Karten
 let thumbUrls = [];        // Object-URLs der Galerie (zum Freigeben)
 
 async function reload() {
-  entries = (await dbAll()).sort((a, b) => b.created - a.created);
+  try { entries = (await dbAll()).sort((a, b) => b.created - a.created); }
+  catch (e) {
+    entries = [];
+    if (!(folderOn() && !FS.ready)) toast('Fehler beim Laden: ' + e.message, true);
+  }
   renderAll();
 }
 
@@ -565,6 +711,25 @@ function matches(e, q) {
   return tokens.every(t => hay.indexOf(t) >= 0 || (compact(t) && hayC.indexOf(compact(t)) >= 0));
 }
 
+/* Vorschaubilder im Ordner-Modus: beim ersten Anzeigen erzeugen und zwischenspeichern */
+const thumbQueue = [];
+let thumbBusy = 0;
+function queueThumb(e, img) { thumbQueue.push([e, img]); pumpThumbs(); }
+function pumpThumbs() {
+  while (thumbBusy < 2 && thumbQueue.length) {
+    const job = thumbQueue.shift(), e = job[0], img = job[1];
+    if (!img.isConnected) continue;
+    thumbBusy++;
+    photoThumb(e.photos[0]).then(async b => {
+      e.thumb = b;
+      if (folderOn() && FS.ready && e.photoNames) {
+        try { await idbRun('thumbs', 'readwrite', s => s.put(b, thumbKey(e.id, e.photoNames[0], e.photos[0].size))); } catch (x) { /* ohne Cache */ }
+      }
+      if (img.isConnected) { const u = URL.createObjectURL(b); thumbUrls.push(u); img.src = u; }
+    }).catch(() => {}).finally(() => { thumbBusy--; pumpThumbs(); });
+  }
+}
+
 function renderGallery() {
   thumbUrls.forEach(u => URL.revokeObjectURL(u));
   thumbUrls = [];
@@ -577,12 +742,13 @@ function renderGallery() {
     grid.appendChild(el('div', { class: 'empty', text: entries.length ? 'Keine Treffer.' : 'Noch keine Einträge. Unter „Daten“ eine ZIP vom Handy importieren.' }));
   }
   list.slice(0, shown).forEach(e => {
-    const url = URL.createObjectURL(e.thumb || e.photos[0]);
-    thumbUrls.push(url);
+    const img = el('img', { alt: e.name, loading: 'lazy' });
+    if (e.thumb) { const url = URL.createObjectURL(e.thumb); thumbUrls.push(url); img.src = url; }
+    else queueThumb(e, img);
     const c = e.exported ? 'var(--green)' : 'var(--orange)';
     const card = el('div', { class: 'item', tabindex: '0', style: '--c:' + c }, [
       el('div', { class: 'im' }, [
-        el('img', { src: url, alt: e.name, loading: 'lazy' }),
+        img,
         e.photos.length > 1 ? el('span', { class: 'cnt', text: '▣ ' + e.photos.length }) : document.createTextNode('')
       ]),
       el('div', { class: 'mt' }, [
@@ -628,6 +794,7 @@ function openEntry(id) {
           onclick: async () => {
             if (!confirm('Dieses Foto löschen?')) return;
             e.photos.splice(i, 1);
+            if (e.photoNames) e.photoNames.splice(i, 1);
             e.thumb = await photoThumb(e.photos[0]);
             await dbPut(e);
             drawPhotos();
@@ -689,7 +856,7 @@ async function buildZip(list) {
   for (const e of list) {
     const names = [];
     for (let i = 0; i < e.photos.length; i++) {
-      const fn = 'bilder/' + safe(e.matnr) + '_' + safe(e.name).slice(0, 40) + '_' + e.id.slice(0, 8) + '_' + (i + 1) + '.jpg';
+      const fn = fsName(e, i);
       files.push({ name: fn, data: new Uint8Array(await e.photos[i].arrayBuffer()) });
       names.push(fn);
     }
@@ -726,7 +893,7 @@ async function doExport(onlyNew) {
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
   }
   const t = Date.now();
-  for (const e of list) { e.exported = t; await dbPut(e); }
+  await batch(async () => { for (const e of list) { e.exported = t; await dbPut(e); } });
   await reload();
   toast('EXPORTIERT: ' + list.length + ' Einträge');
 }
@@ -767,10 +934,12 @@ async function finishImport(stat, failed) {
 async function importZips(files) {
   const stat = { added: 0, skipped: 0 }, failed = [];
   const known = new Set(entries.map(e => e.id));
-  for (const f of files) {
-    try { await importPackage(await readZip(f), known, stat); }
-    catch (e) { failed.push(f.name + ': ' + e.message); }
-  }
+  await batch(async () => {
+    for (const f of files) {
+      try { await importPackage(await readZip(f), known, stat); }
+      catch (e) { failed.push(f.name + ': ' + e.message); }
+    }
+  });
   await finishImport(stat, failed);
 }
 
@@ -781,7 +950,7 @@ async function importFolder(fileList) {
   const metas = all.filter(f => /(^|\/)daten\.json$/.test(f.webkitRelativePath));
   if (!metas.length) { toast('Keine daten.json im Ordner gefunden.', true); return; }
   const known = new Set(entries.map(e => e.id));
-  for (const m of metas) {
+  await batch(async () => { for (const m of metas) {
     const prefix = m.webkitRelativePath.slice(0, m.webkitRelativePath.length - 'daten.json'.length);
     try {
       const zip = new Map();
@@ -792,7 +961,7 @@ async function importFolder(fileList) {
       }
       await importPackage(zip, known, stat);
     } catch (e) { failed.push(e.message); }
-  }
+  } });
   await finishImport(stat, failed);
 }
 
@@ -816,7 +985,7 @@ $('#btnPurge').addEventListener('click', async () => {
   const old = entries.filter(e => e.exported);
   if (!old.length) { toast('Keine exportierten Einträge.', true); return; }
   if (!confirm(old.length + ' bereits exportierte Einträge von diesem Gerät löschen?\nNur tun, wenn die ZIP sicher am Ziel angekommen ist.')) return;
-  for (const e of old) await dbDel(e.id);
+  await batch(async () => { for (const e of old) await dbDel(e.id); });
   await reload();
   toast('GELÖSCHT: ' + old.length);
 });
@@ -834,6 +1003,12 @@ function statHtml(box) {
 
 async function renderStorage() {
   const info = $('#storageInfo');
+  if (folderOn()) {
+    info.textContent = FS.ready
+      ? 'Speicherort: Ordner „' + FS.name + '“' + (FS.missing ? ' · ' + FS.missing + ' Einträge ohne Bilddatei übersprungen' : '')
+      : 'Speicherort: Ordner „' + FS.name + '“ (nicht verbunden)';
+    return;
+  }
   if (!(navigator.storage && navigator.storage.estimate)) { info.textContent = ''; return; }
   try {
     const est = await navigator.storage.estimate();
@@ -851,7 +1026,185 @@ function renderAll() {
   $('#btnExportNewCap').disabled = !neu;
   renderGallery();
   renderStorage();
+  renderFolderCard();
+  renderInboxCard();
+  renderWarn();
+  $('#btnPurge').closest('.card').hidden = folderOn();   // Löschen nach Export nur im Browser-Speicher (Handy)
 }
+
+/* ================= Arbeitsordner und Eingang: Bedienung ================= */
+const INBOX = { handle: null, ready: false };
+let scanning = false;
+
+function stateLine(box, text, color) {
+  box.textContent = '';
+  box.appendChild(el('span', { text: text, style: 'color:' + color }));
+}
+function addBtn(box, text, cls, fn) {
+  box.appendChild(el('button', { class: 'btn ' + cls, type: 'button', text: text, onclick: fn }));
+}
+
+function renderFolderCard() {
+  const st = $('#folderState'), bt = $('#folderBtns'), note = $('#folderNote');
+  bt.textContent = '';
+  if (!FS.supported) {
+    stateLine(st, 'Speicherort: Browser-Speicher', 'var(--cyan)');
+    note.textContent = 'Der Arbeitsordner braucht Chrome oder Edge am PC. Am Handy bleibt der Browser-Speicher, die ZIP-Übertragung funktioniert wie gehabt.';
+    $('#cardInbox').hidden = true;
+    return;
+  }
+  if (!folderOn()) {
+    stateLine(st, 'Speicherort: Browser-Speicher', 'var(--cyan)');
+    addBtn(bt, 'Arbeitsordner wählen', 'g', pickFolder);
+    note.textContent = 'Mit Arbeitsordner liegen Fotos und Liste als normale Dateien in deinem Ordner (bilder/, daten.json, daten.csv) und lassen sich leicht sichern. Der Ordner wird nur von dieser Seite gelesen und geschrieben.';
+  } else if (FS.ready) {
+    stateLine(st, 'Speicherort: Ordner „' + FS.name + '“ (verbunden)', 'var(--green)');
+    addBtn(bt, 'Neu einlesen', '', async () => { await FS.connect(FS.handle); await reload(); toast('Ordner neu eingelesen'); });
+    addBtn(bt, 'Anderen Ordner wählen', '', pickFolder);
+    addBtn(bt, 'Zum Browser-Speicher', 'o', leaveFolder);
+    note.textContent = 'Neue Fotos werden direkt in diesen Ordner geschrieben. Dateien, die du von Hand in bilder/ legst, tauchen nur auf, wenn sie in daten.json stehen.';
+  } else {
+    stateLine(st, 'Ordner „' + FS.name + '“ ist nicht verbunden', 'var(--orange)');
+    addBtn(bt, 'Verbinden', 'g', reconnectFolder);
+    addBtn(bt, 'Anderen Ordner wählen', '', pickFolder);
+    addBtn(bt, 'Zum Browser-Speicher', 'o', leaveFolder);
+    note.textContent = 'Der Browser fragt nach einem Neustart erneut nach der Erlaubnis. Einmal „Verbinden“ klicken und im Fenster zulassen.';
+  }
+}
+
+function renderInboxCard() {
+  const st = $('#inboxState'), bt = $('#inboxBtns');
+  bt.textContent = '';
+  if (!FS.supported) return;
+  $('#cardInbox').hidden = false;
+  if (!INBOX.handle) {
+    stateLine(st, 'Kein Eingang-Ordner gewählt', 'var(--dim)');
+    addBtn(bt, 'Eingang-Ordner wählen', 'g', pickInbox);
+  } else if (INBOX.ready) {
+    stateLine(st, 'Eingang: „' + INBOX.handle.name + '“ (verbunden)', 'var(--green)');
+    addBtn(bt, 'Jetzt einlesen', 'g', () => scanInbox(true));
+    addBtn(bt, 'Anderen Ordner wählen', '', pickInbox);
+    addBtn(bt, 'Entfernen', 'o', removeInbox);
+  } else {
+    stateLine(st, 'Eingang „' + INBOX.handle.name + '“ ist nicht verbunden', 'var(--orange)');
+    addBtn(bt, 'Verbinden', 'g', reconnectInbox);
+    addBtn(bt, 'Anderen Ordner wählen', '', pickInbox);
+    addBtn(bt, 'Entfernen', 'o', removeInbox);
+  }
+}
+
+function renderWarn() {
+  const bar = $('#warnBar');
+  if (folderOn() && !FS.ready) {
+    $('#warnText').textContent = 'Arbeitsordner „' + FS.name + '“ ist nicht verbunden. Ohne Verbindung wird nichts angezeigt oder gespeichert.';
+    $('#warnBtn').onclick = reconnectFolder;
+    bar.hidden = false;
+  } else if (INBOX.handle && !INBOX.ready) {
+    $('#warnText').textContent = 'Eingang-Ordner „' + INBOX.handle.name + '“ ist nicht verbunden. Neue ZIPs werden nicht automatisch eingelesen.';
+    $('#warnBtn').onclick = reconnectInbox;
+    bar.hidden = false;
+  } else {
+    bar.hidden = true;
+  }
+}
+
+async function pickFolder() {
+  let h;
+  try { h = await window.showDirectoryPicker({ id: 'teile-fotos', mode: 'readwrite' }); }
+  catch (e) { if (e && e.name !== 'AbortError') toast('Ordner nicht verfügbar: ' + e.message, true); return; }
+  try {
+    const inBrowser = folderOn() ? [] : await idbAll();   // Kopie nur beim Wechsel vom Browser-Speicher
+    await FS.connect(h);
+    await kvSet('dir', h);
+    if (inBrowser.length && confirm(inBrowser.length + ' Einträge aus dem Browser-Speicher in den Ordner „' + h.name + '“ kopieren?\n(Die Daten im Browser bleiben zusätzlich erhalten.)')) {
+      await batch(async () => {
+        const have = new Set(FS.meta.map(m => m.id));
+        for (const e of inBrowser) if (!have.has(e.id)) await FS.put(Object.assign({}, e, { photoNames: undefined }));
+      });
+    }
+    await reload();
+    toast('Arbeitsordner verbunden: ' + h.name);
+  } catch (e) { toast('Ordner konnte nicht verwendet werden: ' + e.message, true); }
+}
+
+async function reconnectFolder() {
+  try {
+    const p = await FS.handle.requestPermission({ mode: 'readwrite' });
+    if (p !== 'granted') { toast('Zugriff nicht erlaubt.', true); return; }
+    await FS.connect(FS.handle);
+    await reload();
+    toast('Ordner verbunden');
+  } catch (e) { toast('Verbinden fehlgeschlagen: ' + e.message, true); }
+}
+
+async function leaveFolder() {
+  if (!confirm('Zurück zum Browser-Speicher wechseln?\nDie Dateien im Ordner bleiben unverändert liegen.')) return;
+  await kvDel('dir');
+  FS.handle = null; FS.ready = false; FS.meta = []; FS.cache.clear(); FS.name = '';
+  await reload();
+}
+
+async function pickInbox() {
+  let h;
+  try { h = await window.showDirectoryPicker({ id: 'teile-eingang', mode: 'read' }); }
+  catch (e) { if (e && e.name !== 'AbortError') toast('Ordner nicht verfügbar: ' + e.message, true); return; }
+  INBOX.handle = h; INBOX.ready = true;
+  await kvSet('inbox', h);
+  renderAll();
+  await scanInbox(true);
+}
+
+async function reconnectInbox() {
+  try {
+    const p = await INBOX.handle.requestPermission({ mode: 'read' });
+    if (p !== 'granted') { toast('Zugriff nicht erlaubt.', true); return; }
+    INBOX.ready = true;
+    renderAll();
+    await scanInbox(true);
+  } catch (e) { toast('Verbinden fehlgeschlagen: ' + e.message, true); }
+}
+
+async function removeInbox() {
+  await kvDel('inbox');
+  INBOX.handle = null; INBOX.ready = false;
+  renderAll();
+}
+
+/* neue ZIPs aus dem Eingang einlesen; bereits eingelesene (Name + Größe + Datum) werden übersprungen */
+async function scanInbox(manual) {
+  if (!INBOX.handle || !INBOX.ready || scanning) return;
+  if (folderOn() && !FS.ready) return;
+  scanning = true;
+  try {
+    const seen = (await kvGet('seen')) || {};
+    const fresh = [];
+    for await (const pair of INBOX.handle.entries()) {
+      const name = pair[0], h = pair[1];
+      if (h.kind !== 'file' || !/\.zip$/i.test(name)) continue;
+      const f = await h.getFile();
+      const key = INBOX.handle.name + '/' + name, sig = f.size + '|' + f.lastModified;
+      if (seen[key] !== sig) fresh.push({ key: key, name: name, file: f, sig: sig });
+    }
+    if (!fresh.length) { if (manual) toast('Keine neuen ZIP-Dateien im Eingang.'); return; }
+    const stat = { added: 0, skipped: 0 }, failed = [];
+    const known = new Set(entries.map(e => e.id));
+    await batch(async () => {
+      for (const z of fresh) {
+        try { await importPackage(await readZip(z.file), known, stat); seen[z.key] = z.sig; }
+        catch (e) { failed.push(z.name + ': ' + e.message); }   // z. B. noch nicht fertig synchronisiert: nächster Versuch folgt
+      }
+    });
+    await kvSet('seen', seen);
+    await reload();
+    if (failed.length) toast('Eingang: ' + failed.join(' | '), true);
+    else toast('EINGANG: ' + stat.added + ' neue Einträge' + (stat.skipped ? ', ' + stat.skipped + ' schon vorhanden' : ''));
+  } catch (e) {
+    if (manual) toast('Eingang lesen fehlgeschlagen: ' + e.message, true);
+  } finally { scanning = false; }
+}
+
+document.addEventListener('visibilitychange', () => { if (!document.hidden) scanInbox(false); });
+setInterval(() => { if (!document.hidden) scanInbox(false); }, 60000);
 
 /* ================= Start ================= */
 (async function init() {
@@ -863,8 +1216,22 @@ function renderAll() {
     tab = window.matchMedia('(pointer:coarse)').matches ? 'erfassen' : 'galerie';
   }
   showTab(tab);
+  if (FS.supported) {
+    try {
+      const h = await kvGet('dir');
+      if (h) {
+        FS.handle = h; FS.name = h.name;
+        if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted') await FS.connect(h);
+      }
+    } catch (e) { /* Ordner nicht erreichbar: Banner bietet „Verbinden“ an */ }
+    try {
+      const ih = await kvGet('inbox');
+      if (ih) { INBOX.handle = ih; INBOX.ready = (await ih.queryPermission({ mode: 'read' })) === 'granted'; }
+    } catch (e) { /* ignorieren */ }
+  }
   try { await reload(); }
   catch (e) { toast('Datenbank-Fehler: ' + e.message, true); }
+  scanInbox(false);
 })();
 </script>
 </body>
