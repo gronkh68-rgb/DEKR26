@@ -1315,7 +1315,11 @@
     var impChg = d.neu.length + d.moved.length + d.chg.length, impSummary = d.neu.length + ' neu, ' + d.moved.length + ' verschoben, ' + d.chg.length + ' geändert';
     Store.batch(ops).then(function () {
       // Bei Änderungen übernimmt die Meldung im Nachrichtenstrom (fresh()) den Hinweis samt Ton; ohne Änderungen reicht ein Toast.
-      if (impChg > 0) Store.addMsg({ type: 'import', by: Util.getName() || 'Import', text: 'MIPP-Import: ' + impSummary + ' · ' + impDetailText(d) });
+      if (impChg > 0) {
+        var impText = 'MIPP-Import: ' + impSummary + ' · ' + impDetailText(d);
+        Store.addMsg({ type: 'import', by: Util.getName() || 'Import', text: impText });
+        Push.send('', 'MIPP-Import', impText, 3, ['package']);
+      }
       else toast('Import: ' + impSummary);
       if (firstWeek) viewWeek = firstWeek;   // nie in einer vergangenen Woche landen
       weekLabel(); render(Store.get());
@@ -1770,7 +1774,7 @@
   // Ton an/aus (im Browser gemerkt)
   function soundLabel() { $('soundBtn').textContent = Sound.label(); }
   window.DEKR_NTFY = function () {
-    return [{ label: 'Beipack fertig, Probleme, Überspielen', sub: '' }, { label: 'Neue Podest-Bestellungen', sub: 'podest' }];
+    return [{ label: 'Beipack fertig, Probleme, Überspielen, MIPP-Import', sub: '' }, { label: 'Neue Podest-Bestellungen', sub: 'podest' }];
   };
   $('soundBtn').onclick = function () { Sound.panel(); };
   document.addEventListener('dekr-sound', soundLabel);

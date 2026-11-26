@@ -370,7 +370,7 @@
   window.DEKR_NTFY = function () {
     var l = [], p = perms();
     if (qid) l.push({ label: 'Rückmeldungen und Nachrichten an dieses Handy', sub: 'q' + qid });
-    if (p.dash) l.push({ label: 'Beipack fertig, Probleme, Überspielen', sub: '' });
+    if (p.dash) l.push({ label: 'Beipack fertig, Probleme, Überspielen, MIPP-Import', sub: '' });
     if (p.podest) l.push({ label: 'Neue Podest-Bestellungen', sub: 'podest' });
     return l;
   };

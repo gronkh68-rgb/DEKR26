@@ -193,10 +193,16 @@
         if (ex) ex.forEach(function (x) { if (x.id !== id) ops['tasks/' + x.id] = null; });
         ops['tasks/' + id] = t;
       });
-      // Meldung im Dashboard-Nachrichtenstrom (Toast samt Ton), nur wenn sich wirklich etwas geändert hat, mit Details je KR
+      // Meldung im Dashboard-Nachrichtenstrom (Toast samt Ton), nur wenn sich wirklich etwas geändert hat, mit Details je KR; dazu Push über ntfy, falls eingerichtet
       if (st.neu + st.moved + st.chg > 0) {
         var MAXL = 8, detail = lines.slice(0, MAXL).join(' · ') + (lines.length > MAXL ? ' · und ' + (lines.length - MAXL) + ' weitere' : '');
-        ops['msgs/' + uid()] = { type: 'import', by: CFG.name || 'MIPP-Import', text: 'MIPP-Import: ' + st.neu + ' neu, ' + st.moved + ' verschoben, ' + st.chg + ' geändert · ' + detail, t: now };
+        var mtext = 'MIPP-Import: ' + st.neu + ' neu, ' + st.moved + ' verschoben, ' + st.chg + ' geändert · ' + detail;
+        ops['msgs/' + uid()] = { type: 'import', by: CFG.name || 'MIPP-Import', text: mtext, t: now };
+        if (CFG.ntfy) {
+          try {
+            fetch('https:' + '/' + '/ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: CFG.ntfy, title: 'MIPP-Import', message: mtext, priority: 3, tags: ['package'] }) }).catch(function () { /* Push ist optional */ });
+          } catch (e15) { /* ignorieren */ }
+        }
       }
       return { ops: ops, st: st };
     }
@@ -438,7 +444,7 @@
   }
   var url = '', hlCode = '';
   function build(h27) {
-    var cfg = haveAuth ? { key: C.authApiKey, db: C.firebaseUrl, refresh: A.refresh, h27: h27, hall: hallMap, rev: hallRev, name: (window.Util && Util.getName && Util.getName()) || 'MIPP-Import' } : null;
+    var cfg = haveAuth ? { key: C.authApiKey, db: C.firebaseUrl, refresh: A.refresh, h27: h27, hall: hallMap, rev: hallRev, name: (window.Util && Util.getName && Util.getName()) || 'MIPP-Import', ntfy: C.ntfyTopic || '' } : null;
     var code = '(' + body.replace('__BASE__', base).replace('__VER__', ver).replace('__CFG__', function () { return JSON.stringify(cfg); }) + ')()';
     url = 'javascript:' + encodeURIComponent(code);
     hlCode = 'window.__dekrHeadless = true; ' + code;
