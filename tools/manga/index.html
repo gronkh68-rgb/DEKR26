@@ -81,8 +81,8 @@ h1,h2,.btn{font-family:'Orbitron','Share Tech Mono',sans-serif;text-transform:up
 
 <div id="lib">
   <h1>MANGA<span> // </span>READER</h1>
-  <label class="btn g" style="width:100%;min-height:54px;font-size:13px">+ CBZ / ZIP / BILDER ÖFFNEN
-    <input type="file" id="inFile" accept=".cbz,.zip,application/zip,application/x-cbz,image/*" multiple hidden>
+  <label class="btn g" style="width:100%;min-height:54px;font-size:13px">+ CBZ / ZIP / PDF / BILDER ÖFFNEN
+    <input type="file" id="inFile" accept=".cbz,.zip,.pdf,application/pdf,application/zip,application/x-cbz,image/*" multiple hidden>
   </label>
   <div class="list" id="list"></div>
 </div>
@@ -211,12 +211,51 @@ async function zipPages(file) {
   return pages;
 }
 
+/* PDF: pdf.js wird erst beim ersten PDF geladen, Seiten werden einzeln zu JPEG gerendert */
+let pdfjsP = null;
+function loadPdfjs() {
+  if (!pdfjsP) pdfjsP = import('./pdf.min.mjs').then(m => {
+    m.GlobalWorkerOptions.workerSrc = new URL('pdf.worker.min.mjs', location.href).href;
+    return m;
+  });
+  return pdfjsP;
+}
+
+async function pdfPages(file) {
+  let doc;
+  try {
+    const lib = await loadPdfjs();
+    doc = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  } catch (e) {
+    throw new Error('PDF nicht lesbar (' + (e && e.name === 'PasswordException' ? 'passwortgeschützt' : e.message) + ')');
+  }
+  const pages = [];
+  for (let n = 1; n <= doc.numPages; n++) {
+    pages.push({
+      name: 'Seite ' + n,
+      get: async () => {
+        const pg = await doc.getPage(n);
+        const v1 = pg.getViewport({ scale: 1 });
+        const scale = Math.min(1600 / v1.width, 2600 / v1.height);
+        const vp = pg.getViewport({ scale: scale });
+        const c = document.createElement('canvas');
+        c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+        await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        pg.cleanup();
+        return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Seite konnte nicht gerendert werden')), 'image/jpeg', 0.88));
+      }
+    });
+  }
+  return pages;
+}
+
 function imagePages(files) {
   return files.slice().sort((a, b) => natSort(a.name, b.name))
     .map(f => ({ name: f.name, get: async () => f }));
 }
 
 async function pagesOf(book) {
+  if (book.kind === 'pdf') return pdfPages(book.file);
   return book.kind === 'zip' ? zipPages(book.file) : imagePages(book.files);
 }
 
@@ -277,6 +316,7 @@ $('#inFile').addEventListener('change', async ev => {
   busy(true);
   try {
     const zips = files.filter(f => /\.(cbz|zip)$/i.test(f.name));
+    const pdfs = files.filter(f => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
     const imgs = files.filter(f => IMG_EXT[extOf(f.name)] || /^image\//.test(f.type));
     for (const f of zips) {
       const pages = await zipPages(f);
@@ -284,6 +324,13 @@ $('#inFile').addEventListener('change', async ev => {
       await dbPut({
         id: uid(), kind: 'zip', title: f.name.replace(/\.(cbz|zip)$/i, ''), file: f, pages: pages.length, page: 0,
         added: Date.now(), cover: await makeCover(pages[0]), mode: 'page', rtl: true, fit: 'screen'
+      });
+    }
+    for (const f of pdfs) {
+      const pages = await pdfPages(f);
+      await dbPut({
+        id: uid(), kind: 'pdf', title: f.name.replace(/\.pdf$/i, ''), file: f, pages: pages.length, page: 0,
+        added: Date.now(), cover: await makeCover(pages[0]), mode: 'page', rtl: false, fit: 'screen'
       });
     }
     if (imgs.length) {
@@ -294,7 +341,7 @@ $('#inFile').addEventListener('change', async ev => {
         mode: 'page', rtl: true, fit: 'screen'
       });
     }
-    if (!zips.length && !imgs.length) toast('Keine unterstützte Datei gewählt.');
+    if (!zips.length && !pdfs.length && !imgs.length) toast('Keine unterstützte Datei gewählt.');
   } catch (e) { toast('Fehler: ' + e.message); }
   busy(false);
   loadLib();
