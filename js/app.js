@@ -1126,8 +1126,10 @@
     return Halls.label(hall, pos);
   }
   function kwText(w) { return 'KW ' + w.split('-W')[1]; }
+  // z.B. "Mo 26.10." – ohne Woche, für die kurze Schreibweise bei einer Verschiebung
+  function dayShort(w, d) { return Util.DAYS[d].slice(0, 2) + ' ' + Util.dayDate(w, d); }
   // z.B. "Mo 26.10. (KW 44)" – das Datum macht gleiche Wochentage verschiedener Wochen unterscheidbar
-  function dayText(w, d) { return Util.DAYS[d].slice(0, 2) + ' ' + Util.dayDate(w, d) + ' (' + kwText(w) + ')'; }
+  function dayText(w, d) { return dayShort(w, d) + ' (' + kwText(w) + ')'; }
   // Liegt der Tag vor heute? Vergangenes wird beim Import nur übernommen, wenn sich dort etwas geändert hat.
   function isPastDay(week, day) {
     var d = Util.mondayOf(week), t = new Date();
@@ -1150,8 +1152,10 @@
       if (!ex) { x.how = 'neu'; if (isPastDay(x.week, x.day)) { x.skip = true; res.past++; return; } res.neu.push(x); return; }
       var e = ex[0], moved = [], ch = [];
       if (e.week !== x.week || e.day !== x.day) {
-        moved.push('von ' + dayText(e.week, e.day) + ' nach ' + dayText(x.week, x.day));
-        x.movedFrom = Util.DAYS[e.day].slice(0, 2) + ' ' + Util.dayDate(e.week, e.day) + (e.week !== x.week ? ' (' + kwText(e.week) + ')' : '');
+        var sameWk = e.week === x.week;
+        // Einheitlich wie die anderen Felder als „Label A → B“: Woche nur zeigen, wo sie zur Unterscheidung nötig ist
+        moved.push('Tag ' + dayShort(e.week, e.day) + (sameWk ? '' : ' (' + kwText(e.week) + ')') + ' → ' + dayShort(x.week, x.day) + ' (' + kwText(x.week) + ')');
+        x.movedFrom = dayShort(e.week, e.day) + (sameWk ? '' : ' (' + kwText(e.week) + ')');
       }
       if ((e.pos || '') !== (x.pos || '') || (e.pos && (e.hall || '') !== x.hallEff)) {
         ch.push('Position ' + posText(e.hall, e.pos) + ' → ' + posText(x.hallEff, x.pos));

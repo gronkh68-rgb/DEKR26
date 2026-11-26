@@ -134,11 +134,12 @@
       var m = /^(\d{4})-W(\d{2})$/.exec(key), j4 = new Date(+m[1], 0, 4);
       return new Date(+m[1], 0, 4 - ((j4.getDay() || 7) - 1) + 7 * (+m[2] - 1));
     }
-    function dayText(wk, d) {
+    function dayShort(wk, d) {
       var m = mondayOf(wk);
       m.setDate(m.getDate() + d - 1);
-      return SD[d] + ' ' + pad(m.getDate()) + '.' + pad(m.getMonth() + 1) + '. (KW ' + wk.split('-W')[1] + ')';
+      return SD[d] + ' ' + pad(m.getDate()) + '.' + pad(m.getMonth() + 1) + '.';
     }
+    function dayText(wk, d) { return dayShort(wk, d) + ' (KW ' + wk.split('-W')[1] + ')'; }
     function label(hallId, pos) {
       if (!pos) return '–';
       var m = /^([A-Z])(\d+)$/.exec(pos);
@@ -161,7 +162,11 @@
         var hall = pos && !from ? CFG.hall[r[2]] || '' : '', ex = by[kr + (shr ? '~S' : '')], e = ex && ex[0] ? ex[0].t : null, how = 'neu', chg = '', movedFrom = '';
         if (e) {
           var mv = e.week !== week || e.day !== day, ch = [];
-          if (mv) { chg = 'von ' + dayText(e.week, e.day) + ' nach ' + dayText(week, day); movedFrom = SD[e.day] + ' ' + dayText(e.week, e.day).slice(3, 9) + (e.week !== week ? ' (KW ' + e.week.split('-W')[1] + ')' : ''); }
+          if (mv) {
+            var sameWk = e.week === week;
+            chg = 'Tag ' + dayShort(e.week, e.day) + (sameWk ? '' : ' (KW ' + e.week.split('-W')[1] + ')') + ' → ' + dayShort(week, day) + ' (KW ' + week.split('-W')[1] + ')';
+            movedFrom = dayShort(e.week, e.day) + (sameWk ? '' : ' (KW ' + e.week.split('-W')[1] + ')');
+          }
           if ((e.pos || '') !== (pos || '') || (e.pos && (e.hall || '') !== hall)) ch.push('Position ' + label(e.hall, e.pos) + ' → ' + label(hall, pos));
           if ((e.scope || '') !== (scope || '')) ch.push('Lieferumfang ' + (e.scope || '–') + ' → ' + (scope || '–'));
           if (!!e.usa !== usa) ch.push(usa ? 'jetzt USA' : 'nicht mehr USA');
@@ -232,11 +237,16 @@
       window.addEventListener('beforeunload', guard);
       window.__dekrAuto = A;
       A.next = Date.now() + A.mins * 60000;
+      var mini = false;
+      try { mini = localStorage.getItem('dekr26_auto_mini') === '1'; } catch (e13) { mini = false; }
       var box = document.createElement('div');
-      box.style.cssText = 'position:fixed;right:16px;top:70px;z-index:2147483646;width:260px;padding:10px 12px;background:#05060b;color:#e8f9ff;border:1px solid #fcee09;font:12px monospace;box-shadow:0 0 14px rgba(0,0,0,.6)';
+      box.style.cssText = 'position:fixed;right:16px;top:70px;z-index:2147483646;width:260px;padding:10px 12px;background:#05060b;color:#e8f9ff;border:1px solid #fcee09;font:12px monospace;box-shadow:0 0 14px rgba(0,0,0,.6);transition:width .15s,padding .15s';
       var head = document.createElement('div');
       head.style.cssText = 'font:900 12px monospace;letter-spacing:.1em;color:#fcee09;margin-bottom:6px';
-      head.textContent = 'DEUKRO26 · AUTO-IMPORT v' + VER;
+      var dot = document.createElement('span');
+      dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;background:#7a8a96';
+      var headText = document.createElement('span');
+      head.appendChild(dot); head.appendChild(headText);
       var stat = document.createElement('div'), last = document.createElement('div');
       last.style.cssText = 'color:#7a8a96;margin:4px 0 8px';
       var row = document.createElement('div'), sel2 = document.createElement('select');
@@ -247,18 +257,35 @@
       row.appendChild(sel2);
       var bNow = mk('Jetzt', function () { runAuto(); });
       var bPause = mk('Pause', function () { A.on = !A.on; bPause.textContent = A.on ? 'Pause' : 'Weiter'; if (A.on) A.next = Date.now() + A.mins * 60000; draw(); });
+      mk('Verstecken', function (e) { if (e && e.stopPropagation) e.stopPropagation(); setMini(true); });
       mk('Beenden', function () { clearInterval(tm); if (A.frame) { A.frame.remove(); } box.remove(); window.removeEventListener('beforeunload', guard); delete window.__dekrAuto; });
       sel2.addEventListener('change', function () { A.mins = +sel2.value; try { localStorage.setItem('dekr26_auto_mins', String(A.mins)); } catch (e12) { /* ignorieren */ } A.next = Date.now() + A.mins * 60000; draw(); });
       box.appendChild(head); box.appendChild(stat); box.appendChild(last); box.appendChild(row);
       document.body.appendChild(box);
       A.box = box;
+      // Verstecken: nur die Anzeige (klein, nur ein Punkt + „MIPP“, klickbar); der Zeitgeber läuft unverändert im Hintergrund weiter
+      function dotColor() { return A.busy ? '#fcee09' : A.lastOk === false ? '#ff2a55' : A.lastOk === true ? '#2dffb3' : '#7a8a96'; }
+      function setMini(v) {
+        mini = v;
+        try { localStorage.setItem('dekr26_auto_mini', v ? '1' : '0'); } catch (e14) { /* ignorieren */ }
+        [stat, last, row].forEach(function (e) { e.style.display = v ? 'none' : ''; });
+        head.style.marginBottom = v ? '0' : '6px';
+        head.title = v ? 'Anklicken zum Anzeigen' : '';
+        headText.textContent = v ? ' MIPP' : ' DEUKRO26 · AUTO-IMPORT v' + VER;
+        box.style.width = v ? 'auto' : '260px';
+        box.style.padding = v ? '6px 10px' : '10px 12px';
+        box.style.cursor = v ? 'pointer' : '';
+        box.onclick = v ? function () { setMini(false); } : null;
+      }
+      setMini(mini);
       function draw() {
         var left = Math.max(0, Math.round((A.next - Date.now()) / 1000));
         stat.textContent = A.busy ? 'Lädt MIPP neu und liest …' : A.on ? 'Nächster Import in ' + pad(Math.floor(left / 60)) + ':' + pad(left % 60) : 'Pausiert';
         last.textContent = A.last;
+        dot.style.background = dotColor();
       }
       function done(txt) {
-        A.busy = false; A.last = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes()) + ' ' + txt;
+        A.busy = false; A.lastOk = txt.charAt(0) === '✔'; A.last = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes()) + ' ' + txt;
         A.next = Date.now() + A.mins * 60000;
         if (A.frame) { A.frame.remove(); A.frame = null; }
         draw();
