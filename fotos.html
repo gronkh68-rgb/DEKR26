@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src blob: data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#080c12">
+<title>TEILE // FOTOGALERIE</title>
+<link rel="stylesheet" href="css/fonts.css">
+<style>
+:root{
+  --bg:#080c12; --panel:#0d131c; --panel2:#111a26; --line:#1b2a3b;
+  --cyan:#00cfff; --green:#39ff14; --orange:#ff9f1c; --red:#ff3b5c;
+  --text:#d6e6f2; --dim:#6f869a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  min-height:100vh; color:var(--text); background:var(--bg);
+  background-image:
+    linear-gradient(rgba(0,207,255,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,207,255,.045) 1px,transparent 1px);
+  background-size:32px 32px;
+  font-family:'Share Tech Mono',ui-monospace,Consolas,monospace; font-size:15px; letter-spacing:.02em;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+h1,h2,h3,.orb,.tab,.btn{font-family:'Orbitron','Share Tech Mono',sans-serif;text-transform:uppercase;letter-spacing:.1em}
+header{
+  position:sticky;top:0;z-index:20;background:rgba(8,12,18,.94);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);padding:calc(8px + env(safe-area-inset-top)) 14px 0;
+}
+h1{font-size:15px;color:var(--cyan);text-shadow:0 0 12px rgba(0,207,255,.55);padding:4px 0 8px}
+h1 span{color:var(--dim)}
+nav{display:flex;gap:4px}
+.tab{
+  flex:1;background:none;border:1px solid var(--line);border-bottom:none;color:var(--dim);
+  padding:10px 4px;font-size:11px;cursor:pointer;border-radius:0
+}
+.tab[aria-selected=true]{color:var(--cyan);background:var(--panel);border-color:var(--cyan);box-shadow:0 -2px 12px rgba(0,207,255,.25)}
+.tab .n{color:var(--orange)}
+main{max-width:1200px;margin:0 auto;padding:14px}
+[hidden]{display:none!important}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--c,var(--cyan));
+  padding:12px;margin-bottom:12px;box-shadow:0 0 18px rgba(0,0,0,.4)
+}
+.card h2{font-size:12px;color:var(--c,var(--cyan));margin-bottom:10px}
+label.f{display:block;color:var(--dim);font-size:12px;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.1em}
+input[type=text],input[type=search]{
+  width:100%;background:#070b11;border:1px solid var(--line);color:var(--text);
+  font:inherit;font-size:18px;padding:12px;border-radius:0;outline:none
+}
+input:focus{border-color:var(--cyan);box-shadow:0 0 10px rgba(0,207,255,.35)}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan);padding:13px 14px;font-size:12px;
+  border-radius:0;min-height:46px;user-select:none;-webkit-user-select:none
+}
+.btn:hover{background:rgba(0,207,255,.12);box-shadow:0 0 12px rgba(0,207,255,.4)}
+.btn.g{color:var(--green);border-color:var(--green)}
+.btn.g:hover{background:rgba(57,255,20,.1);box-shadow:0 0 12px rgba(57,255,20,.4)}
+.btn.o{color:var(--orange);border-color:var(--orange)}
+.btn.r{color:var(--red);border-color:var(--red)}
+.btn.big{width:100%;font-size:14px;min-height:56px}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>*{flex:1 1 140px}
+.hint{color:var(--orange);font-size:13px;min-height:18px;margin-top:6px}
+.dim{color:var(--dim)}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-top:10px}
+.thumbs .t{position:relative;aspect-ratio:1;border:1px solid var(--line);background:#000}
+.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.thumbs .x{
+  position:absolute;top:0;right:0;width:32px;height:32px;background:rgba(8,12,18,.85);color:var(--red);
+  border:1px solid var(--red);font:inherit;font-size:16px;cursor:pointer;border-radius:0
+}
+.thumbs .busy{display:flex;align-items:center;justify-content:center;color:var(--cyan);font-size:12px;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.stat{display:flex;gap:16px;flex-wrap:wrap;font-size:13px}
+.stat b{font-family:'Orbitron',sans-serif;font-size:18px;display:block;color:var(--cyan)}
+.stat .o b{color:var(--orange)} .stat .g b{color:var(--green)}
+.search{position:sticky;top:calc(88px + env(safe-area-inset-top));z-index:10;background:var(--bg);padding:2px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.item{
+  background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--c);cursor:pointer;
+  display:flex;flex-direction:column;transition:box-shadow .15s
+}
+.item:hover{box-shadow:0 0 14px var(--c)}
+.item .im{aspect-ratio:4/3;background:#000;position:relative;overflow:hidden}
+.item img{width:100%;height:100%;object-fit:cover;display:block}
+.item .cnt{position:absolute;right:4px;bottom:4px;background:rgba(8,12,18,.85);border:1px solid var(--line);padding:1px 6px;font-size:12px}
+.item .mt{padding:8px}
+.item .nr{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--c);word-break:break-all}
+.item .nm{font-size:14px;margin-top:2px;word-break:break-word}
+.item .dt{font-size:11px;color:var(--dim);margin-top:4px}
+.empty{color:var(--dim);text-align:center;padding:40px 10px}
+dialog{
+  background:var(--panel);color:var(--text);border:1px solid var(--cyan);border-top:2px solid var(--cyan);
+  box-shadow:0 0 30px rgba(0,207,255,.35);width:min(920px,calc(100vw - 16px));max-height:calc(100vh - 16px);
+  padding:14px;margin:auto;overflow:auto
+}
+dialog::backdrop{background:rgba(2,4,8,.85)}
+.photos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin:10px 0}
+.photos .p{position:relative;background:#000;border:1px solid var(--line)}
+.photos img{width:100%;display:block;max-height:70vh;object-fit:contain}
+.photos .x{position:absolute;top:0;right:0;padding:6px 10px;background:rgba(8,12,18,.85);color:var(--red);border:1px solid var(--red);font:inherit;cursor:pointer}
+#toast{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:50;
+  background:var(--panel2);border:1px solid var(--green);color:var(--green);padding:12px 18px;
+  box-shadow:0 0 18px rgba(57,255,20,.4);max-width:92vw;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s
+}
+#toast.show{opacity:1} #toast.err{border-color:var(--red);color:var(--red);box-shadow:0 0 18px rgba(255,59,92,.4)}
+#drop{position:fixed;inset:0;z-index:60;background:rgba(0,207,255,.12);border:3px dashed var(--cyan);display:none;
+  align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;color:var(--cyan);font-size:22px}
+#drop.on{display:flex}
+@media(min-width:760px){ h1{font-size:18px} .tab{font-size:13px} .search{top:calc(96px + env(safe-area-inset-top))} }
+</style>
+</head>
+<body>
+<header>
+  <h1>TEILE<span> // </span>FOTOGALERIE</h1>
+  <nav role="tablist">
+    <button class="tab" role="tab" data-tab="erfassen">Erfassen</button>
+    <button class="tab" role="tab" data-tab="galerie">Galerie <span class="n" id="navCount"></span></button>
+    <button class="tab" role="tab" data-tab="daten">Daten</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ERFASSEN (Handy) -->
+  <section id="tab-erfassen" hidden>
+    <div class="card">
+      <h2>Neues Teil</h2>
+      <label class="f" for="inNr">Materialnummer</label>
+      <input type="text" id="inNr" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
+      <div class="hint" id="nrHint"></div>
+      <label class="f" for="inName">Bezeichnung / Name</label>
+      <input type="text" id="inName" autocomplete="off" enterkeyhint="done">
+      <label class="f">Fotos</label>
+      <div class="row">
+        <label class="btn g">&#128247; Foto aufnehmen
+          <input type="file" id="inCam" accept="image/*" capture="environment" hidden>
+        </label>
+        <label class="btn">&#128193; Aus Galerie
+          <input type="file" id="inPick" accept="image/*" multiple hidden>
+        </label>
+      </div>
+      <div class="thumbs" id="pending"></div>
+      <div class="hint" id="saveHint"></div>
+      <button class="btn g big" id="btnSave" style="margin-top:12px">Speichern</button>
+    </div>
+    <div class="card" style="--c:var(--orange)">
+      <h2>Auf diesem Gerät</h2>
+      <div class="stat" id="statCapture"></div>
+      <div style="margin-top:12px"><button class="btn o big" id="btnExportNewCap">Neue exportieren (ZIP)</button></div>
+      <div class="dim" style="margin-top:8px;font-size:12px">ZIP aufs Handy-Menü „Teilen“ → Mail / Drive / Messenger / USB. Am PC unter „Daten“ importieren.</div>
+    </div>
+  </section>
+
+  <!-- GALERIE (PC) -->
+  <section id="tab-galerie" hidden>
+    <div class="search">
+      <input type="search" id="q" placeholder="Suche: Materialnummer oder Name …" autocomplete="off" spellcheck="false">
+      <div class="dim" style="margin-top:6px;font-size:12px" id="resCount"></div>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div style="margin-top:12px"><button class="btn" id="btnMore" hidden>Mehr laden</button></div>
+  </section>
+
+  <!-- DATEN -->
+  <section id="tab-daten" hidden>
+    <div class="card">
+      <h2>Übersicht</h2>
+      <div class="stat" id="statData"></div>
+      <div class="dim" style="margin-top:8px;font-size:12px" id="storageInfo"></div>
+    </div>
+    <div class="card" style="--c:var(--green)">
+      <h2>Import (am PC)</h2>
+      <p class="dim" style="margin-bottom:10px;font-size:13px">ZIP-Dateien vom Handy auswählen oder hier ins Fenster ziehen. Bereits vorhandene Einträge werden übersprungen.</p>
+      <label class="btn g big">ZIP importieren
+        <input type="file" id="inZip" accept=".zip,application/zip" multiple hidden>
+      </label>
+    </div>
+    <div class="card" style="--c:var(--orange)">
+      <h2>Export</h2>
+      <div class="row">
+        <button class="btn o" id="btnExportNew">Nur neue exportieren</button>
+        <button class="btn" id="btnExportAll">Alles exportieren</button>
+      </div>
+      <p class="dim" style="margin-top:10px;font-size:12px">ZIP enthält <b>daten.json</b>, <b>daten.csv</b> (Excel) und den Ordner <b>bilder/</b> – Dateinamen: MatNr_Name_….jpg</p>
+    </div>
+    <div class="card" style="--c:var(--red)">
+      <h2>Aufräumen</h2>
+      <button class="btn r" id="btnPurge">Bereits exportierte Einträge löschen</button>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg"></dialog>
+<div id="toast" role="status"></div>
+<div id="drop">ZIP HIER ABLEGEN</div>
+
+<script>
+'use strict';
+
+/* ================= Hilfsfunktionen ================= */
+const $ = s => document.querySelector(s);
+
+function el(tag, props, kids) {
+  const e = document.createElement(tag);
+  if (props) {
+    for (const k of Object.keys(props)) {
+      if (k === 'class') e.className = props[k];
+      else if (k === 'text') e.textContent = props[k];
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), props[k]);
+      else e.setAttribute(k, props[k]);
+    }
+  }
+  (kids || []).forEach(c => e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+  return e;
+}
+
+function uid() {
+  return Math.random().toString(36).slice(2, 10).padEnd(8, '0') + Date.now().toString(36);
+}
+
+function fmtDate(ms) {
+  const d = new Date(ms), p = n => String(n).padStart(2, '0');
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function stamp() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes());
+}
+
+/* Dateisicherer Name (nur ASCII), damit ZIP-Namen überall gleich ankommen */
+function safe(s) {
+  s = String(s).replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue')
+    .replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss');
+  s = s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return s || 'x';
+}
+
+function compact(s) { return String(s).toLowerCase().replace(/[^a-z0-9äöüß]/g, ''); }
+
+let toastTimer = 0;
+function toast(msg, isErr) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, isErr ? 5000 : 2200);
+}
+
+/* ================= IndexedDB ================= */
+const DB_NAME = 'teile-fotogalerie', STORE = 'entries';
+let dbp = null;
+
+function openDB() {
+  if (!dbp) {
+    dbp = new Promise((resolve, reject) => {
+      const r = indexedDB.open(DB_NAME, 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore(STORE, { keyPath: 'id' }); };
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+  }
+  return dbp;
+}
+
+async function dbRun(mode, fn) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, mode);
+    const st = tx.objectStore(STORE);
+    let result;
+    const req = fn(st);
+    if (req) req.onsuccess = () => { result = req.result; };
+    tx.oncomplete = () => resolve(result);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error('Speichern abgebrochen (Speicher voll?)'));
+  });
+}
+
+const dbAll = () => dbRun('readonly', s => s.getAll());
+const dbPut = e => dbRun('readwrite', s => s.put(e));
+const dbDel = id => dbRun('readwrite', s => s.delete(id));
+
+/* ================= Bilder ================= */
+function loadImg(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Bild nicht lesbar')); };
+    img.src = url;
+  });
+}
+
+async function shrink(blob, max, quality) {
+  let bmp;
+  try { bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' }); }
+  catch (e) { bmp = await loadImg(blob); }
+  const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
+  const s = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * s));
+  c.height = Math.max(1, Math.round(h * s));
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  if (bmp.close) bmp.close();
+  return new Promise((resolve, reject) => {
+    c.toBlob(b => b ? resolve(b) : reject(new Error('Bild konnte nicht umgewandelt werden')), 'image/jpeg', quality);
+  });
+}
+
+const photoFull = b => shrink(b, 1600, 0.85);
+const photoThumb = b => shrink(b, 360, 0.7);
+
+/* ================= ZIP (ohne Bibliothek) ================= */
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(u8) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+/* files: [{name:String, data:Uint8Array}] – ungepackt (Methode 0), Namen UTF-8 */
+function makeZip(files) {
+  const enc = new TextEncoder();
+  const now = new Date();
+  const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  const parts = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    const nameB = enc.encode(f.name);
+    const crc = crc32(f.data), size = f.data.length;
+
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true);
+    lh.setUint16(4, 20, true);
+    lh.setUint16(6, 0x0800, true);
+    lh.setUint16(8, 0, true);
+    lh.setUint16(10, time, true);
+    lh.setUint16(12, date, true);
+    lh.setUint32(14, crc, true);
+    lh.setUint32(18, size, true);
+    lh.setUint32(22, size, true);
+    lh.setUint16(26, nameB.length, true);
+    lh.setUint16(28, 0, true);
+    parts.push(lh.buffer, nameB, f.data);
+
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true);
+    ch.setUint16(4, 20, true);
+    ch.setUint16(6, 20, true);
+    ch.setUint16(8, 0x0800, true);
+    ch.setUint16(10, 0, true);
+    ch.setUint16(12, time, true);
+    ch.setUint16(14, date, true);
+    ch.setUint32(16, crc, true);
+    ch.setUint32(20, size, true);
+    ch.setUint32(24, size, true);
+    ch.setUint16(28, nameB.length, true);
+    ch.setUint16(30, 0, true);
+    ch.setUint16(32, 0, true);
+    ch.setUint16(34, 0, true);
+    ch.setUint16(36, 0, true);
+    ch.setUint32(38, 0, true);
+    ch.setUint32(42, offset, true);
+    central.push(ch.buffer, nameB);
+
+    offset += 30 + nameB.length + size;
+  }
+  let cdSize = 0;
+  central.forEach(p => { cdSize += p.byteLength !== undefined ? p.byteLength : p.length; });
+  const eocd = new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0, 0x06054b50, true);
+  eocd.setUint16(8, files.length, true);
+  eocd.setUint16(10, files.length, true);
+  eocd.setUint32(12, cdSize, true);
+  eocd.setUint32(16, offset, true);
+  return new Blob(parts.concat(central, [eocd.buffer]), { type: 'application/zip' });
+}
+
+async function inflateRaw(u8) {
+  if (typeof DecompressionStream === 'undefined') throw new Error('Komprimierte ZIP wird von diesem Browser nicht unterstützt');
+  const ds = new DecompressionStream('deflate-raw');
+  const res = new Response(new Blob([u8]).stream().pipeThrough(ds));
+  return new Uint8Array(await res.arrayBuffer());
+}
+
+/* liefert Map<Name, Uint8Array> */
+async function readZip(file) {
+  const buf = await file.arrayBuffer();
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let e = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 22 - 65535); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  }
+  if (e < 0) throw new Error('Keine gültige ZIP-Datei: ' + file.name);
+  const n = dv.getUint16(e + 10, true);
+  let p = dv.getUint32(e + 16, true);
+  const dec = new TextDecoder('utf-8');
+  const out = new Map();
+  for (let i = 0; i < n; i++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) throw new Error('ZIP beschädigt: ' + file.name);
+    const method = dv.getUint16(p + 10, true);
+    const csize = dv.getUint32(p + 20, true);
+    const nl = dv.getUint16(p + 28, true), el2 = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true);
+    const lo = dv.getUint32(p + 42, true);
+    const name = dec.decode(u8.subarray(p + 46, p + 46 + nl));
+    p += 46 + nl + el2 + cl;
+    if (name.charAt(name.length - 1) === '/') continue;
+    const ds = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
+    let data = u8.subarray(ds, ds + csize);
+    if (method === 8) data = await inflateRaw(data);
+    else if (method !== 0) throw new Error('ZIP-Kompression nicht unterstützt: ' + file.name);
+    out.set(name, data);
+  }
+  return out;
+}
+
+/* ================= Zustand ================= */
+let entries = [];          // alle Einträge, neueste zuerst
+let pending = [];          // Fotos der laufenden Erfassung [{blob,url,busy}]
+let shown = 60;            // Anzahl sichtbarer Karten
+let thumbUrls = [];        // Object-URLs der Galerie (zum Freigeben)
+
+async function reload() {
+  entries = (await dbAll()).sort((a, b) => b.created - a.created);
+  renderAll();
+}
+
+/* ================= Tabs ================= */
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'));
+  document.querySelectorAll('main > section').forEach(s => { s.hidden = s.id !== 'tab-' + name; });
+  try { localStorage.setItem('fg-tab', name); } catch (e) { /* ignorieren */ }
+  if (name === 'erfassen') setTimeout(() => $('#inNr').focus(), 50);
+}
+
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+/* ================= Erfassen ================= */
+function findByNr(nr) {
+  const c = compact(nr);
+  return c ? entries.filter(e => compact(e.matnr) === c) : [];
+}
+
+let nameAuto = true;
+$('#inName').addEventListener('input', () => { nameAuto = false; });
+$('#inNr').addEventListener('input', () => {
+  const same = findByNr($('#inNr').value);
+  const hint = $('#nrHint');
+  if (same.length) {
+    hint.textContent = 'Bekannt: ' + same[0].name + ' (' + same.length + (same.length === 1 ? ' Eintrag)' : ' Einträge)');
+    const nm = $('#inName');
+    if (nm.value === '' || nameAuto) { nm.value = same[0].name; nameAuto = true; }
+  } else {
+    hint.textContent = '';
+    if (nameAuto) $('#inName').value = '';
+  }
+});
+$('#inNr').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); $('#inName').focus(); } });
+$('#inName').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); } });
+
+async function addFiles(fileList) {
+  const files = Array.prototype.slice.call(fileList);
+  for (const f of files) {
+    const slot = { blob: null, url: null, busy: true };
+    pending.push(slot);
+    renderPending();
+    try {
+      slot.blob = await photoFull(f);
+      slot.url = URL.createObjectURL(slot.blob);
+    } catch (e) {
+      pending.splice(pending.indexOf(slot), 1);
+      toast('Foto nicht verwendbar: ' + e.message, true);
+    }
+    slot.busy = false;
+    renderPending();
+  }
+}
+
+$('#inCam').addEventListener('change', ev => { addFiles(ev.target.files); ev.target.value = ''; });
+$('#inPick').addEventListener('change', ev => { addFiles(ev.target.files); ev.target.value = ''; });
+
+function renderPending() {
+  const box = $('#pending');
+  box.textContent = '';
+  pending.forEach(p => {
+    if (p.busy) { box.appendChild(el('div', { class: 't busy', text: '…' })); return; }
+    box.appendChild(el('div', { class: 't' }, [
+      el('img', { src: p.url, alt: '' }),
+      el('button', {
+        class: 'x', type: 'button', 'aria-label': 'Foto entfernen', text: '✕',
+        onclick: () => { URL.revokeObjectURL(p.url); pending.splice(pending.indexOf(p), 1); renderPending(); }
+      })
+    ]));
+  });
+}
+
+function clearPending() {
+  pending.forEach(p => { if (p.url) URL.revokeObjectURL(p.url); });
+  pending = [];
+  renderPending();
+}
+
+$('#btnSave').addEventListener('click', async () => {
+  const matnr = $('#inNr').value.trim();
+  const name = $('#inName').value.trim();
+  const hint = $('#saveHint');
+  hint.textContent = '';
+  if (!matnr) { hint.textContent = 'Materialnummer fehlt.'; $('#inNr').focus(); return; }
+  if (!name) { hint.textContent = 'Bezeichnung fehlt.'; $('#inName').focus(); return; }
+  if (pending.some(p => p.busy)) { hint.textContent = 'Foto wird noch verarbeitet …'; return; }
+  if (!pending.length) { hint.textContent = 'Mindestens ein Foto nötig.'; return; }
+  const btn = $('#btnSave');
+  btn.disabled = true;
+  try {
+    const photos = pending.map(p => p.blob);
+    const entry = {
+      id: uid(), matnr: matnr, name: name, created: Date.now(), exported: null,
+      photos: photos, thumb: await photoThumb(photos[0])
+    };
+    await dbPut(entry);
+    clearPending();
+    $('#inNr').value = '';
+    $('#inName').value = '';
+    $('#nrHint').textContent = '';
+    nameAuto = true;
+    await reload();
+    toast('GESPEICHERT: ' + matnr);
+    $('#inNr').focus();
+  } catch (e) {
+    toast('Fehler beim Speichern: ' + (e && e.message ? e.message : e), true);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ================= Galerie ================= */
+function matches(e, q) {
+  const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+  const hay = (e.matnr + ' ' + e.name).toLowerCase();
+  const hayC = compact(e.matnr + ' ' + e.name);
+  return tokens.every(t => hay.indexOf(t) >= 0 || (compact(t) && hayC.indexOf(compact(t)) >= 0));
+}
+
+function renderGallery() {
+  thumbUrls.forEach(u => URL.revokeObjectURL(u));
+  thumbUrls = [];
+  const q = $('#q').value;
+  const list = entries.filter(e => matches(e, q));
+  const grid = $('#grid');
+  grid.textContent = '';
+  $('#resCount').textContent = list.length + ' von ' + entries.length + ' Einträgen';
+  if (!list.length) {
+    grid.appendChild(el('div', { class: 'empty', text: entries.length ? 'Keine Treffer.' : 'Noch keine Einträge. Unter „Daten“ eine ZIP vom Handy importieren.' }));
+  }
+  list.slice(0, shown).forEach(e => {
+    const url = URL.createObjectURL(e.thumb || e.photos[0]);
+    thumbUrls.push(url);
+    const c = e.exported ? 'var(--green)' : 'var(--orange)';
+    const card = el('div', { class: 'item', tabindex: '0', style: '--c:' + c }, [
+      el('div', { class: 'im' }, [
+        el('img', { src: url, alt: e.name, loading: 'lazy' }),
+        e.photos.length > 1 ? el('span', { class: 'cnt', text: '▣ ' + e.photos.length }) : document.createTextNode('')
+      ]),
+      el('div', { class: 'mt' }, [
+        el('div', { class: 'nr', text: e.matnr }),
+        el('div', { class: 'nm', text: e.name }),
+        el('div', { class: 'dt', text: fmtDate(e.created) })
+      ])
+    ]);
+    card.addEventListener('click', () => openEntry(e.id));
+    card.addEventListener('keydown', ev => { if (ev.key === 'Enter') openEntry(e.id); });
+    grid.appendChild(card);
+  });
+  $('#btnMore').hidden = list.length <= shown;
+}
+
+let qTimer = 0;
+$('#q').addEventListener('input', () => { shown = 60; clearTimeout(qTimer); qTimer = setTimeout(renderGallery, 120); });
+$('#btnMore').addEventListener('click', () => { shown += 60; renderGallery(); });
+
+/* Detailansicht */
+function openEntry(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  const dlg = $('#dlg');
+  const urls = [];
+  const inNr = el('input', { type: 'text', value: e.matnr, autocomplete: 'off' });
+  const inName = el('input', { type: 'text', value: e.name, autocomplete: 'off' });
+  const photosBox = el('div', { class: 'photos' });
+
+  function drawPhotos() {
+    photosBox.textContent = '';
+    urls.forEach(u => URL.revokeObjectURL(u));
+    urls.length = 0;
+    e.photos.forEach((b, i) => {
+      const u = URL.createObjectURL(b);
+      urls.push(u);
+      const p = el('div', { class: 'p' }, [
+        el('a', { href: u, target: '_blank', rel: 'noopener' }, [el('img', { src: u, alt: e.name })])
+      ]);
+      if (e.photos.length > 1) {
+        p.appendChild(el('button', {
+          class: 'x', type: 'button', text: '✕', 'aria-label': 'Foto löschen',
+          onclick: async () => {
+            if (!confirm('Dieses Foto löschen?')) return;
+            e.photos.splice(i, 1);
+            e.thumb = await photoThumb(e.photos[0]);
+            await dbPut(e);
+            drawPhotos();
+            renderAll();
+          }
+        }));
+      }
+      photosBox.appendChild(p);
+    });
+  }
+  drawPhotos();
+
+  function close() { urls.forEach(u => URL.revokeObjectURL(u)); dlg.close(); }
+
+  dlg.textContent = '';
+  dlg.appendChild(el('h2', { class: 'orb', style: 'color:var(--cyan);font-size:13px', text: 'Eintrag · ' + fmtDate(e.created) }));
+  dlg.appendChild(photosBox);
+  dlg.appendChild(el('label', { class: 'f', text: 'Materialnummer' }));
+  dlg.appendChild(inNr);
+  dlg.appendChild(el('label', { class: 'f', text: 'Bezeichnung / Name' }));
+  dlg.appendChild(inName);
+  dlg.appendChild(el('div', { class: 'row', style: 'margin-top:14px' }, [
+    el('button', {
+      class: 'btn g', type: 'button', text: 'Speichern',
+      onclick: async () => {
+        const nr = inNr.value.trim(), nm = inName.value.trim();
+        if (!nr || !nm) { toast('Materialnummer und Name dürfen nicht leer sein.', true); return; }
+        e.matnr = nr; e.name = nm; e.exported = null;
+        await dbPut(e);
+        close();
+        await reload();
+        toast('GESPEICHERT');
+      }
+    }),
+    el('button', {
+      class: 'btn r', type: 'button', text: 'Löschen',
+      onclick: async () => {
+        if (!confirm('Eintrag „' + e.matnr + ' – ' + e.name + '“ endgültig löschen?')) return;
+        await dbDel(e.id);
+        close();
+        await reload();
+        toast('GELÖSCHT');
+      }
+    }),
+    el('button', { class: 'btn', type: 'button', text: 'Schließen', onclick: close })
+  ]));
+  dlg.showModal();
+}
+
+$('#dlg').addEventListener('click', ev => { if (ev.target === ev.currentTarget) ev.currentTarget.close(); });
+
+/* ================= Export / Import ================= */
+function csvCell(s) { return '"' + String(s).replace(/"/g, '""') + '"'; }
+
+async function buildZip(list) {
+  const enc = new TextEncoder();
+  const files = [], meta = [];
+  const rows = ['﻿' + ['Materialnummer', 'Bezeichnung', 'Erfasst', 'Dateien'].map(csvCell).join(';')];
+  for (const e of list) {
+    const names = [];
+    for (let i = 0; i < e.photos.length; i++) {
+      const fn = 'bilder/' + safe(e.matnr) + '_' + safe(e.name).slice(0, 40) + '_' + e.id.slice(0, 8) + '_' + (i + 1) + '.jpg';
+      files.push({ name: fn, data: new Uint8Array(await e.photos[i].arrayBuffer()) });
+      names.push(fn);
+    }
+    meta.push({ id: e.id, matnr: e.matnr, name: e.name, erstellt: e.created, fotos: names });
+    rows.push([e.matnr, e.name, fmtDate(e.created), names.join(' | ')].map(csvCell).join(';'));
+  }
+  const json = JSON.stringify({ version: 1, exportiert: Date.now(), eintraege: meta }, null, 1);
+  files.unshift(
+    { name: 'daten.json', data: enc.encode(json) },
+    { name: 'daten.csv', data: enc.encode(rows.join('\r\n')) }
+  );
+  return makeZip(files);
+}
+
+async function doExport(onlyNew) {
+  const list = entries.filter(e => !onlyNew || !e.exported);
+  if (!list.length) { toast(onlyNew ? 'Keine neuen Einträge.' : 'Nichts zu exportieren.', true); return; }
+  toast('ZIP wird erstellt …');
+  let blob;
+  try { blob = await buildZip(list); }
+  catch (e) { toast('Export fehlgeschlagen: ' + e.message, true); return; }
+  const file = new File([blob], 'teile_' + stamp() + '.zip', { type: 'application/zip' });
+  let done = false;
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'Teile-Fotos' }); done = true; }
+    catch (e) {
+      if (e && e.name === 'AbortError') { toast('Export abgebrochen.', true); return; }
+    }
+  }
+  if (!done) {
+    const a = el('a', { href: URL.createObjectURL(file), download: file.name });
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  }
+  const t = Date.now();
+  for (const e of list) { e.exported = t; await dbPut(e); }
+  await reload();
+  toast('EXPORTIERT: ' + list.length + ' Einträge');
+}
+
+$('#btnExportNewCap').addEventListener('click', () => doExport(true));
+$('#btnExportNew').addEventListener('click', () => doExport(true));
+$('#btnExportAll').addEventListener('click', () => doExport(false));
+
+async function importZips(files) {
+  let added = 0, skipped = 0;
+  const known = new Set(entries.map(e => e.id));
+  const failed = [];
+  for (const f of files) {
+    try {
+      const zip = await readZip(f);
+      const metaRaw = zip.get('daten.json');
+      if (!metaRaw) throw new Error('daten.json fehlt in ' + f.name);
+      const meta = JSON.parse(new TextDecoder('utf-8').decode(metaRaw));
+      for (const m of meta.eintraege || []) {
+        if (known.has(m.id)) { skipped++; continue; }
+        const photos = [];
+        for (const fn of m.fotos || []) {
+          const d = zip.get(fn);
+          if (d) photos.push(new Blob([d], { type: 'image/jpeg' }));
+        }
+        if (!photos.length) continue;
+        await dbPut({
+          id: String(m.id), matnr: String(m.matnr), name: String(m.name),
+          created: Number(m.erstellt) || Date.now(), exported: Date.now(),
+          photos: photos, thumb: await photoThumb(photos[0])
+        });
+        known.add(m.id);
+        added++;
+      }
+    } catch (e) {
+      failed.push(e.message);
+    }
+  }
+  await reload();
+  if (failed.length) toast(failed.join(' | '), true);
+  else toast('IMPORT: ' + added + ' neu, ' + skipped + ' schon vorhanden');
+  if (added) showTab('galerie');
+}
+
+$('#inZip').addEventListener('change', ev => { importZips(Array.prototype.slice.call(ev.target.files)); ev.target.value = ''; });
+
+/* Drag & Drop */
+let dragDepth = 0;
+window.addEventListener('dragenter', ev => { ev.preventDefault(); dragDepth++; $('#drop').className = 'on'; });
+window.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $('#drop').className = ''; });
+window.addEventListener('dragover', ev => ev.preventDefault());
+window.addEventListener('drop', ev => {
+  ev.preventDefault();
+  dragDepth = 0;
+  $('#drop').className = '';
+  const zips = Array.prototype.filter.call(ev.dataTransfer.files, f => /\.zip$/i.test(f.name));
+  if (zips.length) importZips(zips); else toast('Nur .zip-Dateien', true);
+});
+
+$('#btnPurge').addEventListener('click', async () => {
+  const old = entries.filter(e => e.exported);
+  if (!old.length) { toast('Keine exportierten Einträge.', true); return; }
+  if (!confirm(old.length + ' bereits exportierte Einträge von diesem Gerät löschen?\nNur tun, wenn die ZIP sicher am Ziel angekommen ist.')) return;
+  for (const e of old) await dbDel(e.id);
+  await reload();
+  toast('GELÖSCHT: ' + old.length);
+});
+
+/* ================= Statistik ================= */
+function statHtml(box) {
+  const total = entries.length;
+  const neu = entries.filter(e => !e.exported).length;
+  const fotos = entries.reduce((s, e) => s + e.photos.length, 0);
+  box.textContent = '';
+  [['', 'Einträge', total], ['o', 'Nicht exportiert', neu], ['g', 'Exportiert', total - neu], ['', 'Fotos', fotos]].forEach(x => {
+    box.appendChild(el('div', { class: x[0] }, [el('b', { text: String(x[2]) }), x[1]]));
+  });
+}
+
+async function renderStorage() {
+  const info = $('#storageInfo');
+  if (!(navigator.storage && navigator.storage.estimate)) { info.textContent = ''; return; }
+  try {
+    const est = await navigator.storage.estimate();
+    info.textContent = 'Speicher im Browser: ' + (est.usage / 1048576).toFixed(1) + ' MB belegt' +
+      (est.quota ? ' von ca. ' + Math.round(est.quota / 1048576) + ' MB' : '');
+  } catch (e) { info.textContent = ''; }
+}
+
+function renderAll() {
+  statHtml($('#statCapture'));
+  statHtml($('#statData'));
+  const neu = entries.filter(e => !e.exported).length;
+  $('#navCount').textContent = entries.length ? '(' + entries.length + ')' : '';
+  $('#btnExportNewCap').textContent = 'Neue exportieren (' + neu + ')';
+  $('#btnExportNewCap').disabled = !neu;
+  renderGallery();
+  renderStorage();
+}
+
+/* ================= Start ================= */
+(async function init() {
+  if (!window.indexedDB) { toast('Dieser Browser unterstützt keine lokale Speicherung.', true); return; }
+  if (navigator.storage && navigator.storage.persist) { navigator.storage.persist().catch(() => {}); }
+  let tab = null;
+  try { tab = localStorage.getItem('fg-tab'); } catch (e) { /* ignorieren */ }
+  if (tab !== 'erfassen' && tab !== 'galerie' && tab !== 'daten') {
+    tab = window.matchMedia('(pointer:coarse)').matches ? 'erfassen' : 'galerie';
+  }
+  showTab(tab);
+  try { await reload(); }
+  catch (e) { toast('Datenbank-Fehler: ' + e.message, true); }
+})();
+</script>
+</body>
+</html>

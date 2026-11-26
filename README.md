@@ -121,3 +121,6 @@ Die Versionsnummer (`n` in `js/version.js`, von Hand erhöhen) steht unten recht
 (setzt Build, Datum, `version.json` und die Cache-Buster) und das Ergebnis einchecken. Die Seiten prüfen `version.json` alle 5 Minuten und beim Zurückkehren in die App:
 ist sie neuer, erscheint oben der Hinweis „Neue Version verfügbar – Jetzt neu laden“. Ein Klick auf die Versionsangabe prüft sofort.
 Die Karte am Handy liegt im mobilen Dashboard (Reiter „Karte“, für alle Accounts; ohne Dashboard-Recht heißt der Menüpunkt „Karte & KR“) mit Woche, Tag, Status, Suche, Hallen und Zoom; Tippen auf eine Position zeigt KR, Status und Kisten.
+
+## Teile-Fotogalerie (`fotos.html`)
+Handy: Materialnummer + Name eingeben, Foto aufnehmen, speichern (lokal im Browser, funktioniert offline). Unter „Daten“ → „Neue exportieren“ erzeugt eine ZIP (`daten.json`, `daten.csv`, `bilder/MatNr_Name_….jpg`) und öffnet das Teilen-Menü. PC: dieselbe Seite öffnen, ZIP unter „Daten“ importieren bzw. ins Fenster ziehen, in „Galerie“ nach Materialnummer oder Name suchen. Bereits vorhandene Einträge werden beim Import übersprungen. Adresse nach dem Deploy: `…/fotos.html`.
