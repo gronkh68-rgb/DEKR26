@@ -86,6 +86,11 @@ h1,h2,.btn{font-family:'Orbitron','Share Tech Mono',sans-serif;text-transform:up
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:50;background:var(--panel);
   border:1px solid var(--red);color:var(--red);padding:12px 16px;max-width:92vw;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast.show{opacity:1}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#upd{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:center;gap:10px;
+  background:var(--panel);border:1px solid var(--green);border-top:2px solid var(--green);padding:10px 12px;box-shadow:0 0 18px rgba(57,255,20,.35)}
+#upd span{flex:1;font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.08em;color:var(--green)}
+#ver{cursor:pointer;text-decoration:underline dotted}
 #busy{position:fixed;inset:0;z-index:40;background:rgba(8,12,18,.8);display:flex;align-items:center;justify-content:center;
   font-family:'Orbitron',sans-serif;color:var(--cyan);animation:pulse 1s infinite}
 @keyframes pulse{50%{opacity:.5}}
@@ -94,7 +99,7 @@ h1,h2,.btn{font-family:'Orbitron','Share Tech Mono',sans-serif;text-transform:up
 <body>
 
 <div id="lib">
-  <h1>MANGA<span> // </span>READER <small id="ver" style="font-size:10px;color:var(--dim);letter-spacing:.1em">v5</small></h1>
+  <h1>MANGA<span> // </span>READER <small id="ver" title="Tippen: nach Update suchen" style="font-size:10px;color:var(--dim);letter-spacing:.1em">v6</small></h1>
   <label class="btn g" style="width:100%;min-height:54px;font-size:13px">+ CBZ / ZIP / PDF / BILDER ÖFFNEN
     <input type="file" id="inFile" accept=".cbz,.zip,.pdf,application/pdf,application/zip,application/x-cbz,image/*" multiple hidden>
   </label>
@@ -124,6 +129,7 @@ h1,h2,.btn{font-family:'Orbitron','Share Tech Mono',sans-serif;text-transform:up
   </div>
 </div>
 
+<div id="upd" hidden><span>NEUE VERSION VERFÜGBAR</span><button class="btn g sm" id="bUpd" type="button">Aktualisieren</button></div>
 <div id="busy" hidden>LADE …</div>
 <div id="toast" role="status"></div>
 
@@ -149,8 +155,8 @@ function el(tag, props, kids) {
 }
 
 let toastT = 0;
-function toast(m) {
-  const t = $('#toast'); t.textContent = m; t.className = 'show';
+function toast(m, ok) {
+  const t = $('#toast'); t.textContent = m; t.className = 'show' + (ok ? ' ok' : '');
   clearTimeout(toastT); toastT = setTimeout(() => { t.className = ''; }, 4500);
 }
 const busy = on => { $('#busy').hidden = !on; };
@@ -677,7 +683,9 @@ $('#bFs').addEventListener('click', () => {
   else toast('Vollbild nicht möglich');
 });
 
-lastW = $('#shelf').clientWidth;
+const APP_VERSION = 'v6 · Datei';
+$('#ver').textContent = APP_VERSION;
+$('#ver').style.textDecoration = 'none';
 if (!window.indexedDB) toast('Dieser Browser kann nichts lokal speichern.');
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 loadLib().catch(e => toast('Datenbank-Fehler: ' + e.message));

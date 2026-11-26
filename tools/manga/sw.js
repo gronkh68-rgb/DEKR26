@@ -1,14 +1,15 @@
 /* Offline-Cache für den Manga-Reader.
    Seiten: erst Netz (damit Updates sofort ankommen), ohne Netz aus dem Cache.
    pdf.js (.mjs, groß): aus dem Cache. Version erhöhen, wenn pdf.js wechselt. */
-const CACHE = 'manga-reader-v5';
+const CACHE = 'manga-reader-v6';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'pdf.min.mjs', 'pdf.worker.min.mjs'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE)
     .then(c => Promise.all(FILES.map(f => fetch(f, { cache: 'no-cache' }).then(r => { if (!r.ok) throw new Error(f); return c.put(f, r); }))))
-    .then(() => self.skipWaiting()));
+    .then(() => { if (!self.registration.active) self.skipWaiting(); }));
 });
+self.addEventListener('message', e => { if (e.data === 'SKIP_WAITING') self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
     .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
